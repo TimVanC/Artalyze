@@ -1,0 +1,88 @@
+/* Image container */
+.image-container {
+  position: relative;
+  display: inline-block;
+  margin: 10px;
+}
+
+/* Image size */
+.image-container img {
+  width: 300px;
+  height: 300px;
+  object-fit: cover;
+}
+
+/* Green border for selected images */
+.image-container.selected {
+  border: 5px solid #4CAF50; /* Green border */
+}
+
+/* Centering the game container */
+.game-container {
+  text-align: center;
+}
+
+/* Status bar for tries and correct answers */
+.status-bar {
+  margin-bottom: 20px;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+/* Navigation buttons */
+.navigation-buttons button {
+  margin: 10px;
+  padding: 10px 20px;
+  font-size: 1rem;
+}
+
+/* Submit button */
+.submit-button.enabled {
+  background-color: #4CAF50;
+  color: white;
+  padding: 10px 20px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.submit-button.disabled {
+  background-color: #ccc;
+  color: #666;
+  padding: 10px 20px;
+  font-size: 1rem;
+  cursor: not-allowed;
+}
+
+.results {
+  font-size: 1.5rem;
+  margin-top: 20px;
+}
+
+.try-again-button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  background-color: #4CAF50;
+  color: white;
+  cursor: pointer;
+}
+
+/* Image container for completion screen thumbnails */
+.thumbnail-container {
+  display: inline-block;
+  margin: 10px;
+  position: relative;
+}
+
+.thumbnail-container img {
+  width: 100px;
+  height: 100px;
+}
+
+.thumbnail-container.correct {
+  border: 3px solid green;
+}
+
+.thumbnail-container.wrong {
+  border: 3px solid red;
+}
