@@ -1,41 +1,56 @@
 import './Game.css';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/swiper-bundle.css';
 
 const Game = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selections, setSelections] = useState([]); // Store user selections
-  const [imagePairs, setImagePairs] = useState([
+  const [selections, setSelections] = useState([]);
+  const [imagePairs] = useState([
     { human: 'http://localhost:5000/uploads/1726714251565-Human1.png', ai: 'http://localhost:5000/uploads/1726714251566-Ai1.png' },
     { human: 'http://localhost:5000/uploads/1726721778860-Human2.png', ai: 'http://localhost:5000/uploads/1726721778862-Ai2.png' },
     { human: 'http://localhost:5000/uploads/1726776698480-Human3.png', ai: 'http://localhost:5000/uploads/1726776698482-Ai3.png' },
     { human: 'http://localhost:5000/uploads/1726776822901-Human4.png', ai: 'http://localhost:5000/uploads/1726776822911-Ai4.png' },
     { human: 'http://localhost:5000/uploads/1726776839120-Human5.png', ai: 'http://localhost:5000/uploads/1726776839129-Ai5.png' },
   ]);
-  const [triesLeft, setTriesLeft] = useState(3); // Start with 3 tries
-  const [correctCount, setCorrectCount] = useState(0); // Track correct selections
-  const [isGameComplete, setIsGameComplete] = useState(false); // Game completion flag
-  const [showResults, setShowResults] = useState(false); // Flag to show results after each attempt
+  const [triesLeft, setTriesLeft] = useState(3);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [isGameComplete, setIsGameComplete] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [hasSubmittedOnce, setHasSubmittedOnce] = useState(false);
 
+  const swiperRef = useRef(null);
+
+  // Handle selection
   const handleSelection = (selectedImage, isHumanSelection) => {
     const newSelection = { selected: selectedImage, isHumanSelection };
     const updatedSelections = [...selections];
     updatedSelections[currentIndex] = newSelection;
     setSelections(updatedSelections);
 
-    if (currentIndex + 1 < imagePairs.length) {
-      setCurrentIndex(currentIndex + 1);
+    // Automatically slide to the next pair
+    if (swiperRef.current && currentIndex + 1 < imagePairs.length) {
+      swiperRef.current.slideNext();
     }
+
+    console.log("Updated Selections: ", updatedSelections);
   };
 
+  // Submit the user's choices
   const handleSubmit = () => {
+    setHasSubmittedOnce(true);
+
     let correct = 0;
     selections.forEach((selection, index) => {
       if (selection.isHumanSelection && selection.selected === imagePairs[index].human) {
         correct++;
       }
     });
+
     setCorrectCount(correct);
     setShowResults(true);
+
+    console.log(`Correct selections: ${correct}`);
 
     if (correct === imagePairs.length || triesLeft === 1) {
       setIsGameComplete(true);
@@ -49,12 +64,8 @@ const Game = () => {
     setCurrentIndex(0);
   };
 
-  const handleSwipe = (direction) => {
-    if (direction === 'next' && currentIndex + 1 < imagePairs.length) {
-      setCurrentIndex(currentIndex + 1);
-    } else if (direction === 'prev' && currentIndex - 1 >= 0) {
-      setCurrentIndex(currentIndex - 1);
-    }
+  const handleSwipe = (swiper) => {
+    setCurrentIndex(swiper.realIndex);
   };
 
   const isSubmitEnabled = selections.length === imagePairs.length;
@@ -66,34 +77,50 @@ const Game = () => {
       {!isGameComplete ? (
         <>
           <div className="status-bar">
-            <p>Correct Selections: {correctCount}/5</p>
+            {hasSubmittedOnce && <p>Correct Selections: {correctCount}/5</p>}
             <p>Tries Left: {triesLeft}</p>
           </div>
 
           {!showResults ? (
             <>
-              <div className="image-pair-container">
-                <div
-                  className={`image-container ${selections[currentIndex]?.selected === imagePairs[currentIndex].human ? 'selected' : ''}`}
-                  onClick={() => handleSelection(imagePairs[currentIndex].human, true)}
-                >
-                  <img src={imagePairs[currentIndex].human} alt="Human" />
-                </div>
-                <div
-                  className={`image-container ${selections[currentIndex]?.selected === imagePairs[currentIndex].ai ? 'selected' : ''}`}
-                  onClick={() => handleSelection(imagePairs[currentIndex].ai, false)}
-                >
-                  <img src={imagePairs[currentIndex].ai} alt="AI" />
-                </div>
-              </div>
+              <Swiper
+                loop={true}
+                onSlideChange={handleSwipe}
+                onSwiper={(swiper) => {
+                  swiperRef.current = swiper;
+                }}
+              >
+                {imagePairs.map((pair, index) => (
+                  <SwiperSlide key={index}>
+                    <div className="image-pair-container">
+                      {/* For selection process */}
+                      <div className={`image-container ${selections[currentIndex]?.selected === pair.human ? 'selected' : ''}`} onClick={() => handleSelection(pair.human, true)}>
+                        <img src={pair.human} alt="Human painting" />
+                      </div>
+                      <div className={`image-container ${selections[currentIndex]?.selected === pair.ai ? 'selected' : ''}`} onClick={() => handleSelection(pair.ai, false)}>
+                        <img src={pair.ai} alt="AI painting" />
+                      </div>
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
 
               <div className="navigation-buttons">
-                <button onClick={() => handleSwipe('prev')} disabled={currentIndex === 0}>
-                  Previous
-                </button>
-                <button onClick={() => handleSwipe('next')} disabled={currentIndex + 1 === imagePairs.length}>
-                  Next
-                </button>
+                {imagePairs.map((_, index) => (
+                  <button
+                    key={index}
+                    className={`nav-button ${currentIndex === index ? 'active' : ''}`}
+                    onClick={() => {
+                      if (swiperRef.current) {
+                        swiperRef.current.slideToLoop(index);
+                      } else {
+                        console.error('Swiper reference is undefined.');
+                      }
+                    }}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
               </div>
 
               <button
@@ -123,17 +150,22 @@ const Game = () => {
 
           <div className="thumbnail-grid">
             {imagePairs.map((pair, index) => {
-              const selection = selections[index];
-              const humanCorrect = selection?.isHumanSelection && selection?.selected === pair.human;
-              const humanWrong = selection?.isHumanSelection && selection?.selected !== pair.human;
-              const aiWrong = !selection?.isHumanSelection && selection?.selected === pair.ai;
+              const selection = selections[index];  // User's selection for this pair
+              const humanCorrect = selection?.selected === pair.human;  // Did they select the human image?
+              const aiWrong = selection?.selected === pair.ai;  // Did they select the AI image?
+
+              // Logging for clarity
+              console.log(`Pair ${index}: humanCorrect = ${humanCorrect}, aiWrong = ${aiWrong}`);
 
               return (
                 <div key={index} className="pair-thumbnails">
+                  {/* If they selected the human image correctly, apply the green border */}
                   <div className={`thumbnail-container ${humanCorrect ? 'correct' : ''}`}>
                     <img src={pair.human} alt={`Human selection for pair ${index + 1}`} />
                   </div>
-                  <div className={`thumbnail-container ${humanWrong || aiWrong ? 'wrong' : ''}`}>
+
+                  {/* If they selected the AI image thinking it was human, apply the red border */}
+                  <div className={`thumbnail-container ${aiWrong ? 'wrong' : ''}`}>
                     <img src={pair.ai} alt={`AI selection for pair ${index + 1}`} />
                   </div>
                 </div>
@@ -147,6 +179,7 @@ const Game = () => {
             <p>Congratulations! You've completed the puzzle.</p>
           )}
         </div>
+
       )}
     </div>
   );

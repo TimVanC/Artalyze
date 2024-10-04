@@ -1,20 +1,19 @@
 /* Image container */
 .image-container {
   position: relative;
-  display: inline-block;
+  display: block;
   margin: 10px;
 }
 
-/* Image size */
 .image-container img {
   width: 300px;
   height: 300px;
   object-fit: cover;
 }
 
-/* Green border for selected images */
+/* Green border for correct selections during game */
 .image-container.selected {
-  border: 5px solid #4CAF50; /* Green border */
+  border: 5px solid #4CAF50; /* Green border for selected image */
 }
 
 /* Centering the game container */
@@ -22,21 +21,20 @@
   text-align: center;
 }
 
-/* Status bar for tries and correct answers */
 .status-bar {
   margin-bottom: 20px;
   font-size: 1.2rem;
   font-weight: bold;
 }
 
-/* Navigation buttons */
+/* Navigation button styling */
 .navigation-buttons button {
   margin: 10px;
   padding: 10px 20px;
   font-size: 1rem;
 }
 
-/* Submit button */
+/* Submit button styles */
 .submit-button.enabled {
   background-color: #4CAF50;
   color: white;
@@ -53,21 +51,7 @@
   cursor: not-allowed;
 }
 
-.results {
-  font-size: 1.5rem;
-  margin-top: 20px;
-}
-
-.try-again-button {
-  margin-top: 20px;
-  padding: 10px 20px;
-  font-size: 1rem;
-  background-color: #4CAF50;
-  color: white;
-  cursor: pointer;
-}
-
-/* Image container for completion screen thumbnails */
+/* Thumbnail container for completion screen */
 .thumbnail-container {
   display: inline-block;
   margin: 10px;
@@ -79,10 +63,31 @@
   height: 100px;
 }
 
+/* Green border for correct answers in the completion screen */
 .thumbnail-container.correct {
   border: 3px solid green;
 }
 
+/* Red border for wrong answers in the completion screen */
 .thumbnail-container.wrong {
   border: 3px solid red;
+}
+
+/* Flexbox container for vertically aligning the image pairs */
+.image-pair-container {
+  display: flex;
+  flex-direction: column; /* Ensure vertical stacking */
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+}
+
+/* Correct selection during the selection process */
+.image-container.selected.correct {
+  border: 5px solid #4CAF50; /* Green border for correct */
+}
+
+/* Wrong selection during the completion process */
+.image-container.selected.wrong {
+  border: 5px solid red; /* Red border for wrong */
 }

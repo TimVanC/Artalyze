@@ -1,0 +1,86 @@
+/* Center everything */
+.home-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #B2CBED;
+    text-align: center;
+  }
+  
+  /* Logo */
+  .home-logo {
+    width: 125px;
+    height: auto;
+    margin-bottom: 20px;
+  }
+  
+  /* Title */
+  .title {
+    font-family: 'Lato', sans-serif;
+    font-size: 36px;
+    font-weight: 700;
+    color: #2E294E;
+    margin-bottom: 10px;
+  }
+  
+  /* Description */
+  .description {
+    font-family: 'Lato', sans-serif;
+    font-size: 20px;
+    font-weight: 300;
+    color: #2E294E;
+    margin-bottom: 30px;
+  }
+  
+  /* Buttons */
+  button {
+    font-family: 'Lato', sans-serif;
+    border-radius: 20px;
+    padding: 10px 40px;
+    font-size: 16px;
+    font-weight: 400;
+    margin-bottom: 15px;
+    cursor: pointer;
+  }
+  
+  .play-button {
+    background-color: black;
+    color: white;
+    border: 2px solid black;
+  }
+  
+  .login-button {
+    background-color: transparent;
+    border: 2px solid black;
+    color: black;
+  }
+  
+  /* Date, No. x, and author text */
+  .text-container p {
+    font-family: 'Lato', sans-serif;
+    color: #333333;
+    text-align: center;
+    margin: 5px 0;
+  }
+  
+  /* Date */
+  .text-container .date {
+    font-size: 16px;
+    font-weight: 400;
+  }
+  
+  /* No. X */
+  .text-container .puzzle-number {
+    font-size: 14px;
+    font-weight: 300;
+  }
+  
+  /* Author */
+  .text-container .author {
+    font-size: 14px;
+    font-weight: 300;
+    color: #666666;
+  }
+  
