@@ -2,7 +2,49 @@ import './Game.css';
 import React, { useState, useRef, useEffect } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/swiper-bundle.css';
-import { FaPalette, FaInfoCircle, FaChartBar, FaCog } from 'react-icons/fa';
+import { FaPalette, FaInfoCircle, FaChartBar, FaCog, FaShareAlt } from 'react-icons/fa';
+import InfoModal from '../components/InfoModal';
+
+// Completion messages based on score
+const completionMessages = {
+  0: [
+    "Tough luck! But hey, there's always tomorrow!",
+    "Not your day? Don’t worry, try again tomorrow!",
+    "Missed them all, but the next game awaits!"
+  ],
+  1: [
+    "A small victory! You got 1 right. Come back for more!",
+    "One down, but there’s room to improve!",
+    "You got 1 correct! Keep challenging yourself!"
+  ],
+  2: [
+    "Almost halfway! Keep going, you’re getting there!",
+    "Two right! Not bad, but there’s room for improvement.",
+    "You got 2 right—nicely done! Try for more next time."
+  ],
+  3: [
+    "Solid effort! You’re halfway there. Keep it up!",
+    "Three out of five! You’re on the right track!",
+    "Nicely done! 3 correct answers—almost there!"
+  ],
+  4: [
+    "So close! You nailed 4 out of 5!",
+    "Almost perfect! Just one shy of a full score.",
+    "You got 4 right—fantastic job! Can you make it 5 tomorrow?"
+  ],
+  5: [
+    "Perfect score! 5 out of 5! You’re on fire!",
+    "Amazing! You got them all right! Way to go!",
+    "5/5! You’ve mastered today’s challenge!"
+  ]
+};
+
+// Function to get a random message based on score
+const getRandomCompletionMessage = (score) => {
+  const messages = completionMessages[score];
+  const randomIndex = Math.floor(Math.random() * messages.length);
+  return messages[randomIndex];
+};
 
 // Function to generate shareable result
 const generateArtalyzeShareableResult = (results) => {
@@ -16,13 +58,11 @@ const handleShare = (results) => {
   const shareableText = generateArtalyzeShareableResult(results);
 
   if (navigator.share) {
-    // If the Share API is supported, use it for a native sharing dialog
     navigator.share({
       title: 'My Artalyze Score',
       text: shareableText
     }).catch((error) => console.log('Error sharing:', error));
   } else {
-    // Fallback to copying to clipboard
     navigator.clipboard.writeText(shareableText).then(() => {
       alert("Results copied to clipboard! You can now paste it anywhere.");
     }).catch((error) => {
@@ -40,6 +80,9 @@ const Game = () => {
   const [showResults, setShowResults] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState(null);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [showScoreOverlay, setShowScoreOverlay] = useState(true); 
+  const [selectedCompletionMessage, setSelectedCompletionMessage] = useState("");
 
   const initialImagePairs = [
     { human: 'http://localhost:5000/uploads/1728260151091-Human-01.png', ai: 'http://localhost:5000/uploads/1728260592402-Ai-01.png' },
@@ -92,20 +135,26 @@ const Game = () => {
     });
 
     setCorrectCount(correct);
+    const message = getRandomCompletionMessage(correct);
+    setSelectedCompletionMessage(message);
 
     if (correct === imagePairs.length || triesLeft === 1) {
-      setIsGameComplete(true); // Directly go to the completion screen
-      setShowOverlay(false);   // Make sure overlay does not show
-      setShowResults(false);   // Ensure no results overlay
+      setIsGameComplete(true); 
+      setShowOverlay(false); 
+      setShowResults(false); 
     } else {
-      setShowOverlay(true);    // Show overlay for incorrect attempts
+      setShowOverlay(true); 
       setTriesLeft(triesLeft - 1);
     }
   };
 
   const handleTryAgain = () => {
-    setShowOverlay(false); // Hide overlay but keep selections
-    setShowResults(false); // Reset results without resetting Swiper
+    setShowOverlay(false);
+    setShowResults(false);
+  };
+
+  const handleDismissOverlay = () => {
+    setShowScoreOverlay(false);
   };
 
   const handleSwipe = (swiper) => {
@@ -118,23 +167,41 @@ const Game = () => {
 
   const isSubmitEnabled = selections.length === imagePairs.length;
 
+  const getScoreOverlayMessage = () => {
+    if (correctCount === 5) {
+      return "Perfect Score! 🎉 You got all 5 correct!";
+    } else if (correctCount === 0) {
+      return "Better Luck Next Time! You scored 0/5. Come back tomorrow to try again!";
+    } else {
+      return `Well Done! You scored ${correctCount}/5!`;
+    }
+  };
+
   return (
     <div className="game-container">
-      {/* Top Bar */}
+      {isGameComplete && showScoreOverlay && (
+        <div className="score-overlay">
+          <div className="score-overlay-content">
+            <h2>{getScoreOverlayMessage()}</h2>
+            <button className="view-results-button" onClick={handleDismissOverlay}>View Results</button>
+          </div>
+        </div>
+      )}
+
       <div className="top-bar">
         <div className="app-title">Artalyze</div>
         <div className="icons-right">
-          <FaInfoCircle className="icon" title="Info" />
+          <FaInfoCircle className="icon" title="Info" onClick={() => setIsInfoOpen(true)} />
           <FaChartBar className="icon" title="Stats" />
           <FaCog className="icon" title="Settings" />
         </div>
       </div>
 
+      <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
+
       {!isGameComplete && (
         <>
           <h1>Guess the human painting from each pair!</h1>
-
-          {/* Progress Bar */}
           <div className="progress-bar-container">
             <div className="progress-bar">
               {[...Array(5)].map((_, index) => (
@@ -218,7 +285,6 @@ const Game = () => {
         </>
       )}
 
-      {/* Overlay */}
       {showOverlay && (
         <div className="results-overlay">
           <div className="overlay-content">
@@ -239,38 +305,37 @@ const Game = () => {
         </div>
       )}
 
-{isGameComplete && (
-  <div className="completion-screen">
-    <h2>Game Complete!</h2>
-    <p>{correctCount}/5 correct</p>
-    <div className="horizontal-thumbnail-grid">
-      {imagePairs.map((pair, index) => {
-        const selection = selections[index];
-        const isCorrect = selection?.selected === pair.human;
+      {isGameComplete && !showScoreOverlay && (
+        <div className="completion-screen">
+          <p>{selectedCompletionMessage}</p>
+          <div className="horizontal-thumbnail-grid">
+            {imagePairs.map((pair, index) => {
+              const selection = selections[index];
+              const isCorrect = selection?.selected === pair.human;
 
-        return (
-          <div key={index} className="pair-thumbnails-horizontal">
-            {/* Ensure only the human image is highlighted in green for correct guesses */}
-            <div className={`thumbnail-container ${isCorrect && pair.images[0] === pair.human ? 'correct' : (selection?.selected === pair.images[0] ? 'incorrect' : '')}`}>
-              <img src={pair.images[0]} alt={`First painting for pair ${index + 1}`} />
-            </div>
-            <div className={`thumbnail-container ${isCorrect && pair.images[1] === pair.human ? 'correct' : (selection?.selected === pair.images[1] ? 'incorrect' : '')}`}>
-              <img src={pair.images[1]} alt={`Second painting for pair ${index + 1}`} />
-            </div>
+              return (
+                <div key={index} className="pair-thumbnails-horizontal">
+                  <div className={`thumbnail-container ${isCorrect && pair.images[0] === pair.human ? 'correct' : (selection?.selected === pair.images[0] ? 'incorrect' : '')}`}>
+                    <img src={pair.images[0]} alt={`First painting for pair ${index + 1}`} />
+                  </div>
+                  <div className={`thumbnail-container ${isCorrect && pair.images[1] === pair.human ? 'correct' : (selection?.selected === pair.images[1] ? 'incorrect' : '')}`}>
+                    <img src={pair.images[1]} alt={`Second painting for pair ${index + 1}`} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
-    </div>
-    <div className="completion-buttons">
-      <button className="stats-button">See Stats</button>
-      <button className="share-button" onClick={() => handleShare([true, true, false, true, false])}>Share</button>
-    </div>
-  </div>
-)}
+          <div className="completion-buttons">
+            <button className="stats-button">
+              <FaChartBar /> See Stats
+            </button>
+            <button className="share-button" onClick={() => handleShare([true, true, false, true, false])}>
+              <FaShareAlt /> Share
+            </button>
+          </div>
+        </div>
+      )}
 
-
-
-      {/* Enlarged Image Modal */}
       {enlargedImage && (
         <div className="enlarge-modal" onClick={closeEnlargedImage}>
           <img src={enlargedImage} alt="Enlarged view" className="enlarged-image" />
