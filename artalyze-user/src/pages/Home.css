@@ -1,86 +1,93 @@
+/* Global font */
+body {
+  font-family: 'Lato', sans-serif;
+}
+
 /* Center everything */
 .home-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background-color: #B2CBED;
-    text-align: center;
-  }
-  
-  /* Logo */
-  .home-logo {
-    width: 125px;
-    height: auto;
-    margin-bottom: 20px;
-  }
-  
-  /* Title */
-  .title {
-    font-family: 'Lato', sans-serif;
-    font-size: 36px;
-    font-weight: 700;
-    color: #2E294E;
-    margin-bottom: 10px;
-  }
-  
-  /* Description */
-  .description {
-    font-family: 'Lato', sans-serif;
-    font-size: 20px;
-    font-weight: 300;
-    color: #2E294E;
-    margin-bottom: 30px;
-  }
-  
-  /* Buttons */
-  button {
-    font-family: 'Lato', sans-serif;
-    border-radius: 20px;
-    padding: 10px 40px;
-    font-size: 16px;
-    font-weight: 400;
-    margin-bottom: 15px;
-    cursor: pointer;
-  }
-  
-  .play-button {
-    background-color: black;
-    color: white;
-    border: 2px solid black;
-  }
-  
-  .login-button {
-    background-color: transparent;
-    border: 2px solid black;
-    color: black;
-  }
-  
-  /* Date, No. x, and author text */
-  .text-container p {
-    font-family: 'Lato', sans-serif;
-    color: #333333;
-    text-align: center;
-    margin: 5px 0;
-  }
-  
-  /* Date */
-  .text-container .date {
-    font-size: 16px;
-    font-weight: 400;
-  }
-  
-  /* No. X */
-  .text-container .puzzle-number {
-    font-size: 14px;
-    font-weight: 300;
-  }
-  
-  /* Author */
-  .text-container .author {
-    font-size: 14px;
-    font-weight: 300;
-    color: #666666;
-  }
-  
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #B2CBED;
+  text-align: center;
+}
+
+/* Logo */
+.home-logo {
+  width: 125px;
+  height: auto;
+  margin-bottom: 20px;
+}
+
+/* Title */
+.home-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: #2E294E;
+  margin-bottom: 10px;
+}
+
+/* Description */
+.home-description {
+  font-size: 17px;
+  font-weight: 300;
+  color: #2E294E;
+  margin-bottom: 30px;
+}
+
+/* Buttons */
+button {
+  border-radius: 20px !important;
+  padding: 10px 50px !important;
+  font-size: 16px;
+  font-weight: 400;
+  margin-bottom: 15px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.play-button {
+  background-color: black;
+  color: white;
+  border: 2px solid black;
+}
+
+.play-button:hover {
+  background-color: #333;
+}
+
+.login-button {
+  background-color: transparent;
+  color: black;
+  border: 2px solid black;
+}
+
+.login-button:hover {
+  background-color: black;
+  color: white;
+}
+
+/* Date, No. x, and author text */
+.date, .number, .author {
+  color: #333333;
+  text-align: center;
+  margin: 5px 0;
+}
+
+.date {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.puzzle-number {
+  font-size: 14px;
+  font-weight: 300;
+}
+
+.author {
+  font-size: 14px;
+  font-weight: 300;
+  color: #666666;
+}

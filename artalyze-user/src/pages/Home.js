@@ -11,7 +11,7 @@ const Home = () => {
   };
 
   const handleLoginClick = () => {
-    navigate('/login');
+    navigate('/login'); // Redirect to the login page
   };
 
   return (
@@ -21,9 +21,11 @@ const Home = () => {
       <p className="home-description">Can you spot the human masterpiece?</p>
       <button className="play-button" onClick={handlePlayClick}>Play</button>
       <button className="login-button" onClick={handleLoginClick}>Log In</button>
-      <p className="date">September 20, 2024</p>
-      <p className="number">No. 1</p>
-      <p className="author">By Tim Van Cauwenberge</p>
+      <div className="text-container">
+        <p className="date">September 20, 2024</p>
+        <p className="puzzle-number">No. 1</p>
+        <p className="author">By Tim Van Cauwenberge</p>
+      </div>
     </div>
   );
 };

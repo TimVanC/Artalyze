@@ -1,19 +1,21 @@
+require('dotenv').config(); // Load environment variables
 const express = require('express');
 const cors = require('cors');
-const bodyParser = require('body-parser');
 const authRoutes = require('./routes/authRoutes'); // Authentication routes
 const gameRoutes = require('./routes/gameRoutes'); // Game-related routes
 const imageRoutes = require('./routes/imageRoutes'); // Image upload routes
 const connectDB = require('./config/db'); // Database connection function
-require('dotenv').config(); // Load environment variables
 
 const app = express();
 
+// Check if environment variables are loaded
+console.log("EMAIL_USER:", process.env.EMAIL_USER);
+console.log("EMAIL_PASS:", process.env.EMAIL_PASS);
+
 // Middleware
-app.use(express.json());
 app.use(cors()); // Enable CORS for cross-origin requests
-app.use(bodyParser.json()); // Parse JSON bodies
-app.use(bodyParser.urlencoded({ extended: true })); // Parse URL-encoded bodies
+app.use(express.json()); // Parse JSON bodies
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
 // Connect to the database
 connectDB();
