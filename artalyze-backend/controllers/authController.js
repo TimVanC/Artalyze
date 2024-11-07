@@ -61,11 +61,11 @@ exports.verifyOtp = (req, res) => {
 exports.registerUser = async (req, res) => {
   console.log("Received data:", req.body);
   try {
-    const { firstName, lastName, email, password } = req.body;
+    const { email, password } = req.body;
 
     // Validate required fields
-    if (!firstName || !lastName || !email || !password) {
-      return res.status(400).json({ message: 'All fields are required' });
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
     }
 
     // Check if email is already registered
@@ -78,18 +78,19 @@ exports.registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new user
-    const newUser = new User({ firstName, lastName, email, password: hashedPassword });
+    const newUser = new User({ email, password: hashedPassword });
     await newUser.save();
 
     // Generate a JWT
     const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET);
 
-    res.status(201).json({ token, user: { firstName: newUser.firstName, lastName: newUser.lastName, email: newUser.email } });
+    res.status(201).json({ token, user: { email: newUser.email } });
   } catch (error) {
     console.error("Registration error:", error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 // Login user
 exports.loginUser = async (req, res) => {

@@ -13,7 +13,7 @@ console.log("EMAIL_USER:", process.env.EMAIL_USER);
 console.log("EMAIL_PASS:", process.env.EMAIL_PASS);
 
 // Middleware
-app.use(cors()); // Enable CORS for cross-origin requests
+app.use(cors({ origin: 'http://localhost:3000' }));
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 

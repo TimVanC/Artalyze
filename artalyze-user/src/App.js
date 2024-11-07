@@ -3,7 +3,7 @@ import Home from './pages/Home';
 import Game from './pages/Game';
 import Stats from './pages/Stats';
 import Settings from './pages/Settings';
-import Register from './pages/Register';
+// import Register from './pages/Register';
 import Login from './pages/Login';
 
 function App() {
@@ -14,7 +14,7 @@ function App() {
         <Route path="/game" element={<Game />} />
         <Route path="/stats" element={<Stats />} /> {/* Add Stats route */}
         <Route path="/settings" element={<Settings />} /> {/* Add Settings route */}
-        <Route path="/register" element={<Register />} />
+        {/* <Route path="/register" element={<Register />} /> */}
         <Route path="/login" element={<Login />} />
       </Routes>
     </Router>
