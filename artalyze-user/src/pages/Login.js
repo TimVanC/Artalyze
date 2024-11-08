@@ -50,20 +50,22 @@ const Login = () => {
   };
 
   // Step 3: Handle new user registration
-  const handleRegisterSubmit = async (e) => {
+  const handleLoginOrRegisterSubmit = async (e) => {
     e.preventDefault();
+    const endpoint = step === 3 && otp ? '/api/auth/register' : '/api/auth/login';
+  
     try {
-      const response = await axios.post('/api/auth/register', {
-        firstName,
-        lastName,
-        email,
-        password,
-      });
-      console.log('Registered successfully:', response.data);
+      const response = await axios.post(endpoint, { email, password, firstName, lastName });
+      
+      // Store token in local storage with key 'authToken'
+      localStorage.setItem('authToken', response.data.token);
+      
+      // Redirect to game after successful login or registration
+      console.log(`${otp ? 'Registered' : 'Logged in'} successfully:`, response.data);
       navigate('/game');
     } catch (error) {
-      console.error('Registration error:', error);
-      setError('Registration failed. Please try again.');
+      console.error('Authentication error:', error);
+      setError('Authentication failed. Please check your credentials.');
     }
   };
 
@@ -72,13 +74,14 @@ const Login = () => {
     e.preventDefault();
     try {
       const response = await axios.post('/api/auth/login', { email, password });
-      console.log('Logged in successfully:', response.data);
-      navigate('/game');
+      localStorage.setItem('authToken', response.data.token);
+      navigate('/game'); // Redirect to the game screen
     } catch (error) {
       console.error('Login error:', error);
       setError('Login failed. Please check your credentials.');
     }
   };
+  
 
   return (
     <div className="login-container">
@@ -113,7 +116,7 @@ const Login = () => {
       )}
 
       {step === 3 && (
-        <form onSubmit={handleRegisterSubmit}>
+        <form onSubmit={handleLoginOrRegisterSubmit}>
           <h2>Create Your Account</h2>
           <input type="text" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
           <input type="text" placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} required />

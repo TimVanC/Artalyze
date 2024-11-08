@@ -7,11 +7,11 @@ const Home = () => {
   const navigate = useNavigate();
 
   const handlePlayClick = () => {
-    navigate('/game');
+    navigate('/game'); // Directly navigate to game screen, regardless of login status
   };
 
   const handleLoginClick = () => {
-    navigate('/login'); // Redirect to the login page
+    navigate('/login'); // Navigate to login page
   };
 
   return (

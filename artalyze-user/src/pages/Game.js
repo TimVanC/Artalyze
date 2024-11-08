@@ -4,6 +4,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/swiper-bundle.css';
 import { FaPalette, FaInfoCircle, FaChartBar, FaCog, FaShareAlt } from 'react-icons/fa';
 import InfoModal from '../components/InfoModal';
+import { useNavigate } from 'react-router-dom';
 
 // Completion messages based on score
 const completionMessages = {
@@ -72,6 +73,16 @@ const handleShare = (results) => {
 };
 
 const Game = () => {
+  const navigate = useNavigate();
+
+  // Check for auth token on component load
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      navigate('/login');
+    }
+  }, [navigate]);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selections, setSelections] = useState([]);
   const [triesLeft, setTriesLeft] = useState(3);
@@ -177,6 +188,12 @@ const Game = () => {
     }
   };
 
+  // Logout function
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    navigate('/login');
+  };
+
   return (
     <div className="game-container">
       {isGameComplete && showScoreOverlay && (
@@ -193,7 +210,7 @@ const Game = () => {
         <div className="icons-right">
           <FaInfoCircle className="icon" title="Info" onClick={() => setIsInfoOpen(true)} />
           <FaChartBar className="icon" title="Stats" />
-          <FaCog className="icon" title="Settings" />
+          <FaCog className="icon" title="Settings" onClick={handleLogout} />
         </div>
       </div>
 
