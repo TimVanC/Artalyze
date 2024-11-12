@@ -38,7 +38,7 @@ body {
 }
 
 /* Buttons */
-button {
+.home-container button {
   border-radius: 20px !important;
   padding: 10px 50px !important;
   font-size: 16px;

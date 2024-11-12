@@ -122,18 +122,27 @@ h1 {
   margin: 10px 0;
 }
 
-.nav-button {
+/* Use a unique class for nav buttons */
+.navigation-buttons .nav-button {
   background-color: #ccc;
   color: white;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
   border: none;
-  padding: 10px 20px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
   cursor: pointer;
-  margin: 0 5px;
+  margin: 0 8px;
+  transition: background-color 0.3s ease;
 }
 
-.nav-button.active {
-  background-color: #4CAF50;
+.navigation-buttons .nav-button.active {
+  background-color: #4d73af;
 }
+
 
 .submit-button {
   background-color: grey;
@@ -142,10 +151,13 @@ h1 {
   font-size: 18px;
   border: none;
   cursor: pointer;
+  border-radius: 20px;
+  margin: 5% 0;
+  width: 30%;
 }
 
 .submit-button.enabled {
-  background-color: #4CAF50;
+  background-color: #000;
 }
 
 .submit-button.disabled {
@@ -324,3 +336,11 @@ h1 {
 .stats-button:focus, .share-button:focus {
   outline: none;
 }
+
+
+.icon {
+  cursor: pointer;
+}
+
+
+

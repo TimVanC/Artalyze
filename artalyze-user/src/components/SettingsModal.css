@@ -1,0 +1,58 @@
+.settings-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .settings-modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 300px;
+    text-align: center;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  }
+  
+  .settings-options {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .settings-options li {
+    margin: 10px 0;
+  }
+  
+  .settings-button {
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: #333;
+    cursor: pointer;
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    transition: background-color 0.3s;
+  }
+  
+  .settings-button:hover {
+    background-color: #f5f5f5;
+  }
+  
+  .close-modal {
+    margin-top: 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  

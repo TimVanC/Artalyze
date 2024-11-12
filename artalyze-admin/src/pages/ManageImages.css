@@ -1,0 +1,46 @@
+/* ManageImages.css */
+
+.manage-images-container {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.dropzone-container {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.dropzone {
+  width: 45%;
+  height: 150px;
+  border: 2px dashed #aaa;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  margin: 20px;
+}
+
+.scheduled-date-container {
+  margin-bottom: 20px;
+}
+
+.upload-button {
+  padding: 10px 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.upload-button:hover {
+  background-color: #45a049;
+}
+
+.upload-message {
+  margin-top: 15px;
+  font-weight: bold;
+}

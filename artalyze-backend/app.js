@@ -1,9 +1,11 @@
 require('dotenv').config(); // Load environment variables
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const authRoutes = require('./routes/authRoutes'); // Authentication routes
 const gameRoutes = require('./routes/gameRoutes'); // Game-related routes
 const imageRoutes = require('./routes/imageRoutes'); // Image upload routes
+const adminRoutes = require('./routes/adminRoutes'); // Admin-related routes for image pairs
 const connectDB = require('./config/db'); // Database connection function
 
 const app = express();
@@ -13,7 +15,11 @@ console.log("EMAIL_USER:", process.env.EMAIL_USER);
 console.log("EMAIL_PASS:", process.env.EMAIL_PASS);
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:3000' }));
+app.use(cors({
+    origin: 'http://localhost:3001', // Allow access from frontend admin port (React app)
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true // Allow cookies/sessions if needed
+}));
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
@@ -27,6 +33,7 @@ app.use('/uploads', express.static('uploads'));
 app.use('/api/auth', authRoutes); // Authentication routes
 app.use('/api/game', gameRoutes); // Game-related routes
 app.use('/api/images', imageRoutes); // Image upload routes
+app.use('/api/admin', adminRoutes); // Admin routes for managing image pairs
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -36,7 +43,6 @@ app.use((err, req, res, next) => {
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
-    const path = require('path');
     app.use(express.static(path.join(__dirname, '../artalyze-user/build')));
     app.get('*', (req, res) => {
         res.sendFile(path.resolve(__dirname, '../artalyze-user', 'build', 'index.html'));
