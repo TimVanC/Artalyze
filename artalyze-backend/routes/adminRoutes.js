@@ -4,6 +4,8 @@ const express = require('express');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const ImagePair = require('../models/ImagePair');
+const User = require('../models/User'); // Import the User model
+const { authenticateToken, authorizeAdmin } = require('../middleware/authMiddleware'); // Import middleware
 const router = express.Router();
 const streamifier = require('streamifier');
 
@@ -35,6 +37,58 @@ const uploadToCloudinary = (fileBuffer, folderName) => {
     streamifier.createReadStream(fileBuffer).pipe(uploadStream);
   });
 };
+
+// Add/Edit/Delete Users Endpoints
+router.post('/add-user', authenticateToken, authorizeAdmin, async (req, res) => {
+  try {
+    const { firstName, lastName, email, password, role } = req.body;
+
+    // Create new user
+    const newUser = new User({ firstName, lastName, email, password, role });
+    await newUser.save();
+    res.status(201).json({ message: 'User created successfully', data: newUser });
+  } catch (error) {
+    console.error('Error adding user:', error);
+    res.status(500).json({ error: 'Failed to add user' });
+  }
+});
+
+router.put('/edit-user/:id', authenticateToken, authorizeAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { firstName, lastName, email, role } = req.body;
+
+    // Update user details
+    const updatedUser = await User.findByIdAndUpdate(id, { firstName, lastName, email, role }, { new: true });
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.status(200).json({ message: 'User updated successfully', data: updatedUser });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+router.delete('/delete-user/:id', authenticateToken, authorizeAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Delete user
+    const deletedUser = await User.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.status(200).json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
 
 // POST endpoint for uploading or updating an image pair
 router.post('/upload-image-pair', upload.fields([{ name: 'humanImage' }, { name: 'aiImage' }]), async (req, res) => {
