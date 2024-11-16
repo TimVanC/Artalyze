@@ -10,6 +10,11 @@
     margin-bottom: 20px;
 }
 
+/* Reset button color for calendar navigation */
+.react-calendar button {
+    color: #000 !important; /* Set text color to black */
+}
+
 .existing-pairs-wrapper {
     display: flex;
     flex-wrap: wrap;

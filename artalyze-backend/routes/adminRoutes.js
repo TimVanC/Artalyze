@@ -4,10 +4,11 @@ const express = require('express');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const ImagePair = require('../models/ImagePair');
-const User = require('../models/User'); // Import the User model
 const { authenticateToken, authorizeAdmin } = require('../middleware/authMiddleware'); // Import middleware
+const { getAllUsers, createUser, updateUser, deleteUser } = require('../controllers/UserManagement'); // Import User Management Controller
 const router = express.Router();
 const streamifier = require('streamifier');
+const jwt = require('jsonwebtoken');
 
 // Multer setup for file handling (store in memory)
 const storage = multer.memoryStorage();
@@ -38,57 +39,11 @@ const uploadToCloudinary = (fileBuffer, folderName) => {
   });
 };
 
-// Add/Edit/Delete Users Endpoints
-router.post('/add-user', authenticateToken, authorizeAdmin, async (req, res) => {
-  try {
-    const { firstName, lastName, email, password, role } = req.body;
-
-    // Create new user
-    const newUser = new User({ firstName, lastName, email, password, role });
-    await newUser.save();
-    res.status(201).json({ message: 'User created successfully', data: newUser });
-  } catch (error) {
-    console.error('Error adding user:', error);
-    res.status(500).json({ error: 'Failed to add user' });
-  }
-});
-
-router.put('/edit-user/:id', authenticateToken, authorizeAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { firstName, lastName, email, role } = req.body;
-
-    // Update user details
-    const updatedUser = await User.findByIdAndUpdate(id, { firstName, lastName, email, role }, { new: true });
-
-    if (!updatedUser) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    res.status(200).json({ message: 'User updated successfully', data: updatedUser });
-  } catch (error) {
-    console.error('Error updating user:', error);
-    res.status(500).json({ error: 'Failed to update user' });
-  }
-});
-
-router.delete('/delete-user/:id', authenticateToken, authorizeAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Delete user
-    const deletedUser = await User.findByIdAndDelete(id);
-
-    if (!deletedUser) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    res.status(200).json({ message: 'User deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting user:', error);
-    res.status(500).json({ error: 'Failed to delete user' });
-  }
-});
+// Add/Edit/Delete Users Endpoints using User Management Controller
+router.get('/users', authenticateToken, authorizeAdmin, getAllUsers);
+router.post('/users', authenticateToken, authorizeAdmin, createUser);
+router.put('/users/:id', authenticateToken, authorizeAdmin, updateUser);
+router.delete('/users/:id', authenticateToken, authorizeAdmin, deleteUser);
 
 // POST endpoint for uploading or updating an image pair
 router.post('/upload-image-pair', upload.fields([{ name: 'humanImage' }, { name: 'aiImage' }]), async (req, res) => {
@@ -198,6 +153,42 @@ router.get('/get-image-pairs-by-date/:scheduledDate', async (req, res) => {
   } catch (error) {
     console.error('Error fetching image pairs:', error);
     res.status(500).json({ error: 'Failed to fetch image pairs' });
+  }
+});
+
+// POST endpoint for admin login
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Fetch admin email and password from environment variables
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (email === adminEmail && password === adminPassword) {
+      // Generate a token that doesn't expire
+      const token = jwt.sign(
+        { email, isAdmin: true },
+        process.env.JWT_SECRET,
+        { expiresIn: '0' }  // Setting expiresIn to '0' means the token will never expire
+      );
+      res.json({ token });
+    } else {
+      res.status(401).json({ message: 'Invalid email or password.' });
+    }
+  } catch (error) {
+    console.error('Admin Login Error:', error);
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+});
+
+router.get('/users', authenticateToken, authorizeAdmin, async (req, res) => {
+  try {
+    const users = await User.find();
+    res.status(200).json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Failed to fetch users.' });
   }
 });
 
