@@ -14,6 +14,7 @@ function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/" element={<Navigate to="/admin-overview" />} />
         <Route path="/login" element={<Login />} />
         <Route
           path="/admin-overview"
