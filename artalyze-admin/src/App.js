@@ -11,13 +11,15 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
+  const isLoggedIn = localStorage.getItem('adminToken');
+
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Navigate to="/admin-overview" />} />
+        <Route path="/" element={isLoggedIn ? <Navigate to="/overview" /> : <Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
         <Route
-          path="/admin-overview"
+          path="/overview"
           element={
             <ProtectedRoute>
               <AdminOverview />
