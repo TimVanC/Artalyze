@@ -26,24 +26,32 @@ exports.emailCheck = async (req, res) => {
 
 // Generate and send OTP for email verification
 exports.requestOtp = async (req, res) => {
-    const { email } = req.body;
-    try {
+  const { email } = req.body;
+
+  try {
+      // Verify that the email is not already registered
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+          return res.status(400).json({ message: 'Email already in use. Please log in instead.' });
+      }
+
       const otp = generateOTP();
       otpStore[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 }; // 10-minute expiry
-  
+
       // Send OTP email with the HTML template
       await sendEmail(
-        email,
-        'Your Artalyze Verification Code',
-        otp // Pass the OTP to replace in the template
+          email,
+          'Your Artalyze Verification Code',
+          otp // Pass the OTP to replace in the template
       );
-  
+
       res.status(200).json({ message: 'OTP sent to email' });
-    } catch (error) {
+  } catch (error) {
       console.error('Error requesting OTP:', error);
       res.status(500).json({ message: 'Error sending OTP' });
-    }
-  };  
+  }
+};
+
 
 // Verify OTP
 exports.verifyOtp = (req, res) => {
@@ -61,11 +69,11 @@ exports.verifyOtp = (req, res) => {
 exports.registerUser = async (req, res) => {
   console.log("Received data:", req.body);
   try {
-    const { email, password } = req.body;
+    const { email, password, firstName, lastName } = req.body; // Include firstName and lastName here
 
     // Validate required fields
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
+    if (!email || !password || !firstName || !lastName) {
+      return res.status(400).json({ message: 'Email, password, first name, and last name are required' });
     }
 
     // Check if email is already registered
@@ -77,14 +85,14 @@ exports.registerUser = async (req, res) => {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new user
-    const newUser = new User({ email, password: hashedPassword });
+    // Create new user with firstName and lastName
+    const newUser = new User({ email, password: hashedPassword, firstName, lastName });
     await newUser.save();
 
     // Generate a JWT
     const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET);
 
-    res.status(201).json({ token, user: { email: newUser.email } });
+    res.status(201).json({ token, user: { email: newUser.email, firstName, lastName } });
   } catch (error) {
     console.error("Registration error:", error);
     res.status(500).json({ message: 'Server error' });
@@ -125,3 +133,33 @@ exports.getCurrentUser = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+// Resend OTP
+exports.resendOtp = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    // Check if the user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Generate a new OTP
+    const otp = generateOTP(); // Assuming `generateOTP` returns a 6-digit OTP
+    otpStore[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 }; // 10-minute expiry
+
+    // Send OTP email with the HTML template
+    await sendEmail(
+      email,
+      'Your Artalyze Verification Code (Resend)',
+      otp // Pass the OTP to replace in the template
+    );
+
+    res.status(200).json({ message: 'OTP resent to email successfully.' });
+  } catch (error) {
+    console.error('Error resending OTP:', error);
+    res.status(500).json({ message: 'Failed to resend OTP.' });
+  }
+};
+

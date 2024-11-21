@@ -12,6 +12,7 @@ const Login = () => {
   const [lastName, setLastName] = useState('');
   const [error, setError] = useState('');
   const [step, setStep] = useState(1); // 1: Email check, 2: OTP, 3: Registration form, 4: Password login
+  const [resendMessage, setResendMessage] = useState(''); // State for resend message
 
   // Step 1: Handle email submission to check if it exists
   const handleEmailSubmit = async (e) => {
@@ -40,6 +41,8 @@ const Login = () => {
   // Step 2: Handle OTP verification
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+
     try {
       await axios.post('/api/auth/verify-otp', { email, otp });
       setStep(3); // New user registration form step
@@ -49,19 +52,25 @@ const Login = () => {
     }
   };
 
+  // Handle Resend OTP
+  const handleResendOtp = async () => {
+    try {
+      const response = await axios.post('/api/auth/resend-otp', { email });
+      setResendMessage(response.data.message); // Display the resend OTP message
+    } catch (error) {
+      console.error('Resend OTP error:', error);
+      setResendMessage('Failed to resend OTP. Please try again.');
+    }
+  };
+
   // Step 3: Handle new user registration
   const handleLoginOrRegisterSubmit = async (e) => {
     e.preventDefault();
     const endpoint = step === 3 && otp ? '/api/auth/register' : '/api/auth/login';
-  
+
     try {
       const response = await axios.post(endpoint, { email, password, firstName, lastName });
-      
-      // Store token in local storage with key 'authToken'
       localStorage.setItem('authToken', response.data.token);
-      
-      // Redirect to game after successful login or registration
-      console.log(`${otp ? 'Registered' : 'Logged in'} successfully:`, response.data);
       navigate('/game');
     } catch (error) {
       console.error('Authentication error:', error);
@@ -72,6 +81,8 @@ const Login = () => {
   // Step 4: Handle login for existing users
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+
     try {
       const response = await axios.post('/api/auth/login', { email, password });
       localStorage.setItem('authToken', response.data.token);
@@ -81,7 +92,6 @@ const Login = () => {
       setError('Login failed. Please check your credentials.');
     }
   };
-  
 
   return (
     <div className="login-container">
@@ -111,7 +121,11 @@ const Login = () => {
             required
           />
           {error && <p className="error-message">{error}</p>}
+          {resendMessage && <p className="resend-message">{resendMessage}</p>}
           <button type="submit">Verify OTP</button>
+          <button type="button" onClick={handleResendOtp}>
+            Resend OTP
+          </button>
         </form>
       )}
 
