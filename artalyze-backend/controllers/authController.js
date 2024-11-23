@@ -27,28 +27,25 @@ exports.emailCheck = async (req, res) => {
 // Generate and send OTP for email verification
 exports.requestOtp = async (req, res) => {
   const { email } = req.body;
-
+  console.log("OTP request received for email:", email); // Log incoming OTP request
   try {
-      // Verify that the email is not already registered
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-          return res.status(400).json({ message: 'Email already in use. Please log in instead.' });
-      }
+    const otp = generateOTP();
+    otpStore[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 }; // 10-minute expiry
 
-      const otp = generateOTP();
-      otpStore[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 }; // 10-minute expiry
+    console.log("Generated OTP:", otp, "for email:", email); // Log generated OTP
 
-      // Send OTP email with the HTML template
-      await sendEmail(
-          email,
-          'Your Artalyze Verification Code',
-          otp // Pass the OTP to replace in the template
-      );
+    // Send OTP email
+    await sendEmail(
+      email,
+      'Your Artalyze Verification Code',
+      otp
+    );
 
-      res.status(200).json({ message: 'OTP sent to email' });
+    console.log("OTP sent successfully to email:", email); // Log successful email send
+    res.status(200).json({ message: 'OTP sent to email' });
   } catch (error) {
-      console.error('Error requesting OTP:', error);
-      res.status(500).json({ message: 'Error sending OTP' });
+    console.error('Error requesting OTP:', error);
+    res.status(500).json({ message: 'Error sending OTP' });
   }
 };
 
@@ -137,29 +134,33 @@ exports.getCurrentUser = async (req, res) => {
 // Resend OTP
 exports.resendOtp = async (req, res) => {
   const { email } = req.body;
+  console.log("Resend OTP request received for email:", email); // Log incoming Resend OTP request
 
   try {
-    // Check if the user exists
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found.' });
+    // Check if the user is in OTP store (since they're not yet registered)
+    const existingOtp = otpStore[email];
+    if (!existingOtp) {
+      console.log("No OTP found for email (invalid resend request):", email);
+      return res.status(404).json({ message: 'No OTP request found for this email.' });
     }
 
-    // Generate a new OTP
-    const otp = generateOTP(); // Assuming `generateOTP` returns a 6-digit OTP
+    // Generate new OTP
+    const otp = generateOTP();
     otpStore[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 }; // 10-minute expiry
 
-    // Send OTP email with the HTML template
+    console.log("Resent OTP:", otp, "for email:", email); // Log resent OTP
+
+    // Send OTP email
     await sendEmail(
       email,
       'Your Artalyze Verification Code (Resend)',
-      otp // Pass the OTP to replace in the template
+      otp
     );
 
+    console.log("OTP resent successfully to email:", email); // Log successful resend
     res.status(200).json({ message: 'OTP resent to email successfully.' });
   } catch (error) {
     console.error('Error resending OTP:', error);
     res.status(500).json({ message: 'Failed to resend OTP.' });
   }
 };
-

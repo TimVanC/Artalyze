@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axiosInstance from '../axiosInstance';
 import './Login.css';
 
 const Login = () => {
@@ -25,16 +25,20 @@ const Login = () => {
     }
 
     try {
-      const response = await axios.post('/api/auth/email-check', { email });
+      console.log("Submitting email for check:", email); // Log email before sending
+      const response = await axiosInstance.post('/auth/email-check', { email });
+
       if (response.data.requiresPassword) {
+        console.log("Email exists, proceeding to password entry."); // Log if email exists
         setStep(4); // Existing user login step
       } else {
-        await axios.post('/api/auth/request-otp', { email });
+        console.log("Email not found, sending OTP to:", email); // Log new email, sending OTP
+        await axiosInstance.post('/auth/request-otp', { email });
         setStep(2); // New user OTP step
       }
     } catch (error) {
       console.error('Email check error:', error);
-      setError('An error occurred. Please try again.');
+      setError('An error occurred during email check. Please try again.');
     }
   };
 
@@ -44,7 +48,9 @@ const Login = () => {
     setError('');
 
     try {
-      await axios.post('/api/auth/verify-otp', { email, otp });
+      console.log("Verifying OTP for email:", email, "OTP:", otp); // Log OTP before verification
+      await axiosInstance.post('/auth/verify-otp', { email, otp });
+      console.log("OTP verified successfully for:", email); // Log OTP success
       setStep(3); // New user registration form step
     } catch (error) {
       console.error('OTP verification error:', error);
@@ -52,11 +58,14 @@ const Login = () => {
     }
   };
 
-  // Handle Resend OTP
+  // Handle Resend OTP (only at OTP step)
   const handleResendOtp = async () => {
+    setError('');
     try {
-      const response = await axios.post('/api/auth/resend-otp', { email });
-      setResendMessage(response.data.message); // Display the resend OTP message
+      console.log("Requesting to resend OTP for email:", email); // Log resend request
+      const response = await axiosInstance.post('/auth/resend-otp', { email });
+      console.log("Resent OTP successfully to:", email); // Log resend success
+      setResendMessage(response.data.message);
     } catch (error) {
       console.error('Resend OTP error:', error);
       setResendMessage('Failed to resend OTP. Please try again.');
@@ -66,10 +75,11 @@ const Login = () => {
   // Step 3: Handle new user registration
   const handleLoginOrRegisterSubmit = async (e) => {
     e.preventDefault();
-    const endpoint = step === 3 && otp ? '/api/auth/register' : '/api/auth/login';
+    const endpoint = step === 3 && otp ? '/auth/register' : '/auth/login';
 
     try {
-      const response = await axios.post(endpoint, { email, password, firstName, lastName });
+      console.log("Submitting registration/login data for:", email); // Log registration/login submission
+      const response = await axiosInstance.post(endpoint, { email, password, firstName, lastName });
       localStorage.setItem('authToken', response.data.token);
       navigate('/game');
     } catch (error) {
@@ -84,7 +94,8 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await axios.post('/api/auth/login', { email, password });
+      console.log("Attempting to log in with email:", email); // Log login attempt
+      const response = await axiosInstance.post('/auth/login', { email, password });
       localStorage.setItem('authToken', response.data.token);
       navigate('/game'); // Redirect to the game screen
     } catch (error) {
@@ -121,11 +132,14 @@ const Login = () => {
             required
           />
           {error && <p className="error-message">{error}</p>}
-          {resendMessage && <p className="resend-message">{resendMessage}</p>}
           <button type="submit">Verify OTP</button>
-          <button type="button" onClick={handleResendOtp}>
+          <button
+            type="button"
+            onClick={handleResendOtp}
+          >
             Resend OTP
           </button>
+          {resendMessage && <p className="resend-message">{resendMessage}</p>}
         </form>
       )}
 

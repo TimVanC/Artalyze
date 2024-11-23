@@ -16,11 +16,11 @@ console.log("EMAIL_PASS:", process.env.EMAIL_PASS);
 
 // Middleware
 app.use(cors({
-    origin: 'http://localhost:3001', // Allow access from frontend admin port (React app)
+    origin: ['http://localhost:3000', 'http://localhost:3001'], // Allow access from frontend ports (React app)
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true // Allow cookies/sessions if needed
 }));
-app.use(express.json()); // Parse JSON bodies
+app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
 // Connect to the database
