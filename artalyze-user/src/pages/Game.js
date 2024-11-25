@@ -6,6 +6,7 @@ import { FaPalette, FaInfoCircle, FaChartBar, FaCog, FaShareAlt } from 'react-ic
 import InfoModal from '../components/InfoModal';
 import SettingsModal from '../components/SettingsModal';
 import { useNavigate } from 'react-router-dom';
+import axiosInstance from '../axiosInstance';
 
 // Completion messages based on score
 const completionMessages = {
@@ -87,26 +88,47 @@ const Game = () => {
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [showScoreOverlay, setShowScoreOverlay] = useState(true); 
   const [selectedCompletionMessage, setSelectedCompletionMessage] = useState("");
-
-  const initialImagePairs = [
-    { human: 'http://localhost:5000/uploads/1728260151091-Human-01.png', ai: 'http://localhost:5000/uploads/1728260592402-Ai-01.png' },
-    { human: 'http://localhost:5000/uploads/1728260173602-Human-02.png', ai: 'http://localhost:5000/uploads/1728260592402-Ai-02.png' },
-    { human: 'http://localhost:5000/uploads/1728260184652-Human-03.png', ai: 'http://localhost:5000/uploads/1728260592402-Ai-03.png' },
-    { human: 'http://localhost:5000/uploads/1728260204969-Human-04.png', ai: 'http://localhost:5000/uploads/1728260592403-Ai-04.png' },
-    { human: 'http://localhost:5000/uploads/1728260218274-Human-05.png', ai: 'http://localhost:5000/uploads/1728260592403-Ai-05.png' },
-  ];
   const [imagePairs, setImagePairs] = useState([]);
+  const [error, setError] = useState('');
 
   const swiperRef = useRef(null);
   let longPressTimer;
 
   useEffect(() => {
-    const shuffledPairs = initialImagePairs.map(pair => {
-      const images = Math.random() > 0.5 ? [pair.human, pair.ai] : [pair.ai, pair.human];
-      return { human: pair.human, ai: pair.ai, images };
-    });
-    setImagePairs(shuffledPairs);
+    const fetchDailyPuzzle = async () => {
+      try {
+        console.log('Fetching daily puzzle...');
+        const response = await axiosInstance.get('/game/daily-puzzle');
+        console.log('Daily puzzle response:', response.data);
+  
+        if (response.data && response.data.imagePairs && response.data.imagePairs.length > 0) {
+          const shuffledPairs = response.data.imagePairs.map(pair => {
+            const images = Math.random() > 0.5 ? [pair.humanImageURL, pair.aiImageURL] : [pair.aiImageURL, pair.humanImageURL];
+            return { human: pair.humanImageURL, ai: pair.aiImageURL, images };
+          });
+          setImagePairs(shuffledPairs);
+        } else {
+          console.warn('No image pairs available for today.');
+        }
+      } catch (error) {
+        console.error('Error fetching daily puzzle:', error);
+        setError('Failed to load today\'s puzzle. Please try again later.');
+      }
+    };
+  
+    fetchDailyPuzzle();
+  
+    // Calculate time left until midnight
+    const now = new Date();
+    const millisUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() - now.getTime();
+  
+    const timer = setTimeout(() => {
+      fetchDailyPuzzle(); // Re-fetch the puzzle at midnight
+    }, millisUntilMidnight);
+  
+    return () => clearTimeout(timer); // Cleanup the timer on component unmount
   }, []);
+  
 
   const handleSelection = (selectedImage, isHumanSelection) => {
     const newSelection = { selected: selectedImage, isHumanSelection };
