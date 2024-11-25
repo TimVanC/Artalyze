@@ -164,3 +164,77 @@ exports.resendOtp = async (req, res) => {
     res.status(500).json({ message: 'Failed to resend OTP.' });
   }
 };
+
+// Forgot Password
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const otp = generateOTP();
+    otpStore[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 }; // OTP valid for 10 minutes
+
+    // Send OTP email for password reset
+    await sendEmail(
+      email,
+      'Your Artalyze Password Reset Code',
+      otp
+    );
+
+    res.status(200).json({ message: 'OTP sent to your email for password reset' });
+  } catch (error) {
+    console.error('Forgot Password Error:', error);
+    res.status(500).json({ message: 'Error sending password reset OTP' });
+  }
+};
+
+// Verify OTP for Reset Password
+exports.verifyResetOtp = (req, res) => {
+  const { email, otp } = req.body;
+  const storedOtp = otpStore[email];
+
+  if (storedOtp && storedOtp.otp === otp && Date.now() < storedOtp.expiresAt) {
+    delete otpStore[email];
+    return res.status(200).json({ message: 'OTP verified for password reset' });
+  }
+  res.status(400).json({ message: 'Invalid or expired OTP' });
+};
+
+// Reset Password
+exports.resetPassword = async (req, res) => {
+  const { email, newPassword } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Password Reset Error:', error);
+    res.status(500).json({ message: 'Error resetting password' });
+  }
+};
+
+// Delete Account
+exports.deleteAccount = async (req, res) => {
+  const { userId } = req.user; // Extract from JWT
+
+  try {
+    await User.findByIdAndDelete(userId);
+    res.status(200).json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Account Deletion Error:', error);
+    res.status(500).json({ message: 'Error deleting account' });
+  }
+};
