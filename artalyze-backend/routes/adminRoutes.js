@@ -107,20 +107,29 @@ router.post('/upload-image-pair', upload.fields([{ name: 'humanImage' }, { name:
 router.get('/get-image-pairs-by-date/:scheduledDate', async (req, res) => {
   try {
     const { scheduledDate } = req.params;
-    const selectedDate = new Date(scheduledDate);
+    console.log("Received request for image pairs on date:", scheduledDate);
 
-    // Find the document by scheduled date
-    const imagePairs = await ImagePair.findOne({ scheduledDate: selectedDate });
+    // Create a new Date object from the scheduledDate and set the correct UTC time
+    const selectedDate = new Date(scheduledDate);
+    selectedDate.setUTCHours(4, 0, 0, 0); // Set time to 4:00 AM UTC to match stored value
+
+    console.log("Searching for image pairs with date (UTC):", selectedDate.toISOString());
+
+    // Find the document by scheduled date using Unix timestamp or consistent value
+    const imagePairs = await ImagePair.findOne({ scheduledDate: selectedDate.getTime() });
 
     if (!imagePairs) {
+      console.log("No existing image pairs found for this date:", selectedDate.toISOString());
       res.status(404).json({ message: 'No existing image pairs found for this date.' });
     } else {
-      res.json(imagePairs);
+      console.log("Found image pairs:", imagePairs);
+      res.status(200).json(imagePairs);
     }
   } catch (error) {
     console.error('Error fetching image pairs:', error);
     res.status(500).json({ error: 'Failed to fetch image pairs' });
   }
 });
+
 
 module.exports = router;

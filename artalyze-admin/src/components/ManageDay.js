@@ -1,47 +1,57 @@
 import React, { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css'; // Import calendar styles
 import DropzoneComponent from './DropzoneComponent';
 import axios from 'axios';
+import axiosInstance from '../axiosInstance';
 import './ManageDay.css';
 
 const ManageDay = () => {
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [imagePairs, setImagePairs] = useState([
-    { human: null, ai: null },
-    { human: null, ai: null },
-    { human: null, ai: null },
-    { human: null, ai: null },
-    { human: null, ai: null },
-  ]);
-  const [uploadMessage, setUploadMessage] = useState('');
-  const [existingImagePairs, setExistingImagePairs] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [imagePairs, setImagePairs] = useState([]); // State to store the fetched image pairs
+  const [error, setError] = useState(null); // State for managing error messages
+  const [uploadMessage, setUploadMessage] = useState(""); // State for managing upload messages
 
-  const handleDateClick = (date) => {
-    setSelectedDate(date);
-  };
-
-  // Fetch image pairs for the selected date
   useEffect(() => {
-    if (selectedDate) {
-      fetchImagePairsByDate(selectedDate);
-    }
+    fetchImagePairs();
   }, [selectedDate]);
 
-  const fetchImagePairsByDate = async (date) => {
+  // Function to fetch image pairs for the selected date
+  const fetchImagePairs = async () => {
     try {
-      const formattedDate = date.toLocaleDateString('en-CA'); // Formats as yyyy-mm-dd
-      const response = await axios.get(`http://localhost:5000/api/admin/get-image-pairs-by-date/${formattedDate}`);
-      setExistingImagePairs(response.data.pairs || []); // Updated to extract `pairs` from the document
+      // Format the selectedDate to ensure it matches the expected format in the backend
+      const formattedDate = format(selectedDate, "yyyy-MM-dd'T'04:00:00.000XXX");
+      console.log("Formatted Date for Fetch:", formattedDate);
+
+      const response = await axiosInstance.get(`/admin/get-image-pairs-by-date/${formattedDate}`);
+      console.log("Fetched Image Pairs:", response.data);
+
+      if (response.data && response.data.pairs) {
+        setImagePairs(response.data.pairs); // Set state with the fetched image pairs
+      } else {
+        console.warn("No image pairs available for the selected date.");
+        setImagePairs([]); // Set an empty array if no pairs are found
+      }
     } catch (error) {
-      console.error('Error fetching image pairs:', error);
-      setExistingImagePairs([]); // Ensure no image pairs are shown if there's an error
+      console.error("Error fetching image pairs:", error);
+      setError("Failed to load image pairs. Please try again later.");
+      setImagePairs([]); // Set an empty array in case of an error
     }
   };
-  
+
+  // Function to handle date selection from the calendar
+  const handleDateClick = (date) => {
+    setSelectedDate(date);
+    setUploadMessage(""); // Clear any existing upload messages when a new date is selected
+  };
 
   const onDrop = (acceptedFiles, index, type) => {
     const updatedPairs = [...imagePairs];
+    if (!updatedPairs[index]) {
+      updatedPairs[index] = {}; // Ensure the pair object exists
+    }
+
     if (type === 'human') {
       updatedPairs[index].human = acceptedFiles[0];
     } else if (type === 'ai') {
@@ -50,12 +60,13 @@ const ManageDay = () => {
     setImagePairs(updatedPairs);
   };
 
+  // Function to handle the image upload
   const handleUpload = async () => {
     if (!selectedDate) {
       setUploadMessage('Please select a date first.');
       return;
     }
-  
+
     try {
       // Adjust the date to 12:00 AM EST
       const date = new Date(selectedDate);
@@ -65,16 +76,16 @@ const ManageDay = () => {
       } else {
         date.setUTCHours(5, 0, 0, 0); // EST
       }
-  
+
       for (let i = 0; i < imagePairs.length; i++) {
         const pair = imagePairs[i];
-        if (pair.human && pair.ai) {
+        if (pair && pair.human && pair.ai) {
           const formData = new FormData();
           formData.append('humanImage', pair.human);
           formData.append('aiImage', pair.ai);
           formData.append('scheduledDate', date.toISOString()); // Format to match backend expectation
           formData.append('pairIndex', i);
-  
+
           await axios.post('http://localhost:5000/api/admin/upload-image-pair', formData, {
             headers: {
               'Content-Type': 'multipart/form-data',
@@ -82,16 +93,14 @@ const ManageDay = () => {
           });
         }
       }
-  
+
       setUploadMessage('All images uploaded successfully');
-      fetchImagePairsByDate(selectedDate); // Refresh the image pairs
+      fetchImagePairs(); // Refresh the image pairs
     } catch (error) {
       console.error('Upload error:', error);
       setUploadMessage('Failed to upload some or all images. Please try again.');
     }
   };
-  
-  
 
   return (
     <div className="manage-day-container">
@@ -106,17 +115,25 @@ const ManageDay = () => {
           {/* Display existing image pairs for the selected date */}
           <div className="existing-image-pairs-container">
             <h3>Existing Image Pairs for {selectedDate.toDateString()}</h3>
-            {existingImagePairs.length === 0 && <p>No existing image pairs found for this date.</p>}
+            {imagePairs.length === 0 && <p>No existing image pairs found for this date.</p>}
             <div className="existing-pairs-wrapper">
-              {existingImagePairs.map((pair, index) => (
+              {imagePairs.map((pair, index) => (
                 <div key={index} className="existing-pair-container">
                   <h4>Pair #{index + 1}</h4>
                   <div className="existing-images">
                     <div className="image-wrapper">
-                      <img src={pair.humanImageURL} alt="Human Art" className="image-preview" />
+                      {pair.humanImageURL ? (
+                        <img src={pair.humanImageURL} alt="Human Art" className="image-preview" />
+                      ) : (
+                        <p>No Human Image</p>
+                      )}
                     </div>
                     <div className="image-wrapper">
-                      <img src={pair.aiImageURL} alt="AI Art" className="image-preview" />
+                      {pair.aiImageURL ? (
+                        <img src={pair.aiImageURL} alt="AI Art" className="image-preview" />
+                      ) : (
+                        <p>No AI Image</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -126,18 +143,18 @@ const ManageDay = () => {
 
           {/* Dropzones for uploading new image pairs */}
           <div className="image-pairs-container">
-            {imagePairs.map((pair, index) => (
+            {[...Array(5)].map((_, index) => (
               <div key={index} className={`pair-container ${index < 4 ? 'half-width' : 'full-width'}`}>
                 <h3>Pair {index + 1}</h3>
                 <DropzoneComponent
                   onDrop={(files) => onDrop(files, index, 'human')}
                   label="Drop Human Image"
-                  currentFile={pair.human}
+                  currentFile={imagePairs[index]?.human}
                 />
                 <DropzoneComponent
                   onDrop={(files) => onDrop(files, index, 'ai')}
                   label="Drop AI Image"
-                  currentFile={pair.ai}
+                  currentFile={imagePairs[index]?.ai}
                 />
               </div>
             ))}
