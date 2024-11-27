@@ -11,7 +11,8 @@ const ImagePairSchema = new mongoose.Schema({
   pairs: [
     {
       humanImageURL: { type: String, required: true },
-      aiImageURL: { type: String, required: true }
+      aiImageURL: { type: String, required: true },
+      metadata: { type: Object, default: {} } // Added for future extensibility
     }
   ],
   status: { 
@@ -19,7 +20,13 @@ const ImagePairSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'live'], 
     default: 'pending' 
   }, 
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now } // Added updated timestamp for tracking updates
 });
+
+ImagePairSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
+}); // Middleware to update 'updatedAt' before saving
 
 module.exports = mongoose.model('ImagePair', ImagePairSchema);

@@ -10,16 +10,18 @@ const connectDB = require('./config/db'); // Database connection function
 
 const app = express();
 
-// Check if environment variables are loaded
-console.log("EMAIL_USER:", process.env.EMAIL_USER);
-console.log("EMAIL_PASS:", process.env.EMAIL_PASS);
-
 // Middleware
+app.use((req, res, next) => {
+    console.log('Request origin:', req.headers.origin);
+    next();
+});
+
 app.use(cors({
     origin: ['http://localhost:3000', 'http://localhost:3001'], // Allow access from frontend ports (React app)
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true // Allow cookies/sessions if needed
+    credentials: true
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
@@ -31,6 +33,9 @@ app.use('/uploads', express.static('uploads'));
 
 // Routes
 app.use('/api/auth', authRoutes); // Authentication routes
+
+console.log('Mounting gameRoutes at /api/game');
+
 app.use('/api/game', gameRoutes); // Game-related routes
 app.use('/api/images', imageRoutes); // Image upload routes
 app.use('/api/admin', adminRoutes); // Admin routes for managing image pairs

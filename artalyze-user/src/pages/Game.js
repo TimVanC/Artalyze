@@ -56,6 +56,10 @@ const generateArtalyzeShareableResult = (results) => {
   return `${scoreLine}\n${paintingLine}\n🎨 Artalyze Score: ${results.filter(r => r).length}/5`;
 };
 
+const isUserLoggedIn = () => {
+  return !!localStorage.getItem('authToken');
+};
+
 // Function to handle sharing
 const handleShare = (results) => {
   const shareableText = generateArtalyzeShareableResult(results);
@@ -94,41 +98,105 @@ const Game = () => {
   const swiperRef = useRef(null);
   let longPressTimer;
 
-  useEffect(() => {
-    const fetchDailyPuzzle = async () => {
+// Function to be called on game completion
+const handleGameComplete = async () => {
+  console.log('handleGameComplete called');
+  setIsGameComplete(true);
+
+  if (isUserLoggedIn()) {
+    try {
+      console.log('Marking game as played for today...');
+      const response = await axiosInstance.post('/game/mark-as-played');
+      console.log('Game play status updated for today:', response.data);
+    } catch (error) {
+      console.error('Error marking game as played:', error);
+    }
+  } else {
+    console.log('User is not logged in, using localStorage to track last played date');
+    const today = new Date().toISOString().split('T')[0];
+    localStorage.setItem('lastPlayedDate', today);
+  }
+
+  // Save selections and image pairs to localStorage
+  localStorage.setItem('gameSelections', JSON.stringify(selections));
+  localStorage.setItem('gameImagePairs', JSON.stringify(imagePairs));
+};
+
+
+// useEffect to check if the game is played and to fetch the puzzle
+useEffect(() => {
+  const checkIfPlayedTodayAndFetchPuzzle = async () => {
+    const today = new Date().toISOString().split('T')[0];
+
+    if (isUserLoggedIn()) {
       try {
-        console.log('Fetching daily puzzle...');
-        const response = await axiosInstance.get('/game/daily-puzzle');
-        console.log('Daily puzzle response:', response.data);
-  
-        if (response.data && response.data.imagePairs && response.data.imagePairs.length > 0) {
-          const shuffledPairs = response.data.imagePairs.map(pair => {
-            const images = Math.random() > 0.5 ? [pair.humanImageURL, pair.aiImageURL] : [pair.aiImageURL, pair.humanImageURL];
-            return { human: pair.humanImageURL, ai: pair.aiImageURL, images };
-          });
-          setImagePairs(shuffledPairs);
-        } else {
-          console.warn('No image pairs available for today.');
+        console.log('Checking if user has played today...');
+        const response = await axiosInstance.get('/game/check-today-status');
+        console.log('Check play status response:', response.data);
+        if (response.data.hasPlayedToday) {
+          console.log('User has already played today');
+          setIsGameComplete(true);
+          return;
         }
       } catch (error) {
-        console.error('Error fetching daily puzzle:', error);
-        setError('Failed to load today\'s puzzle. Please try again later.');
+        console.error('Error checking play status:', error);
       }
-    };
-  
-    fetchDailyPuzzle();
-  
-    // Calculate time left until midnight
-    const now = new Date();
-    const millisUntilMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() - now.getTime();
-  
-    const timer = setTimeout(() => {
-      fetchDailyPuzzle(); // Re-fetch the puzzle at midnight
-    }, millisUntilMidnight);
-  
-    return () => clearTimeout(timer); // Cleanup the timer on component unmount
-  }, []);
-  
+    } else {
+      console.log('User not logged in, checking localStorage...');
+      const lastPlayed = localStorage.getItem('lastPlayedDate');
+      if (lastPlayed === today) {
+        console.log('Guest user has already played today');
+        setIsGameComplete(true);
+        return;
+      }
+    }
+
+    // Fetch the daily puzzle if the game has not been played yet
+    try {
+      console.log('Fetching daily puzzle...');
+      const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
+      console.log('Daily puzzle response:', puzzleResponse.data);
+
+      if (puzzleResponse.data && puzzleResponse.data.imagePairs && puzzleResponse.data.imagePairs.length > 0) {
+        const shuffledPairs = puzzleResponse.data.imagePairs.map(pair => {
+          const images = Math.random() > 0.5 ? [pair.humanImageURL, pair.aiImageURL] : [pair.aiImageURL, pair.humanImageURL];
+          return { human: pair.humanImageURL, ai: pair.aiImageURL, images };
+        });
+        setImagePairs(shuffledPairs);
+        console.log('Image pairs set:', shuffledPairs);
+      } else {
+        console.warn('No image pairs available for today.');
+        setImagePairs([]);
+      }
+    } catch (error) {
+      console.error('Error fetching daily puzzle:', error);
+      setError('Failed to load today\'s puzzle. Please try again later.');
+    }
+  };
+
+  checkIfPlayedTodayAndFetchPuzzle();
+}, []);
+
+// Restore selections and image pairs if the game is completed and there are saved results
+useEffect(() => {
+  if (isGameComplete) {
+    const savedSelections = JSON.parse(localStorage.getItem('gameSelections'));
+    const savedImagePairs = JSON.parse(localStorage.getItem('gameImagePairs'));
+
+    if (savedSelections && savedImagePairs) {
+      console.log('Restoring saved selections and image pairs...');
+      setSelections(savedSelections);
+      setImagePairs(savedImagePairs);
+    }
+  }
+}, [isGameComplete]);
+
+
+// Trigger handleGameComplete function when the game is complete
+const onGameComplete = () => {
+  console.log('Game is completed. Calling handleGameComplete...');
+  handleGameComplete();
+};
 
   const handleSelection = (selectedImage, isHumanSelection) => {
     const newSelection = { selected: selectedImage, isHumanSelection };
@@ -155,9 +223,9 @@ const Game = () => {
   const handleSubmit = () => {
     let correct = 0;
     selections.forEach((selection, index) => {
-      if (selection.isHumanSelection && selection.selected === imagePairs[index].human) {
-        correct++;
-      }
+        if (selection.isHumanSelection && selection.selected === imagePairs[index].human) {
+            correct++;
+        }
     });
 
     setCorrectCount(correct);
@@ -165,14 +233,17 @@ const Game = () => {
     setSelectedCompletionMessage(message);
 
     if (correct === imagePairs.length || triesLeft === 1) {
-      setIsGameComplete(true); 
-      setShowOverlay(false); 
-      setShowResults(false); 
+        setIsGameComplete(true); 
+        setShowOverlay(false); 
+        setShowResults(false); 
+
+        // Trigger game complete function to mark the game as played
+        onGameComplete();
     } else {
-      setShowOverlay(true); 
-      setTriesLeft(triesLeft - 1);
+        setShowOverlay(true); 
+        setTriesLeft(triesLeft - 1);
     }
-  };
+};
 
   const handleTryAgain = () => {
     setShowOverlay(false);
@@ -331,36 +402,36 @@ const Game = () => {
         </div>
       )}
 
-      {isGameComplete && !showScoreOverlay && (
-        <div className="completion-screen">
-          <p>{selectedCompletionMessage}</p>
-          <div className="horizontal-thumbnail-grid">
-            {imagePairs.map((pair, index) => {
-              const selection = selections[index];
-              const isCorrect = selection?.selected === pair.human;
+{isGameComplete && !showScoreOverlay && (
+  <div className="completion-screen">
+    <p>{selectedCompletionMessage}</p>
+    <div className="horizontal-thumbnail-grid">
+      {imagePairs.map((pair, index) => {
+        const selection = selections[index];
+        const isCorrect = selection?.selected === pair.human;
 
-              return (
-                <div key={index} className="pair-thumbnails-horizontal">
-                  <div className={`thumbnail-container ${isCorrect && pair.images[0] === pair.human ? 'correct' : (selection?.selected === pair.images[0] ? 'incorrect' : '')}`}>
-                    <img src={pair.images[0]} alt={`First painting for pair ${index + 1}`} />
-                  </div>
-                  <div className={`thumbnail-container ${isCorrect && pair.images[1] === pair.human ? 'correct' : (selection?.selected === pair.images[1] ? 'incorrect' : '')}`}>
-                    <img src={pair.images[1]} alt={`Second painting for pair ${index + 1}`} />
-                  </div>
-                </div>
-              );
-            })}
+        return (
+          <div key={index} className="pair-thumbnails-horizontal">
+            <div className={`thumbnail-container ${isCorrect && pair.images[0] === pair.human ? 'correct' : (selection?.selected === pair.images[0] ? 'incorrect' : '')}`}>
+              <img src={pair.images[0]} alt={`First painting for pair ${index + 1}`} />
+            </div>
+            <div className={`thumbnail-container ${isCorrect && pair.images[1] === pair.human ? 'correct' : (selection?.selected === pair.images[1] ? 'incorrect' : '')}`}>
+              <img src={pair.images[1]} alt={`Second painting for pair ${index + 1}`} />
+            </div>
           </div>
-          <div className="completion-buttons">
-            <button className="stats-button">
-              <FaChartBar /> See Stats
-            </button>
-            <button className="share-button" onClick={() => handleShare([true, true, false, true, false])}>
-              <FaShareAlt /> Share
-            </button>
-          </div>
-        </div>
-      )}
+        );
+      })}
+    </div>
+    <div className="completion-buttons">
+      <button className="stats-button">
+        <FaChartBar /> See Stats
+      </button>
+      <button className="share-button" onClick={() => handleShare([true, true, false, true, false])}>
+        <FaShareAlt /> Share
+      </button>
+    </div>
+  </div>
+)}
 
       {enlargedImage && (
         <div className="enlarge-modal" onClick={closeEnlargedImage}>

@@ -1,5 +1,3 @@
-// models/User.js
-
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
@@ -9,7 +7,11 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, required: true },
   otp: String,
   otpExpires: Date,
-  role: { type: String, enum: ['user', 'admin'], default: 'user' }, // Add role field
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  lastPlayedDate: {
+    type: Date,
+    default: null,
+  },
 });
 
 module.exports = mongoose.model('User', UserSchema);

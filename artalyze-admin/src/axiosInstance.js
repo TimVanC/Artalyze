@@ -10,4 +10,10 @@ const axiosInstance = axios.create({
   },
 });
 
+// Debug Log: Use an interceptor to log all outgoing requests
+axiosInstance.interceptors.request.use((config) => {
+  console.log('[Admin] Request made with URL:', config.url);
+  return config;
+});
+
 export default axiosInstance;
