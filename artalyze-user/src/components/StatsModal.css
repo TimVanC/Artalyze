@@ -1,0 +1,161 @@
+/* Stats Overlay Full-Screen */
+.stats-overlay {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    z-index: 1000;
+    transition: transform 0.3s ease-in-out;
+}
+
+.stats-overlay-content {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 20px 20px 0 0;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    position: relative;
+    text-align: center;
+    animation: slide-up 0.4s ease;
+    height: 85vh;
+    overflow-y: auto;
+    font-family: 'Lato', sans-serif; /* Apply font family here */
+}
+
+.close-icon {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 24px;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.close-icon:hover {
+    color: #888888;
+}
+
+.stats-header {
+    margin-top: 10px;
+    font-size: 26px;
+    font-weight: bold;
+    border-bottom: 2px solid #e0e0e0;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.separator {
+    border: none;
+    border-top: 2px solid #e0e0e0;
+    margin: 10px 0;
+}
+
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+    margin-bottom: 20px;
+}
+
+.stat-item {
+    font-size: 18px;
+    text-align: center;
+    font-family: 'Lato', sans-serif;
+}
+
+.stat-value {
+    font-size: 22px;
+    font-weight: normal;
+    font-family: 'Lato', sans-serif;
+}
+
+.mistake-distribution {
+    margin-top: 10px;
+    font-family: 'Lato', sans-serif;
+}
+
+/* Improved Mistake Distribution Styles */
+.distribution-bar-container {
+    display: flex;
+    align-items: center;
+    margin: 10px 0;
+    position: relative;
+}
+
+.mistake-label {
+    flex: .2;
+    font-size: 16px;
+    text-align: left;
+    font-family: 'Lato', sans-serif;
+}
+
+.distribution-bar {
+    flex: 4;
+    height: 20px;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.bar-fill {
+    height: 100%;
+    background-color: #4d73af; /* Blue color for the bar */
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Align value to the end of the bar */
+    border-radius: 5px;
+    padding-right: 5px; /* Adding some padding to the right for spacing */
+}
+
+.bar-value {
+    color: white; /* Make it stand out on the bar fill */
+    font-weight: bold;
+    font-size: 14px;
+}
+
+/* Specific styling for the value of 0 to ensure it's centered */
+.bar-fill.zero-value {
+    justify-content: center; /* Center the value if the count is zero */
+}
+
+
+.frequency-value {
+    margin-left: 10px;
+    font-size: 14px;
+    color: #333333;
+    font-family: 'Lato', sans-serif;
+    position: absolute;
+    right: 10px;
+}
+  
+  /* Enhanced Share Button Styles */
+  .share-button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 25px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s, transform 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 20px; /* Add some space between the content above */
+    width: 80%; /* Ensure the button has good prominence */
+    justify-content: center;
+    font-family: 'Lato', sans-serif; /* Apply font family */
+  }
+  
+  .share-button:hover {
+    background-color: #388E3C;
+    transform: scale(1.05);
+  }
+  
