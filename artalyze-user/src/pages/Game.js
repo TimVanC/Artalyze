@@ -88,6 +88,7 @@ const defaultStats = {
 
 const Game = () => {
   const navigate = useNavigate();
+  const isLoggedIn = isUserLoggedIn();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selections, setSelections] = useState([]);
@@ -105,8 +106,8 @@ const Game = () => {
   const [error, setError] = useState('');
   const swiperRef = useRef(null);
   let longPressTimer;
-
-  const [userId, setUserId] = useState(null);
+  
+  const [userId, setUserId] = useState(localStorage.getItem("userId"));
   const [stats, setStats] = useState({
     gamesPlayed: 0,
     winPercentage: 0,
@@ -117,185 +118,181 @@ const Game = () => {
     lastPlayedDate: null,
   });
   
-
-    // Function to update user stats in the backend
-   // Function to update user stats in the backend
-const updateUserStats = async (userId, updatedStats) => {
-  try {
-    const response = await axiosInstance.put(`/stats/${userId}`, updatedStats, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-      },
-    });
-    console.log('Stats updated in database:', response.data);
-  } catch (error) {
-    console.error('Error updating stats in database:', error.response?.data || error.message);
-  }
-};
-
-// Function to be called on game completion
-const handleGameComplete = async () => {
-  console.log('handleGameComplete called');
-  setIsGameComplete(true);
-
-  const userId = localStorage.getItem('userId');
-  if (!userId) {
-    console.error('User ID not found. Ensure the user is logged in.');
-    return;
-  }
-
-  // Update play status for logged-in users
-  if (isUserLoggedIn()) {
+  // Function to update user stats in the backend
+  const updateUserStats = async (userId, updatedStats) => {
     try {
-      console.log('Marking game as played for today...');
-      const response = await axiosInstance.post('/game/mark-as-played');
-      console.log('Game play status updated for today:', response.data);
+      const response = await axiosInstance.put(`/stats/${userId}`, updatedStats, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
+      console.log('Stats updated in database:', response.data);
     } catch (error) {
-      console.error('Error marking game as played:', error);
-    }
-  } else {
-    console.log('User is not logged in, using localStorage to track last played date');
-    const today = new Date().toISOString().split('T')[0];
-    localStorage.setItem('lastPlayedDate', today);
-  }
-
-  // Update stats
-  console.log('Attempting to update stats for userId:', userId);
-  const updatedStats = { ...stats };
-
-  // Increment games played
-  updatedStats.gamesPlayed += 1;
-
-  // Check if the puzzle was completed perfectly
-  const isPerfectPuzzle = correctCount === imagePairs.length;
-  if (isPerfectPuzzle) {
-    updatedStats.perfectPuzzles += 1;
-  }
-
-  // Update win percentage
-  updatedStats.winPercentage = Math.round((updatedStats.perfectPuzzles / updatedStats.gamesPlayed) * 100);
-
-  // Update streaks
-  const today = new Date().toISOString().split('T')[0];
-  const lastPlayedDate = stats.lastPlayedDate;
-  const lastPlayed = lastPlayedDate ? new Date(lastPlayedDate) : null;
-  const todayDate = new Date(today);
-
-  if (lastPlayed && todayDate - lastPlayed === 86400000) {
-    updatedStats.currentStreak += 1;
-  } else if (!lastPlayed || todayDate - lastPlayed > 86400000) {
-    updatedStats.currentStreak = 1;
-  }
-  updatedStats.maxStreak = Math.max(updatedStats.maxStreak, updatedStats.currentStreak);
-
-  // Update mistake distribution
-  const mistakeCount = imagePairs.length - correctCount;
-  updatedStats.mistakeDistribution[mistakeCount] = (updatedStats.mistakeDistribution[mistakeCount] || 0) + 1;
-
-  // Update last played date
-  updatedStats.lastPlayedDate = today;
-
-  setStats(updatedStats);
-
-  // Send updated stats to the backend
-  try {
-    console.log('Updated stats being sent to backend:', updatedStats);
-    await updateUserStats(userId, updatedStats);
-    console.log('User stats updated successfully in the backend.');
-  } catch (error) {
-    console.error('Error updating user stats:', error);
-  }
-};
-
-// Initialize game logic
-useEffect(() => {
-  const initializeGame = async () => {
-    const today = new Date().toISOString().split('T')[0];
-    const userId = localStorage.getItem('userId');
-    const isLoggedIn = isUserLoggedIn();
-
-    if (isLoggedIn && !userId) {
-      console.error('User is logged in but no userId found in localStorage.');
-      setError('User ID is missing. Please log in again.');
-      return; // Prevent further execution
-    }
-
-    try {
-      if (isLoggedIn) {
-        console.log('Checking if user has played today...');
-        const playStatusResponse = await axiosInstance.get('/game/check-today-status');
-        if (playStatusResponse.data.hasPlayedToday) {
-          console.log('User has already played today');
-          setIsGameComplete(true);
-          if (userId) {
-            await fetchAndSetStats(userId);
-          }
-          return;
-        }
-      } else {
-        const lastPlayed = localStorage.getItem('lastPlayedDate');
-        if (lastPlayed === today) {
-          console.log('Guest user has already played today');
-          setIsGameComplete(true);
-          return;
-        }
-      }
-
-      console.log('Fetching daily puzzle...');
-      const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
-      if (puzzleResponse.data?.imagePairs?.length > 0) {
-        const shuffledPairs = puzzleResponse.data.imagePairs.map((pair) => ({
-          human: pair.humanImageURL,
-          ai: pair.aiImageURL,
-          images: Math.random() > 0.5
-            ? [pair.humanImageURL, pair.aiImageURL]
-            : [pair.aiImageURL, pair.humanImageURL],
-        }));
-        setImagePairs(shuffledPairs);
-      } else {
-        console.warn('No image pairs available for today.');
-        setImagePairs([]);
-      }
-
-      if (isLoggedIn && userId) {
-        await fetchAndSetStats(userId);
-      }
-    } catch (error) {
-      console.error('Error during game initialization:', error.response?.data || error.message);
-      setError('Failed to initialize the game. Please try again later.');
+      console.error('Error updating stats in database:', error.response?.data || error.message);
     }
   };
-
-  const fetchAndSetStats = async (userId) => {
+  
+  // Function to be called on game completion
+  const handleGameComplete = async () => {
+    console.log('handleGameComplete called');
+    setIsGameComplete(true);
+  
     if (!userId) {
-      console.error('No userId provided to fetch stats.');
+      console.error('User ID not found. Ensure the user is logged in.');
       return;
     }
-
+  
+    // Update play status for logged-in users
+    if (isUserLoggedIn()) {
+      try {
+        console.log('Marking game as played for today...');
+        const response = await axiosInstance.post('/game/mark-as-played');
+        console.log('Game play status updated for today:', response.data);
+      } catch (error) {
+        console.error('Error marking game as played:', error);
+      }
+    } else {
+      console.log('User is not logged in, using localStorage to track last played date');
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem('lastPlayedDate', today);
+    }
+  
+    // Update stats
+    console.log('Attempting to update stats for userId:', userId);
+    const updatedStats = { ...stats };
+  
+    // Increment games played
+    updatedStats.gamesPlayed += 1;
+  
+    // Check if the puzzle was completed perfectly
+    const isPerfectPuzzle = correctCount === imagePairs.length;
+    if (isPerfectPuzzle) {
+      updatedStats.perfectPuzzles += 1;
+    }
+  
+    // Update win percentage
+    updatedStats.winPercentage = Math.round((updatedStats.perfectPuzzles / updatedStats.gamesPlayed) * 100);
+  
+    // Update streaks
+    const today = new Date().toISOString().split('T')[0];
+    const lastPlayedDate = stats.lastPlayedDate;
+    const lastPlayed = lastPlayedDate ? new Date(lastPlayedDate) : null;
+    const todayDate = new Date(today);
+  
+    if (lastPlayed && todayDate - lastPlayed === 86400000) {
+      updatedStats.currentStreak += 1;
+    } else if (!lastPlayed || todayDate - lastPlayed > 86400000) {
+      updatedStats.currentStreak = 1;
+    }
+    updatedStats.maxStreak = Math.max(updatedStats.maxStreak, updatedStats.currentStreak);
+  
+    // Update mistake distribution
+    const mistakeCount = imagePairs.length - correctCount;
+    updatedStats.mistakeDistribution[mistakeCount] = (updatedStats.mistakeDistribution[mistakeCount] || 0) + 1;
+  
+    // Update last played date
+    updatedStats.lastPlayedDate = today;
+  
+    setStats(updatedStats);
+  
+    // Send updated stats to the backend
     try {
-      const statsResponse = await axiosInstance.get(`/stats/${userId}`);
-      setStats(statsResponse.data);
-      console.log('Fetched user stats:', statsResponse.data);
+      console.log('Updated stats being sent to backend:', updatedStats);
+      await updateUserStats(userId, updatedStats);
+      console.log('User stats updated successfully in the backend.');
     } catch (error) {
-      console.error('Error fetching user stats:', error.response?.data || error.message);
-      setError('Unable to fetch user statistics. Please try again later.');
+      console.error('Error updating user stats:', error);
     }
   };
-
-  initializeGame();
-}, []);
-
-// Restore selections and image pairs on game completion
-useEffect(() => {
-  if (isGameComplete) {
-    const savedSelections = JSON.parse(localStorage.getItem('gameSelections'));
-    const savedImagePairs = JSON.parse(localStorage.getItem('gameImagePairs'));
-    if (savedSelections && savedImagePairs) {
-      setSelections(savedSelections);
-      setImagePairs(savedImagePairs);
+  
+  // Initialize game logic
+  useEffect(() => {
+    const initializeGame = async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const isLoggedIn = isUserLoggedIn();
+  
+      if (isLoggedIn && !userId) {
+        console.error('User is logged in but no userId found in localStorage.');
+        setError('User ID is missing. Please log in again.');
+        return;
+      }
+  
+      try {
+        if (isLoggedIn) {
+          console.log('Checking if user has played today...');
+          const playStatusResponse = await axiosInstance.get('/game/check-today-status');
+          if (playStatusResponse.data.hasPlayedToday) {
+            console.log('User has already played today');
+            setIsGameComplete(true);
+            if (userId) {
+              await fetchAndSetStats(userId);
+            }
+            return;
+          }
+        } else {
+          const lastPlayed = localStorage.getItem('lastPlayedDate');
+          if (lastPlayed === today) {
+            console.log('Guest user has already played today');
+            setIsGameComplete(true);
+            return;
+          }
+        }
+  
+        console.log('Fetching daily puzzle...');
+        const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
+        if (puzzleResponse.data?.imagePairs?.length > 0) {
+          const shuffledPairs = puzzleResponse.data.imagePairs.map((pair) => ({
+            human: pair.humanImageURL,
+            ai: pair.aiImageURL,
+            images: Math.random() > 0.5
+              ? [pair.humanImageURL, pair.aiImageURL]
+              : [pair.aiImageURL, pair.humanImageURL],
+          }));
+          setImagePairs(shuffledPairs);
+        } else {
+          console.warn('No image pairs available for today.');
+          setImagePairs([]);
+        }
+  
+        if (isLoggedIn && userId) {
+          await fetchAndSetStats(userId);
+        }
+      } catch (error) {
+        console.error('Error during game initialization:', error.response?.data || error.message);
+        setError('Failed to initialize the game. Please try again later.');
+      }
+    };
+  
+    const fetchAndSetStats = async (userId) => {
+      if (!userId) {
+        console.error('No userId provided to fetch stats.');
+        return;
+      }
+  
+      try {
+        const statsResponse = await axiosInstance.get(`/stats/${userId}`);
+        setStats(statsResponse.data);
+        console.log('Fetched user stats:', statsResponse.data);
+      } catch (error) {
+        console.error('Error fetching user stats:', error.response?.data || error.message);
+        setError('Unable to fetch user statistics. Please try again later.');
+      }
+    };
+  
+    initializeGame();
+  }, [userId]);
+  
+  // Restore selections and image pairs on game completion
+  useEffect(() => {
+    if (isGameComplete) {
+      const savedSelections = JSON.parse(localStorage.getItem('gameSelections'));
+      const savedImagePairs = JSON.parse(localStorage.getItem('gameImagePairs'));
+      if (savedSelections && savedImagePairs) {
+        setSelections(savedSelections);
+        setImagePairs(savedImagePairs);
+      }
     }
-  }
-}, [isGameComplete]); 
+  }, [isGameComplete]);  
   
   const handleSelection = (selectedImage, isHumanSelection) => {
     const newSelection = { selected: selectedImage, isHumanSelection };
@@ -394,7 +391,12 @@ useEffect(() => {
       </div>
 
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
-      <StatsModal isOpen={isStatsOpen} onClose={() => setIsStatsOpen(false)} stats={stats} />
+      <StatsModal
+        isOpen={isStatsOpen}
+        onClose={() => setIsStatsOpen(false)}
+        stats={stats}
+        isLoggedIn={isLoggedIn} // Pass isLoggedIn to StatsModal
+      />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
       {!isGameComplete && (

@@ -25,9 +25,10 @@
     animation: slide-up 0.4s ease;
     height: 85vh;
     overflow-y: auto;
-    font-family: 'Lato', sans-serif; /* Apply font family here */
+    font-family: 'Lato', sans-serif; /* Apply font family */
 }
 
+/* Close Icon */
 .close-icon {
     position: absolute;
     top: 15px;
@@ -41,6 +42,7 @@
     color: #888888;
 }
 
+/* Header */
 .stats-header {
     margin-top: 10px;
     font-size: 26px;
@@ -50,12 +52,14 @@
     margin-bottom: 20px;
 }
 
+/* Separator */
 .separator {
     border: none;
     border-top: 2px solid #e0e0e0;
     margin: 10px 0;
 }
 
+/* Stats Overview Grid */
 .stats-overview {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -75,12 +79,12 @@
     font-family: 'Lato', sans-serif;
 }
 
+/* Mistake Distribution */
 .mistake-distribution {
     margin-top: 10px;
     font-family: 'Lato', sans-serif;
 }
 
-/* Improved Mistake Distribution Styles */
 .distribution-bar-container {
     display: flex;
     align-items: center;
@@ -89,7 +93,7 @@
 }
 
 .mistake-label {
-    flex: .2;
+    flex: 0.2;
     font-size: 16px;
     text-align: left;
     font-family: 'Lato', sans-serif;
@@ -125,7 +129,6 @@
     justify-content: center; /* Center the value if the count is zero */
 }
 
-
 .frequency-value {
     margin-left: 10px;
     font-size: 14px;
@@ -134,9 +137,9 @@
     position: absolute;
     right: 10px;
 }
-  
-  /* Enhanced Share Button Styles */
-  .share-button {
+
+/* Share Button Styles */
+.share-button {
     background-color: #4CAF50;
     color: white;
     padding: 10px 25px;
@@ -151,11 +154,60 @@
     margin-top: 20px; /* Add some space between the content above */
     width: 80%; /* Ensure the button has good prominence */
     justify-content: center;
-    font-family: 'Lato', sans-serif; /* Apply font family */
-  }
-  
-  .share-button:hover {
+    font-family: 'Lato', sans-serif;
+}
+
+.share-button:hover {
     background-color: #388E3C;
     transform: scale(1.05);
-  }
-  
+}
+
+/* Non-Logged-In View */
+.stats-logo {
+    max-width: 150px;
+    margin: 20px auto;
+}
+
+.non-logged-in-message {
+    font-size: 22px;
+    font-weight: bold;
+    margin: 10px 0;
+    color: #333333;
+}
+
+.non-logged-in-subtext {
+    font-size: 16px;
+    color: #666666;
+    margin-bottom: 20px;
+}
+
+.cta-button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    width: 80%;
+    max-width: 300px;
+    margin: 20px auto;
+    display: block;
+}
+
+.cta-button:hover {
+    background-color: #388E3C;
+    transform: scale(1.05);
+}
+
+/* Slide-Up Animation */
+@keyframes slide-up {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
