@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Stats = require('../models/Stats'); // Assuming Stats is a model for user statistics
 const sendEmail = require('../utils/emailService');
 require('dotenv').config();
 
@@ -8,6 +9,21 @@ const otpStore = {};
 
 // Function to generate a 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+// Middleware for authenticating JWT and attaching user to the request
+exports.authenticate = (req, res, next) => {
+  const token = req.header('Authorization')?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // Attach userId to the request
+    next();
+  } catch (error) {
+    res.status(401).json({ message: 'Unauthorized access' });
+  }
+};
 
 // Check if email exists and prompt appropriately
 exports.emailCheck = async (req, res) => {
@@ -49,7 +65,6 @@ exports.requestOtp = async (req, res) => {
   }
 };
 
-
 // Verify OTP
 exports.verifyOtp = (req, res) => {
   const { email, otp } = req.body;
@@ -66,7 +81,7 @@ exports.verifyOtp = (req, res) => {
 exports.registerUser = async (req, res) => {
   console.log("Received data:", req.body);
   try {
-    const { email, password, firstName, lastName } = req.body; // Include firstName and lastName here
+    const { email, password, firstName, lastName } = req.body;
 
     // Validate required fields
     if (!email || !password || !firstName || !lastName) {
@@ -82,9 +97,21 @@ exports.registerUser = async (req, res) => {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new user with firstName and lastName
+    // Create new user
     const newUser = new User({ email, password: hashedPassword, firstName, lastName });
     await newUser.save();
+
+    // Initialize user stats upon registration
+    const userStats = new Stats({
+      userId: newUser._id,
+      gamesPlayed: 0,
+      winPercentage: 0,
+      currentStreak: 0,
+      maxStreak: 0,
+      perfectPuzzles: 0,
+      mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+    });
+    await userStats.save();
 
     // Generate a JWT
     const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET);
@@ -96,8 +123,8 @@ exports.registerUser = async (req, res) => {
   }
 };
 
-
 // Login user
+// Assuming you have a function to store this in localStorage
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -109,7 +136,7 @@ exports.loginUser = async (req, res) => {
     }
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
-    res.status(200).json({ token, user: { email: user.email, firstName: user.firstName, lastName: user.lastName } });
+    res.status(200).json({ token, user: { email: user.email, firstName: user.firstName, lastName: user.lastName, userId: user._id } });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ message: 'Server error' });
@@ -134,13 +161,12 @@ exports.getCurrentUser = async (req, res) => {
 // Resend OTP
 exports.resendOtp = async (req, res) => {
   const { email } = req.body;
-  console.log("Resend OTP request received for email:", email); // Log incoming Resend OTP request
+  console.log("Resend OTP request received for email:", email);
 
   try {
-    // Check if the user is in OTP store (since they're not yet registered)
     const existingOtp = otpStore[email];
     if (!existingOtp) {
-      console.log("No OTP found for email (invalid resend request):", email);
+      console.log("No OTP found for email:", email);
       return res.status(404).json({ message: 'No OTP request found for this email.' });
     }
 
@@ -148,7 +174,7 @@ exports.resendOtp = async (req, res) => {
     const otp = generateOTP();
     otpStore[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 }; // 10-minute expiry
 
-    console.log("Resent OTP:", otp, "for email:", email); // Log resent OTP
+    console.log("Resent OTP:", otp, "for email:", email);
 
     // Send OTP email
     await sendEmail(
@@ -157,7 +183,7 @@ exports.resendOtp = async (req, res) => {
       otp
     );
 
-    console.log("OTP resent successfully to email:", email); // Log successful resend
+    console.log("OTP resent successfully to email:", email);
     res.status(200).json({ message: 'OTP resent to email successfully.' });
   } catch (error) {
     console.error('Error resending OTP:', error);
@@ -228,7 +254,7 @@ exports.resetPassword = async (req, res) => {
 
 // Delete Account
 exports.deleteAccount = async (req, res) => {
-  const { userId } = req.user; // Extract from JWT
+  const { userId } = req.user;
 
   try {
     await User.findByIdAndDelete(userId);

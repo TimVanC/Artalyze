@@ -1,17 +1,16 @@
-import './Game.css';
-import React, { useState, useRef, useEffect } from 'react';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import 'swiper/swiper-bundle.css';
-import { FaPalette, FaInfoCircle, FaChartBar, FaCog, FaShareAlt } from 'react-icons/fa';
-import InfoModal from '../components/InfoModal';
-import SettingsModal from '../components/SettingsModal';
-import StatsModal from '../components/StatsModal';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaInfoCircle, FaChartBar, FaCog, FaShareAlt, FaPalette } from 'react-icons/fa';
+import SwiperCore, { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
 import axiosInstance from '../axiosInstance';
+import InfoModal from '../components/InfoModal';
+import StatsModal from '../components/StatsModal';
+import SettingsModal from '../components/SettingsModal';
+import axios from 'axios';
+import { handleShare } from '../utils/shareUtils';
+import './Game.css';
 
-import { dummyStats } from '../components/StatsModal'; // Adjust the path as needed
-
-// Completion messages based on score
 const completionMessages = {
   0: [
     "Tough luck! But hey, there's always tomorrow!",
@@ -45,14 +44,12 @@ const completionMessages = {
   ]
 };
 
-// Function to get a random message based on score
 const getRandomCompletionMessage = (score) => {
   const messages = completionMessages[score];
   const randomIndex = Math.floor(Math.random() * messages.length);
   return messages[randomIndex];
 };
 
-// Function to generate shareable result
 const generateArtalyzeShareableResult = (results) => {
   const scoreLine = results.map(result => result ? '🟢' : '🔴').join(' ');
   const paintingLine = Array(results.length).fill('🖼️').join(' ');
@@ -63,22 +60,30 @@ const isUserLoggedIn = () => {
   return !!localStorage.getItem('authToken');
 };
 
-// Function to handle sharing
-const handleShare = (results) => {
+const handleStatsShare = (results) => {
   const shareableText = generateArtalyzeShareableResult(results);
 
   if (navigator.share) {
-    navigator.share({
-      title: 'My Artalyze Score',
-      text: shareableText
-    }).catch((error) => console.log('Error sharing:', error));
+      navigator.share({
+          title: "Artalyze Score",
+          text: shareableText,
+      }).then(() => {
+          console.log('Thanks for sharing!');
+      }).catch(console.error);
   } else {
-    navigator.clipboard.writeText(shareableText).then(() => {
-      alert("Results copied to clipboard! You can now paste it anywhere.");
-    }).catch((error) => {
-      console.error('Failed to copy:', error);
-    });
+      navigator.clipboard.writeText(shareableText).then(() => {
+          console.log('Score copied to clipboard');
+      }).catch(console.error);
   }
+};
+
+const defaultStats = {
+  gamesPlayed: 0,
+  winPercentage: 0,
+  currentStreak: 0,
+  maxStreak: 0,
+  perfectPuzzles: 0,
+  mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
 };
 
 const Game = () => {
@@ -98,73 +103,136 @@ const Game = () => {
   const [imagePairs, setImagePairs] = useState([]);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [error, setError] = useState('');
-
   const swiperRef = useRef(null);
   let longPressTimer;
 
-  const defaultStats = {
+  const [userId, setUserId] = useState(null);
+  const [stats, setStats] = useState({
     gamesPlayed: 0,
     winPercentage: 0,
     currentStreak: 0,
     maxStreak: 0,
     perfectPuzzles: 0,
-    mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+    mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    lastPlayedDate: null,
+  });
+  
+
+    // Function to update user stats in the backend
+   // Function to update user stats in the backend
+const updateUserStats = async (userId, updatedStats) => {
+  try {
+    const response = await axiosInstance.put(`/stats/${userId}`, updatedStats, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+      },
+    });
+    console.log('Stats updated in database:', response.data);
+  } catch (error) {
+    console.error('Error updating stats in database:', error.response?.data || error.message);
+  }
 };
 
-const stats = {
-    gamesPlayed: localStorage.getItem('gamesPlayed') || defaultStats.gamesPlayed,
-    winPercentage: Math.round((localStorage.getItem('perfectPuzzles') / localStorage.getItem('gamesPlayed')) * 100) || defaultStats.winPercentage,
-    currentStreak: localStorage.getItem('currentStreak') || defaultStats.currentStreak,
-    maxStreak: localStorage.getItem('maxStreak') || defaultStats.maxStreak,
-    perfectPuzzles: localStorage.getItem('perfectPuzzles') || defaultStats.perfectPuzzles,
-    mistakeDistribution: JSON.parse(localStorage.getItem('mistakeDistribution')) || defaultStats.mistakeDistribution
+// Function to be called on game completion
+const handleGameComplete = async () => {
+  console.log('handleGameComplete called');
+  setIsGameComplete(true);
+
+  const userId = localStorage.getItem('userId');
+  if (!userId) {
+    console.error('User ID not found. Ensure the user is logged in.');
+    return;
+  }
+
+  // Update play status for logged-in users
+  if (isUserLoggedIn()) {
+    try {
+      console.log('Marking game as played for today...');
+      const response = await axiosInstance.post('/game/mark-as-played');
+      console.log('Game play status updated for today:', response.data);
+    } catch (error) {
+      console.error('Error marking game as played:', error);
+    }
+  } else {
+    console.log('User is not logged in, using localStorage to track last played date');
+    const today = new Date().toISOString().split('T')[0];
+    localStorage.setItem('lastPlayedDate', today);
+  }
+
+  // Update stats
+  console.log('Attempting to update stats for userId:', userId);
+  const updatedStats = { ...stats };
+
+  // Increment games played
+  updatedStats.gamesPlayed += 1;
+
+  // Check if the puzzle was completed perfectly
+  const isPerfectPuzzle = correctCount === imagePairs.length;
+  if (isPerfectPuzzle) {
+    updatedStats.perfectPuzzles += 1;
+  }
+
+  // Update win percentage
+  updatedStats.winPercentage = Math.round((updatedStats.perfectPuzzles / updatedStats.gamesPlayed) * 100);
+
+  // Update streaks
+  const today = new Date().toISOString().split('T')[0];
+  const lastPlayedDate = stats.lastPlayedDate;
+  const lastPlayed = lastPlayedDate ? new Date(lastPlayedDate) : null;
+  const todayDate = new Date(today);
+
+  if (lastPlayed && todayDate - lastPlayed === 86400000) {
+    updatedStats.currentStreak += 1;
+  } else if (!lastPlayed || todayDate - lastPlayed > 86400000) {
+    updatedStats.currentStreak = 1;
+  }
+  updatedStats.maxStreak = Math.max(updatedStats.maxStreak, updatedStats.currentStreak);
+
+  // Update mistake distribution
+  const mistakeCount = imagePairs.length - correctCount;
+  updatedStats.mistakeDistribution[mistakeCount] = (updatedStats.mistakeDistribution[mistakeCount] || 0) + 1;
+
+  // Update last played date
+  updatedStats.lastPlayedDate = today;
+
+  setStats(updatedStats);
+
+  // Send updated stats to the backend
+  try {
+    console.log('Updated stats being sent to backend:', updatedStats);
+    await updateUserStats(userId, updatedStats);
+    console.log('User stats updated successfully in the backend.');
+  } catch (error) {
+    console.error('Error updating user stats:', error);
+  }
 };
 
-  // Function to be called on game completion
-  const handleGameComplete = async () => {
-    console.log('handleGameComplete called');
-    setIsGameComplete(true);
+// Initialize game logic
+useEffect(() => {
+  const initializeGame = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const userId = localStorage.getItem('userId');
+    const isLoggedIn = isUserLoggedIn();
 
-    if (isUserLoggedIn()) {
-      try {
-        console.log('Marking game as played for today...');
-        const response = await axiosInstance.post('/game/mark-as-played');
-        console.log('Game play status updated for today:', response.data);
-      } catch (error) {
-        console.error('Error marking game as played:', error);
-      }
-    } else {
-      console.log('User is not logged in, using localStorage to track last played date');
-      const today = new Date().toISOString().split('T')[0];
-      localStorage.setItem('lastPlayedDate', today);
+    if (isLoggedIn && !userId) {
+      console.error('User is logged in but no userId found in localStorage.');
+      setError('User ID is missing. Please log in again.');
+      return; // Prevent further execution
     }
 
-    // Save selections and image pairs to localStorage
-    localStorage.setItem('gameSelections', JSON.stringify(selections));
-    localStorage.setItem('gameImagePairs', JSON.stringify(imagePairs));
-  };
-
-
-  // useEffect to check if the game is played and to fetch the puzzle
-  useEffect(() => {
-    const checkIfPlayedTodayAndFetchPuzzle = async () => {
-      const today = new Date().toISOString().split('T')[0];
-
-      if (isUserLoggedIn()) {
-        try {
-          console.log('Checking if user has played today...');
-          const response = await axiosInstance.get('/game/check-today-status');
-          console.log('Check play status response:', response.data);
-          if (response.data.hasPlayedToday) {
-            console.log('User has already played today');
-            setIsGameComplete(true);
-            return;
+    try {
+      if (isLoggedIn) {
+        console.log('Checking if user has played today...');
+        const playStatusResponse = await axiosInstance.get('/game/check-today-status');
+        if (playStatusResponse.data.hasPlayedToday) {
+          console.log('User has already played today');
+          setIsGameComplete(true);
+          if (userId) {
+            await fetchAndSetStats(userId);
           }
-        } catch (error) {
-          console.error('Error checking play status:', error);
+          return;
         }
       } else {
-        console.log('User not logged in, checking localStorage...');
         const lastPlayed = localStorage.getItem('lastPlayedDate');
         if (lastPlayed === today) {
           console.log('Guest user has already played today');
@@ -173,53 +241,62 @@ const stats = {
         }
       }
 
-      // Fetch the daily puzzle if the game has not been played yet
-      try {
-        console.log('Fetching daily puzzle...');
-        const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
-        console.log('Daily puzzle response:', puzzleResponse.data);
-
-        if (puzzleResponse.data && puzzleResponse.data.imagePairs && puzzleResponse.data.imagePairs.length > 0) {
-          const shuffledPairs = puzzleResponse.data.imagePairs.map(pair => {
-            const images = Math.random() > 0.5 ? [pair.humanImageURL, pair.aiImageURL] : [pair.aiImageURL, pair.humanImageURL];
-            return { human: pair.humanImageURL, ai: pair.aiImageURL, images };
-          });
-          setImagePairs(shuffledPairs);
-          console.log('Image pairs set:', shuffledPairs);
-        } else {
-          console.warn('No image pairs available for today.');
-          setImagePairs([]);
-        }
-      } catch (error) {
-        console.error('Error fetching daily puzzle:', error);
-        setError('Failed to load today\'s puzzle. Please try again later.');
+      console.log('Fetching daily puzzle...');
+      const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
+      if (puzzleResponse.data?.imagePairs?.length > 0) {
+        const shuffledPairs = puzzleResponse.data.imagePairs.map((pair) => ({
+          human: pair.humanImageURL,
+          ai: pair.aiImageURL,
+          images: Math.random() > 0.5
+            ? [pair.humanImageURL, pair.aiImageURL]
+            : [pair.aiImageURL, pair.humanImageURL],
+        }));
+        setImagePairs(shuffledPairs);
+      } else {
+        console.warn('No image pairs available for today.');
+        setImagePairs([]);
       }
-    };
 
-    checkIfPlayedTodayAndFetchPuzzle();
-  }, []);
-
-  // Restore selections and image pairs if the game is completed and there are saved results
-  useEffect(() => {
-    if (isGameComplete) {
-      const savedSelections = JSON.parse(localStorage.getItem('gameSelections'));
-      const savedImagePairs = JSON.parse(localStorage.getItem('gameImagePairs'));
-
-      if (savedSelections && savedImagePairs) {
-        console.log('Restoring saved selections and image pairs...');
-        setSelections(savedSelections);
-        setImagePairs(savedImagePairs);
+      if (isLoggedIn && userId) {
+        await fetchAndSetStats(userId);
       }
+    } catch (error) {
+      console.error('Error during game initialization:', error.response?.data || error.message);
+      setError('Failed to initialize the game. Please try again later.');
     }
-  }, [isGameComplete]);
-
-
-  // Trigger handleGameComplete function when the game is complete
-  const onGameComplete = () => {
-    console.log('Game is completed. Calling handleGameComplete...');
-    handleGameComplete();
   };
 
+  const fetchAndSetStats = async (userId) => {
+    if (!userId) {
+      console.error('No userId provided to fetch stats.');
+      return;
+    }
+
+    try {
+      const statsResponse = await axiosInstance.get(`/stats/${userId}`);
+      setStats(statsResponse.data);
+      console.log('Fetched user stats:', statsResponse.data);
+    } catch (error) {
+      console.error('Error fetching user stats:', error.response?.data || error.message);
+      setError('Unable to fetch user statistics. Please try again later.');
+    }
+  };
+
+  initializeGame();
+}, []);
+
+// Restore selections and image pairs on game completion
+useEffect(() => {
+  if (isGameComplete) {
+    const savedSelections = JSON.parse(localStorage.getItem('gameSelections'));
+    const savedImagePairs = JSON.parse(localStorage.getItem('gameImagePairs'));
+    if (savedSelections && savedImagePairs) {
+      setSelections(savedSelections);
+      setImagePairs(savedImagePairs);
+    }
+  }
+}, [isGameComplete]); 
+  
   const handleSelection = (selectedImage, isHumanSelection) => {
     const newSelection = { selected: selectedImage, isHumanSelection };
     const updatedSelections = [...selections];
@@ -260,7 +337,8 @@ const stats = {
       setShowResults(false);
 
       // Trigger game complete function to mark the game as played
-      onGameComplete();
+      handleGameComplete();
+
     } else {
       setShowOverlay(true);
       setTriesLeft(triesLeft - 1);
@@ -316,11 +394,7 @@ const stats = {
       </div>
 
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
-      <StatsModal 
-  isOpen={isStatsOpen} 
-  onClose={() => setIsStatsOpen(false)} 
-  stats={dummyStats} // Use dummy stats to test
-/>
+      <StatsModal isOpen={isStatsOpen} onClose={() => setIsStatsOpen(false)} stats={stats} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
       {!isGameComplete && (
@@ -450,10 +524,10 @@ const stats = {
             })}
           </div>
           <div className="completion-buttons">
-            <button className="stats-button">
+            <button className="stats-button" onClick={() => setIsStatsOpen(true)}>
               <FaChartBar /> See Stats
             </button>
-            <button className="share-button" onClick={() => handleShare([true, true, false, true, false])}>
+            <button className="share-button" onClick={() => handleStatsShare(selections.map(selection => selection?.isHumanSelection))}>
               <FaShareAlt /> Share
             </button>
           </div>

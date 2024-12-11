@@ -82,7 +82,14 @@ const Login = () => {
     try {
       console.log("Submitting registration/login data for:", email);
       const response = await axiosInstance.post(endpoint, { email, password, firstName, lastName });
-      localStorage.setItem('authToken', response.data.token);
+      
+      // Store user info in localStorage
+      const { token, user } = response.data;
+      localStorage.setItem('authToken', token);
+      localStorage.setItem('userId', user.userId); // Save the userId for later use
+      localStorage.setItem('userFirstName', user.firstName);
+      localStorage.setItem('userLastName', user.lastName);
+
       navigate('/game');
     } catch (error) {
       console.error('Authentication error:', error);
@@ -98,7 +105,14 @@ const Login = () => {
     try {
       console.log("Attempting to log in with email:", email);
       const response = await axiosInstance.post('/auth/login', { email, password });
-      localStorage.setItem('authToken', response.data.token);
+
+      // Store user info in localStorage
+      const { token, user } = response.data;
+      localStorage.setItem('authToken', token);
+      localStorage.setItem('userId', user.userId); // Save the userId for later use
+      localStorage.setItem('userFirstName', user.firstName);
+      localStorage.setItem('userLastName', user.lastName);
+
       navigate('/game'); // Redirect to the game screen
     } catch (error) {
       console.error('Login error:', error);

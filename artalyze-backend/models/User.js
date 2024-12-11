@@ -9,7 +9,7 @@ const UserSchema = new mongoose.Schema({
   otpExpires: Date,
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
   lastPlayedDate: {
-    type: Date,
+    type: Date, // Retain this if you want to track general user activity
     default: null,
   },
 });
