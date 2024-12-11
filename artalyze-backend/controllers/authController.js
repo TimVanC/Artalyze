@@ -144,7 +144,10 @@ exports.loginUser = async (req, res) => {
 };
 
 // Logout
-exports.logoutUser = (req, res) => res.status(200).json({ message: "Logged out successfully" });
+exports.logoutUser = (req, res) => {
+  res.status(200).json({ message: "Logged out successfully" });
+};
+
 
 // Get current user
 exports.getCurrentUser = async (req, res) => {

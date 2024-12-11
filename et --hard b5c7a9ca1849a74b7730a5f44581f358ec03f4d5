@@ -1,0 +1,176 @@
+[33mcommit b5c7a9ca1849a74b7730a5f44581f358ec03f4d5[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mstats-feature[m[33m, [m[1;31morigin/stats-feature[m[33m)[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Tue Dec 10 20:50:41 2024 -0500
+
+    feat(auth): add token-based authentication with user role validation
+    
+    - Introduced middleware for token authentication and admin role validation.
+    
+    - Updated JWT handling and added debugging logs.
+    
+    - Ensured user details are attached to  after validation.
+    
+    fix(stats): resolve userId undefined issue
+    
+    - Correctly fetch and pass userId in API calls for fetching and updating stats.
+    
+    - Addressed errors caused by inconsistent userId handling.
+    
+    refactor(game): improve game initialization logic
+    
+    - Reorganized  hooks for better readability and functionality.
+    
+    - Added helper functions for fetching stats and shuffling image pairs.
+    
+    - Improved error handling for API requests.
+    
+    chore(env): remove deprecated MongoDB options
+    
+    - Eliminated  and  options.
+    
+    - Aligned with MongoDB Driver v4.0+ requirements.
+    
+    BREAKING CHANGE: Stats schema updated
+    
+    - Removed redundant fields from  schema and consolidated with  model.
+    
+    - This change requires a database migration to ensure compatibility.
+
+[33mcommit a213dd7f5aad935740daed5aaf0c074d799f535b[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Tue Dec 3 13:19:21 2024 -0500
+
+    feat(stats modal): Add animations to statistics and update mistake distribution styles
+    
+    - Added count-up animation for all top statistics (games played, win percentage, streaks, and perfect puzzles).
+    - Implemented a roll-out animation for mistake distribution bars, which occurs only on the first open of the stats modal.
+    - Corrected the alignment for mistake distribution values:
+      - Centered '0' values in mistake distribution bars.
+      - Adjusted alignment for other numbers to stay right-aligned with a small margin.
+    - Set the width of the '0' mistake distribution bar to 5% for better visibility while keeping it distinguishable.
+    - Removed redundant separator line at the top of the stats modal to enhance layout consistency.
+    - Updated CSS to manage positioning and alignment issues for mistake distribution bars and values effectively.
+    - Ensured animations run only once per modal activation, with the top stats animating only on the first view unless refreshed.
+    
+    This update makes the stats modal visually appealing and interactive, enhancing user engagement by providing dynamic visual feedback.
+
+[33mcommit 0b3c31361b0f6367c9567753a28d3f64eca0ab08[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Tue Dec 3 01:05:25 2024 -0500
+
+    Refine Stats UI and Implement Detailed Functional Improvements
+    
+    - StatsModal.js:
+      - Implemented dynamic scaling for the mistake distribution bars to ensure proportional representation.
+      - Adjusted value alignment logic:
+        - '0' values are now centered vertically and horizontally in the bar.
+        - Non-zero values are aligned to the right end of the bar, with consistent padding for readability.
+      - Enhanced styling of bar values for improved readability and aesthetics.
+      - Added minimum bar width to ensure all values, including '0', have visual prominence.
+      - Refactored the  logic to apply conditional alignment based on the value.
+    
+    - StatsModal.css:
+      - Improved overall styling for the StatsModal:
+        - Ensured consistent alignment for all distribution bars.
+        - Reduced the spacing between bars and mistake labels for a more compact look.
+        - Ensured '0' values are visually distinct and well-aligned.
+        - Adjusted padding and alignment to provide a polished user interface.
+      - Added styles to conditionally align values based on mistake count (either centered or right-aligned).
+      - Removed unnecessary styles and replaced them with a more streamlined approach for better maintainability.
+    
+    - Summary:
+      - The new mistake distribution UI now effectively balances visual clarity with data representation accuracy.
+      - Minor layout and aesthetic tweaks to ensure a consistent and professional look.
+    
+    Tested thoroughly to ensure all changes are stable and visually consistent across different stat scenarios.
+
+[33mcommit 7da74939cbe6d755c119a96517c56818869f646b[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/daily-puzzle-feature[m[33m, [m[1;32mmain[m[33m, [m[1;32mdaily-puzzle-feature[m[33m)[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Wed Nov 27 01:12:12 2024 -0500
+
+    feat: persist user selections and results in localStorage to maintain game state
+    
+    - Save user selections and image pairs to localStorage on game completion.
+    
+    - Load saved selections and image pairs after a page refresh to retain game state.
+    
+    - Refactor useEffect hooks to handle game state restoration and API checks.
+
+[33mcommit 8d73ab5b9d30530fd08994f5b298437812b20fcb[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Mon Nov 25 13:19:28 2024 -0500
+
+    Fix issue with incorrect image pairs displaying on non-set dates & ensure dropzones are visible for new uploads
+    
+    - Fixed bug where image pairs for one date were displayed for all empty dates.
+    - Ensured state is properly cleared when no image pairs are found for the selected date.
+    - Updated fetch logic to properly handle empty state for new dates.
+    - Added conditional rendering for existing image pairs to handle cases without images.
+    - Modified dropzones to always be available, allowing new image pairs to be added even if none are pre-existing.
+    - Adjusted handleUpload to refresh correctly after uploads.
+
+[33mcommit 4326f5387360d8b11d88b26fda1c2e4c5e00c787[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Sun Nov 24 23:18:14 2024 -0500
+
+    Fix date handling for /daily-puzzle to ensure consistent scheduledDate in EST/EDT
+
+[33mcommit 3f64bbae5067fd9277a3e3a7f8dccbf09d8e8b74[m[33m ([m[1;31morigin/authentication-feature[m[33m, [m[1;32mauthentication-feature[m[33m)[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Sun Nov 24 20:09:55 2024 -0500
+
+    Added password recovery system
+
+[33mcommit 885f72ecc755e53c7598c3e917ec9c4465d680aa[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Sat Nov 23 16:01:59 2024 -0500
+
+    Fix resend OTP flow and ensure new user registration works as expected
+
+[33mcommit 17e52aab42e4035e7970330a9e857a9ed70ad06c[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Wed Nov 20 21:28:33 2024 -0500
+
+    Fixed user registration to save first and last name; removed unwanted username index from MongoDB
+
+[33mcommit 95e2944c527ad26fb7e22ed85aff46a5c7816e7d[m[33m ([m[1;31morigin/admin-console[m[33m, [m[1;32madmin-console[m[33m)[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Mon Nov 18 22:46:15 2024 -0500
+
+    Completed login routing for admin console
+
+[33mcommit ff7edaff00d8faf3da95cb3fb2fbebb40654419c[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Mon Nov 18 22:35:37 2024 -0500
+
+    Completed updates for admin console, including user management and UI fixes.
+
+[33mcommit 79710697487f7839795481b4620a73990e5f8f48[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Fri Nov 15 19:42:25 2024 -0500
+
+    Added admin overview page, user management functionalities, and fixed admin login issues.
+
+[33mcommit 9ae7e56174f15424a4c5bd7463fc198db0c615de[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Wed Nov 13 01:19:23 2024 -0500
+
+    Add user management routes to admin console and integrate admin authentication middleware
+
+[33mcommit d42c684cefadec6a9ff7cc8d9aef0a0ed7932cb7[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Tue Nov 12 01:11:34 2024 -0500
+
+    Add admin differentiation to User model and updated adminRoutes
+
+[33mcommit 4a5d04dda7e4dc9b08a29a0c63984a4890af7b4b[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Fri Nov 8 16:05:34 2024 -0500
+
+    Update authentication flow, routing, and homepage load behavior
+
+[33mcommit c70c5516cd827d3e0d171369ddaad2a0668ecde2[m
+Author: Tim <Timmvanc@gmail.com>
+Date:   Thu Nov 7 17:33:50 2024 -0500
+
+    Implement complete registration and login fl
