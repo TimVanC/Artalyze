@@ -1,25 +1,23 @@
 const User = require('../models/User');
-const ImagePair = require('../models/ImagePair'); // Import ImagePair model
+const ImagePair = require('../models/ImagePair');
 
 // GET endpoint to fetch the image pairs for today's puzzle
 exports.getDailyPuzzle = async (req, res) => {
   console.log('getDailyPuzzle called');
   try {
     const now = new Date();
-    // Adjust the date to reflect midnight EST/EDT
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
     const isDaylightSaving = now.getMonth() >= 2 && now.getMonth() <= 10; // March to November
+
     if (isDaylightSaving) {
-      today.setUTCHours(4, 0, 0, 0); // 4:00 AM UTC for EDT (equivalent to midnight EST)
+      today.setUTCHours(4, 0, 0, 0); // UTC 4:00 AM for EDT
     } else {
-      today.setUTCHours(5, 0, 0, 0); // 5:00 AM UTC for EST (equivalent to midnight EST)
+      today.setUTCHours(5, 0, 0, 0); // UTC 5:00 AM for EST
     }
 
     console.log("Today's Date (Adjusted to UTC Midnight):", today.toISOString());
 
-    // Find the daily puzzle scheduled for today
-    const dailyPuzzle = await ImagePair.findOne({ scheduledDate: today });
+    const dailyPuzzle = await ImagePair.findOne({ scheduledDate: today.toISOString() });
 
     if (dailyPuzzle) {
       console.log('Found Daily Puzzle:', dailyPuzzle);
@@ -36,26 +34,37 @@ exports.getDailyPuzzle = async (req, res) => {
 
 // Check if the user has played today
 exports.checkIfPlayedToday = async (req, res) => {
+  console.log('checkIfPlayedToday called');
   try {
-    const userId = req.user.userId; // Use userId from the decoded token
+    const userId = req.user.userId;
     const user = await User.findById(userId);
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Get the current date in UTC and set the time to midnight (UTC 00:00)
-    const todayUTC = new Date();
-    todayUTC.setUTCHours(0, 0, 0, 0);
+    const nowUTC = new Date();
+    const isDaylightSaving = nowUTC.getMonth() >= 2 && nowUTC.getMonth() <= 10; // March to November
+    const offset = isDaylightSaving ? -4 : -5;
 
-    // Get the user's lastPlayedDate
-    const lastPlayedUTC = user.lastPlayedDate;
+    // Convert UTC to EST/EDT
+    const todayEST = new Date(nowUTC.getTime() + offset * 60 * 60 * 1000);
+    todayEST.setHours(0, 0, 0, 0); // Reset to midnight
 
-    // Check if lastPlayedDate exists and if it matches today's date (in UTC)
-    if (lastPlayedUTC && lastPlayedUTC.toISOString().split('T')[0] === todayUTC.toISOString().split('T')[0]) {
+    const lastPlayedUTC = user.lastPlayedDate ? new Date(user.lastPlayedDate) : null;
+
+    console.log('Today (EST):', todayEST.toISOString());
+    console.log('Last Played Date (UTC):', lastPlayedUTC);
+
+    if (
+      lastPlayedUTC &&
+      todayEST.toISOString().split('T')[0] === lastPlayedUTC.toISOString().split('T')[0]
+    ) {
+      console.log('User has already played today.');
       return res.status(200).json({ hasPlayedToday: true });
     }
 
-    // If no match, the user has not played today
+    console.log('User has not played today.');
     return res.status(200).json({ hasPlayedToday: false });
   } catch (error) {
     console.error('Error checking play status:', error);
@@ -68,8 +77,20 @@ exports.checkIfPlayedToday = async (req, res) => {
 exports.markAsPlayedToday = async (req, res) => {
   console.log('markAsPlayedToday called');
   try {
-    const userId = req.user.userId; // Adjusted to use the correct property from req.user
-    await User.findByIdAndUpdate(userId, { lastPlayedDate: new Date() });
+    const userId = req.user.userId;
+    const nowUTC = new Date();
+    const isDaylightSaving = nowUTC.getMonth() >= 2 && nowUTC.getMonth() <= 10;
+    const offset = isDaylightSaving ? -4 : -5;
+
+    const todayEST = new Date(
+      nowUTC.getUTCFullYear(),
+      nowUTC.getUTCMonth(),
+      nowUTC.getUTCDate(),
+    );
+    todayEST.setHours(todayEST.getHours() + offset);
+
+    console.log('Updating lastPlayedDate to:', todayEST.toISOString());
+    await User.findByIdAndUpdate(userId, { lastPlayedDate: todayEST });
     res.status(200).json({ message: 'User play status updated for today' });
   } catch (error) {
     console.error('Error updating play status:', error);
