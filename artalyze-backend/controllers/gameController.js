@@ -75,25 +75,36 @@ exports.checkIfPlayedToday = async (req, res) => {
 
 // Mark the user as played today
 exports.markAsPlayedToday = async (req, res) => {
-  console.log('markAsPlayedToday called');
   try {
     const userId = req.user.userId;
+    const { isPerfectPuzzle } = req.body; // Include this in the request body
     const nowUTC = new Date();
-    const isDaylightSaving = nowUTC.getMonth() >= 2 && nowUTC.getMonth() <= 10;
-    const offset = isDaylightSaving ? -4 : -5;
 
-    const todayEST = new Date(
-      nowUTC.getUTCFullYear(),
-      nowUTC.getUTCMonth(),
-      nowUTC.getUTCDate(),
-    );
-    todayEST.setHours(todayEST.getHours() + offset);
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-    console.log('Updating lastPlayedDate to:', todayEST.toISOString());
-    await User.findByIdAndUpdate(userId, { lastPlayedDate: todayEST });
-    res.status(200).json({ message: 'User play status updated for today' });
+    const lastPlayedUTC = user.lastPlayedDate ? new Date(user.lastPlayedDate) : null;
+
+    if (isPerfectPuzzle) {
+      if (lastPlayedUTC && nowUTC - lastPlayedUTC === 86400000) {
+        user.currentStreak += 1; // Increment streak
+      } else {
+        user.currentStreak = 1; // Reset streak
+      }
+      user.maxStreak = Math.max(user.maxStreak, user.currentStreak);
+    } else {
+      user.currentStreak = 0; // Reset streak if not solved perfectly
+    }
+
+    user.lastPlayedDate = nowUTC;
+    await user.save();
+
+    res.status(200).json({ message: 'User play status and streak updated successfully' });
   } catch (error) {
-    console.error('Error updating play status:', error);
+    console.error('Error updating play status and streak:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+

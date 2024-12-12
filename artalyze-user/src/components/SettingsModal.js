@@ -9,6 +9,8 @@ const SettingsModal = ({ isOpen, onClose }) => {
     window.location.href = '/'; // Redirect to the homepage or login page
   };
 
+  const currentYear = new Date().getFullYear(); // Dynamically fetch the current year
+
   return (
     <div className="settings-modal-overlay">
       <div className="settings-modal-content">
@@ -53,6 +55,9 @@ const SettingsModal = ({ isOpen, onClose }) => {
             </button>
           </li>
         </ul>
+        <footer className="settings-footer">
+          &copy; {currentYear} Artalyze
+        </footer>
         <button className="close-modal" onClick={onClose}>
           Close
         </button>

@@ -56,3 +56,10 @@
     font-size: 16px;
   }
   
+  .settings-footer {
+    margin-top: 20px;
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+  }
+  

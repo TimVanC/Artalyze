@@ -146,7 +146,9 @@ const Game = () => {
     if (isUserLoggedIn()) {
       try {
         console.log('Marking game as played for today...');
-        const response = await axiosInstance.post('/game/mark-as-played');
+        const response = await axiosInstance.post('/game/mark-as-played', {
+          isPerfectPuzzle: correctCount === imagePairs.length,
+        });
         console.log('Game play status updated for today:', response.data);
       } catch (error) {
         console.error('Error marking game as played:', error);
@@ -167,31 +169,39 @@ const Game = () => {
     // Check if the puzzle was completed perfectly
     const isPerfectPuzzle = correctCount === imagePairs.length;
     if (isPerfectPuzzle) {
+      // Increment perfect puzzles
       updatedStats.perfectPuzzles += 1;
+  
+      // Update streaks
+      const today = new Date().toISOString().split('T')[0];
+      const lastPlayedDate = stats.lastPlayedDate;
+      const lastPlayed = lastPlayedDate ? new Date(lastPlayedDate) : null;
+      const todayDate = new Date(today);
+  
+      if (lastPlayed && todayDate - lastPlayed === 86400000) {
+        // If the previous play was yesterday, increment streak
+        updatedStats.currentStreak += 1;
+      } else if (!lastPlayed || todayDate - lastPlayed > 86400000) {
+        // Otherwise, reset streak
+        updatedStats.currentStreak = 1;
+      }
+  
+      // Update max streak
+      updatedStats.maxStreak = Math.max(updatedStats.maxStreak, updatedStats.currentStreak);
+    } else {
+      // Reset current streak if the puzzle wasn't solved perfectly
+      updatedStats.currentStreak = 0;
     }
   
     // Update win percentage
     updatedStats.winPercentage = Math.round((updatedStats.perfectPuzzles / updatedStats.gamesPlayed) * 100);
-  
-    // Update streaks
-    const today = new Date().toISOString().split('T')[0];
-    const lastPlayedDate = stats.lastPlayedDate;
-    const lastPlayed = lastPlayedDate ? new Date(lastPlayedDate) : null;
-    const todayDate = new Date(today);
-  
-    if (lastPlayed && todayDate - lastPlayed === 86400000) {
-      updatedStats.currentStreak += 1;
-    } else if (!lastPlayed || todayDate - lastPlayed > 86400000) {
-      updatedStats.currentStreak = 1;
-    }
-    updatedStats.maxStreak = Math.max(updatedStats.maxStreak, updatedStats.currentStreak);
   
     // Update mistake distribution
     const mistakeCount = imagePairs.length - correctCount;
     updatedStats.mistakeDistribution[mistakeCount] = (updatedStats.mistakeDistribution[mistakeCount] || 0) + 1;
   
     // Update last played date
-    updatedStats.lastPlayedDate = today;
+    updatedStats.lastPlayedDate = new Date().toISOString();
   
     setStats(updatedStats);
   
@@ -204,6 +214,7 @@ const Game = () => {
       console.error('Error updating user stats:', error);
     }
   };
+  
   
   // Initialize game logic
   useEffect(() => {
