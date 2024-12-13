@@ -276,7 +276,18 @@ const Game = () => {
     };
 
     initializeGame(); // Call the function inside useEffect
-}, [userId]); // Closing the useEffect correctly
+}, [userId]);
+
+useEffect(() => {
+  if (isGameComplete) {
+      const timer = setTimeout(() => {
+          setIsStatsOpen(true); // Automatically open stats modal after completion
+      }, 500); // 0.5 seconds delay
+
+      return () => clearTimeout(timer); // Cleanup timeout on unmount or re-run
+  }
+}, [isGameComplete]);
+
 
 const fetchAndSetStats = async (userId) => {
     if (!userId) {
