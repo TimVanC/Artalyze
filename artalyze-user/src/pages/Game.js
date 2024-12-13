@@ -103,10 +103,11 @@ const Game = () => {
   const [selectedCompletionMessage, setSelectedCompletionMessage] = useState("");
   const [imagePairs, setImagePairs] = useState([]);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
+  const [isDisappearing, setIsDisappearing] = useState(false); // Added this state
   const [error, setError] = useState('');
   const swiperRef = useRef(null);
   let longPressTimer;
-  
+
   const [userId, setUserId] = useState(localStorage.getItem("userId"));
   const [stats, setStats] = useState({
     gamesPlayed: 0,
@@ -219,91 +220,79 @@ const Game = () => {
   // Initialize game logic
   useEffect(() => {
     const initializeGame = async () => {
-      const today = new Date().toISOString().split('T')[0];
-      const isLoggedIn = isUserLoggedIn();
-  
-      if (isLoggedIn && !userId) {
-        console.error('User is logged in but no userId found in localStorage.');
-        setError('User ID is missing. Please log in again.');
-        return;
-      }
-  
-      try {
-        if (isLoggedIn) {
-          console.log('Checking if user has played today...');
-          const playStatusResponse = await axiosInstance.get('/game/check-today-status');
-          if (playStatusResponse.data.hasPlayedToday) {
-            console.log('User has already played today');
-            setIsGameComplete(true);
-            if (userId) {
-              await fetchAndSetStats(userId);
+        const today = new Date().toISOString().split('T')[0];
+        const isLoggedIn = isUserLoggedIn();
+
+        if (isLoggedIn && !userId) {
+            console.error('User is logged in but no userId found in localStorage.');
+            setError('User ID is missing. Please log in again.');
+            return;
+        }
+
+        try {
+            if (isLoggedIn) {
+                console.log('Checking if user has played today...');
+                const playStatusResponse = await axiosInstance.get('/game/check-today-status');
+                if (playStatusResponse.data.hasPlayedToday) {
+                    console.log('User has already played today');
+                    setIsGameComplete(true);
+                    if (userId) {
+                        await fetchAndSetStats(userId);
+                    }
+                    return;
+                }
+            } else {
+                const lastPlayed = localStorage.getItem('lastPlayedDate');
+                if (lastPlayed === today) {
+                    console.log('Guest user has already played today');
+                    setIsGameComplete(true);
+                    return;
+                }
             }
-            return;
-          }
-        } else {
-          const lastPlayed = localStorage.getItem('lastPlayedDate');
-          if (lastPlayed === today) {
-            console.log('Guest user has already played today');
-            setIsGameComplete(true);
-            return;
-          }
+
+            console.log('Fetching daily puzzle...');
+            const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
+            if (puzzleResponse.data?.imagePairs?.length > 0) {
+                const shuffledPairs = puzzleResponse.data.imagePairs.map((pair) => ({
+                    human: pair.humanImageURL,
+                    ai: pair.aiImageURL,
+                    images: Math.random() > 0.5
+                        ? [pair.humanImageURL, pair.aiImageURL]
+                        : [pair.aiImageURL, pair.humanImageURL],
+                }));
+                setImagePairs(shuffledPairs);
+            } else {
+                console.warn('No image pairs available for today.');
+                setImagePairs([]);
+            }
+
+            if (isLoggedIn && userId) {
+                await fetchAndSetStats(userId);
+            }
+        } catch (error) {
+            console.error('Error during game initialization:', error.response?.data || error.message);
+            setError('Failed to initialize the game. Please try again later.');
         }
-  
-        console.log('Fetching daily puzzle...');
-        const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
-        if (puzzleResponse.data?.imagePairs?.length > 0) {
-          const shuffledPairs = puzzleResponse.data.imagePairs.map((pair) => ({
-            human: pair.humanImageURL,
-            ai: pair.aiImageURL,
-            images: Math.random() > 0.5
-              ? [pair.humanImageURL, pair.aiImageURL]
-              : [pair.aiImageURL, pair.humanImageURL],
-          }));
-          setImagePairs(shuffledPairs);
-        } else {
-          console.warn('No image pairs available for today.');
-          setImagePairs([]);
-        }
-  
-        if (isLoggedIn && userId) {
-          await fetchAndSetStats(userId);
-        }
-      } catch (error) {
-        console.error('Error during game initialization:', error.response?.data || error.message);
-        setError('Failed to initialize the game. Please try again later.');
-      }
     };
-  
-    const fetchAndSetStats = async (userId) => {
-      if (!userId) {
+
+    initializeGame(); // Call the function inside useEffect
+}, [userId]); // Closing the useEffect correctly
+
+const fetchAndSetStats = async (userId) => {
+    if (!userId) {
         console.error('No userId provided to fetch stats.');
         return;
-      }
-  
-      try {
+    }
+
+    try {
         const statsResponse = await axiosInstance.get(`/stats/${userId}`);
         setStats(statsResponse.data);
         console.log('Fetched user stats:', statsResponse.data);
-      } catch (error) {
+    } catch (error) {
         console.error('Error fetching user stats:', error.response?.data || error.message);
         setError('Unable to fetch user statistics. Please try again later.');
-      }
-    };
-  
-    initializeGame();
-  }, [userId]);
-  
-  // Restore selections and image pairs on game completion
-  useEffect(() => {
-    if (isGameComplete) {
-      const savedSelections = JSON.parse(localStorage.getItem('gameSelections'));
-      const savedImagePairs = JSON.parse(localStorage.getItem('gameImagePairs'));
-      if (savedSelections && savedImagePairs) {
-        setSelections(savedSelections);
-        setImagePairs(savedImagePairs);
-      }
     }
-  }, [isGameComplete]);  
+}; 
   
   const handleSelection = (selectedImage, isHumanSelection) => {
     const newSelection = { selected: selectedImage, isHumanSelection };
@@ -327,39 +316,40 @@ const Game = () => {
     clearTimeout(longPressTimer);
   };
 
+  const handleMidTurnFeedback = () => {
+    setIsDisappearing(false);
+    setTimeout(() => {
+      setIsDisappearing(true);
+    }, 1300); // Example delay for the disappearing animation
+  };  
+
   const handleSubmit = () => {
     let correct = 0;
+  
     selections.forEach((selection, index) => {
       if (selection.isHumanSelection && selection.selected === imagePairs[index].human) {
         correct++;
       }
     });
-
+  
     setCorrectCount(correct);
     const message = getRandomCompletionMessage(correct);
     setSelectedCompletionMessage(message);
-
+  
     if (correct === imagePairs.length || triesLeft === 1) {
       setIsGameComplete(true);
-      setShowOverlay(false);
-      setShowResults(false);
-
-      // Trigger game complete function to mark the game as played
-      handleGameComplete();
-
+      setShowOverlay(false); // Ensure no mid-turn overlay on game completion
+      handleGameComplete(); // Trigger game complete actions
     } else {
-      setShowOverlay(true);
+      setShowOverlay(true); // Display mid-turn feedback
       setTriesLeft(triesLeft - 1);
     }
-  };
+  };  
 
   const handleTryAgain = () => {
     setShowOverlay(false);
     setShowResults(false);
-  };
-
-  const handleDismissOverlay = () => {
-    setShowScoreOverlay(false);
+    setIsDisappearing(false);
   };
 
   const handleSwipe = (swiper) => {
@@ -372,26 +362,8 @@ const Game = () => {
 
   const isSubmitEnabled = selections.length === imagePairs.length;
 
-  const getScoreOverlayMessage = () => {
-    if (correctCount === 5) {
-      return "Perfect Score! 🎉 You got all 5 correct!";
-    } else if (correctCount === 0) {
-      return "Better Luck Next Time! You scored 0/5. Come back tomorrow to try again!";
-    } else {
-      return `Well Done! You scored ${correctCount}/5!`;
-    }
-  };
-
   return (
     <div className="game-container">
-      {isGameComplete && showScoreOverlay && (
-        <div className="score-overlay">
-          <div className="score-overlay-content">
-            <h2>{getScoreOverlayMessage()}</h2>
-            <button className="view-results-button" onClick={handleDismissOverlay}>View Results</button>
-          </div>
-        </div>
-      )}
       <div className="top-bar">
         <div className="app-title">Artalyze</div>
         <div className="icons-right">
@@ -400,7 +372,7 @@ const Game = () => {
           <FaCog className="icon" title="Settings" onClick={() => setIsSettingsOpen(true)} />
         </div>
       </div>
-
+  
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
       <StatsModal
         isOpen={isStatsOpen}
@@ -409,7 +381,7 @@ const Game = () => {
         isLoggedIn={isLoggedIn} // Pass isLoggedIn to StatsModal
       />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-
+  
       {!isGameComplete && (
         <>
           <h1>Guess the human painting from each pair!</h1>
@@ -426,7 +398,7 @@ const Game = () => {
               ))}
             </div>
           </div>
-
+  
           <div className={`status-bar ${showOverlay ? 'blurred' : ''}`}>
             <div className="tries-left">
               <span>Tries Left:</span>
@@ -435,7 +407,7 @@ const Game = () => {
               ))}
             </div>
           </div>
-
+  
           <Swiper
             loop={true}
             onSlideChange={handleSwipe}
@@ -463,13 +435,13 @@ const Game = () => {
               </SwiperSlide>
             ))}
           </Swiper>
-
+  
           {enlargedImage && (
             <div className="enlarge-modal" onClick={closeEnlargedImage}>
               <img src={enlargedImage} alt="Enlarged view" className="enlarged-image" />
             </div>
           )}
-
+  
           <div className="navigation-buttons">
             {imagePairs.map((_, index) => (
               <button
@@ -485,7 +457,7 @@ const Game = () => {
               </button>
             ))}
           </div>
-
+  
           <button
             className={`submit-button ${isSubmitEnabled ? 'enabled' : 'disabled'}`}
             onClick={handleSubmit}
@@ -495,7 +467,7 @@ const Game = () => {
           </button>
         </>
       )}
-
+  
       {showOverlay && (
         <div className="results-overlay">
           <div className="overlay-content">
@@ -515,15 +487,15 @@ const Game = () => {
           </div>
         </div>
       )}
-
-      {isGameComplete && !showScoreOverlay && (
+  
+      {isGameComplete && (
         <div className="completion-screen">
           <p>{selectedCompletionMessage}</p>
           <div className="horizontal-thumbnail-grid">
             {imagePairs.map((pair, index) => {
               const selection = selections[index];
               const isCorrect = selection?.selected === pair.human;
-
+  
               return (
                 <div key={index} className="pair-thumbnails-horizontal">
                   <div className={`thumbnail-container ${isCorrect && pair.images[0] === pair.human ? 'correct' : (selection?.selected === pair.images[0] ? 'incorrect' : '')}`}>
@@ -546,7 +518,7 @@ const Game = () => {
           </div>
         </div>
       )}
-
+  
       {enlargedImage && (
         <div className="enlarge-modal" onClick={closeEnlargedImage}>
           <img src={enlargedImage} alt="Enlarged view" className="enlarged-image" />
@@ -554,6 +526,7 @@ const Game = () => {
       )}
     </div>
   );
+  
 };
 
 export default Game;
