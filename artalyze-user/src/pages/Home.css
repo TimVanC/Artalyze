@@ -39,8 +39,8 @@ body {
 
 /* Buttons */
 .home-container button {
-  border-radius: 20px !important;
-  padding: 10px 50px !important;
+  border-radius: 20px;
+  padding: 10px 50px;
   font-size: 16px;
   font-weight: 400;
   margin-bottom: 15px;
