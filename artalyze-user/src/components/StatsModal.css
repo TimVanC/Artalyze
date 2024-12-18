@@ -113,8 +113,10 @@
     align-items: center;
     justify-content: flex-end;
     border-radius: 5px;
-    padding-right: 5px;
-  }
+    transition: width 1.5s ease-in-out;
+    padding-right: 8px; /* Add space for all values */
+    position: relative;
+}
   
   /* Animate Most Recent Bar */
   .bar-fill.animate {
@@ -130,14 +132,19 @@
     color: white;
     font-weight: bold;
     font-size: 14px;
-  }
-  
+}
 
 /* Zero Value Styling */
 .bar-fill.zero-value {
-    background-color: #b0b0b0; /* Same grey for zero values */
-    justify-content: center;
-    color: white;
+    justify-content: center; /* Perfectly center zero values */
+    padding-right: 0; /* Remove padding for zero values */
+}
+
+.bar-fill.zero-value .bar-value {
+    margin-right: 0; /* Override for centering */
+}
+.bar-fill.zero-value .bar-value {
+    position: static; /* Override absolute positioning for 0 values */
 }
 
 /* Share Button Styles */
