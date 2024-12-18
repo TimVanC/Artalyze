@@ -33,44 +33,46 @@ exports.getDailyPuzzle = async (req, res) => {
 };
 
 // Check if the user has played today
+// Check if the user has played today
 exports.checkIfPlayedToday = async (req, res) => {
   console.log('checkIfPlayedToday called');
   try {
-    const userId = req.user.userId;
-    const user = await User.findById(userId);
+      const userId = req.user.userId;
+      const user = await User.findById(userId);
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+      if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+      }
 
-    const nowUTC = new Date();
-    const isDaylightSaving = nowUTC.getMonth() >= 2 && nowUTC.getMonth() <= 10; // March to November
-    const offset = isDaylightSaving ? -4 : -5;
+      const nowUTC = new Date();
+      const isDaylightSaving = nowUTC.getMonth() >= 2 && nowUTC.getMonth() <= 10; // March to November
+      const offset = isDaylightSaving ? -4 : -5;
 
-    // Convert UTC to EST/EDT
-    const todayEST = new Date(nowUTC.getTime() + offset * 60 * 60 * 1000);
-    todayEST.setHours(0, 0, 0, 0); // Reset to midnight
+      // Convert UTC to EST/EDT
+      const todayEST = new Date(nowUTC.getTime() + offset * 60 * 60 * 1000);
+      todayEST.setHours(0, 0, 0, 0); // Reset to midnight
 
-    const lastPlayedUTC = user.lastPlayedDate ? new Date(user.lastPlayedDate) : null;
+      const lastPlayedUTC = user.lastPlayedDate ? new Date(user.lastPlayedDate) : null;
 
-    console.log('Today (EST):', todayEST.toISOString());
-    console.log('Last Played Date (UTC):', lastPlayedUTC);
+      console.log('Today (EST):', todayEST.toISOString());
+      console.log('Last Played Date (UTC):', lastPlayedUTC);
 
-    if (
-      lastPlayedUTC &&
-      todayEST.toISOString().split('T')[0] === lastPlayedUTC.toISOString().split('T')[0]
-    ) {
-      console.log('User has already played today.');
-      return res.status(200).json({ hasPlayedToday: true });
-    }
+      if (
+          lastPlayedUTC &&
+          todayEST.toISOString().split('T')[0] === new Date(lastPlayedUTC.getTime() + offset * 60 * 60 * 1000).toISOString().split('T')[0]
+      ) {
+          console.log('User has already played today.');
+          return res.status(200).json({ hasPlayedToday: true });
+      }
 
-    console.log('User has not played today.');
-    return res.status(200).json({ hasPlayedToday: false });
+      console.log('User has not played today.');
+      return res.status(200).json({ hasPlayedToday: false });
   } catch (error) {
-    console.error('Error checking play status:', error);
-    res.status(500).json({ message: 'Server error' });
+      console.error('Error checking play status:', error);
+      res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 
 // Mark the user as played today

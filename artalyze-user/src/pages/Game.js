@@ -160,17 +160,16 @@ const Game = () => {
       localStorage.setItem('lastPlayedDate', today);
     }
   
-    // Update stats
+    // Update stats locally
     console.log('Attempting to update stats for userId:', userId);
     const updatedStats = { ...stats };
   
     // Increment games played
     updatedStats.gamesPlayed += 1;
   
-    // Check if the puzzle was completed perfectly
     const isPerfectPuzzle = correctCount === imagePairs.length;
+  
     if (isPerfectPuzzle) {
-      // Increment perfect puzzles
       updatedStats.perfectPuzzles += 1;
   
       // Update streaks
@@ -182,39 +181,49 @@ const Game = () => {
       if (lastPlayed && todayDate - lastPlayed === 86400000) {
         // If the previous play was yesterday, increment streak
         updatedStats.currentStreak += 1;
-      } else if (!lastPlayed || todayDate - lastPlayed > 86400000) {
+      } else {
         // Otherwise, reset streak
         updatedStats.currentStreak = 1;
       }
   
-      // Update max streak
       updatedStats.maxStreak = Math.max(updatedStats.maxStreak, updatedStats.currentStreak);
     } else {
-      // Reset current streak if the puzzle wasn't solved perfectly
-      updatedStats.currentStreak = 0;
+      updatedStats.currentStreak = 0; // Reset streak
     }
   
-    // Update win percentage
-    updatedStats.winPercentage = Math.round((updatedStats.perfectPuzzles / updatedStats.gamesPlayed) * 100);
+    updatedStats.winPercentage = Math.round(
+      (updatedStats.perfectPuzzles / updatedStats.gamesPlayed) * 100
+    );
   
-    // Update mistake distribution
     const mistakeCount = imagePairs.length - correctCount;
-    updatedStats.mistakeDistribution[mistakeCount] = (updatedStats.mistakeDistribution[mistakeCount] || 0) + 1;
+    updatedStats.mistakeDistribution[mistakeCount] =
+      (updatedStats.mistakeDistribution[mistakeCount] || 0) + 1;
   
-    // Update last played date
     updatedStats.lastPlayedDate = new Date().toISOString();
-  
+    updatedStats.mostRecentScore = mistakeCount; // Update the most recent score
     setStats(updatedStats);
   
     // Send updated stats to the backend
     try {
-      console.log('Updated stats being sent to backend:', updatedStats);
-      await updateUserStats(userId, updatedStats);
+      console.log('Sending updated stats to backend:', updatedStats);
+      const payload = {
+        correctAnswers: correctCount,
+        totalQuestions: imagePairs.length,
+      };
+      await axiosInstance.put(`/stats/${userId}`, payload, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
       console.log('User stats updated successfully in the backend.');
+  
+      // Fetch and set stats after successful update
+      await fetchAndSetStats(userId);
     } catch (error) {
-      console.error('Error updating user stats:', error);
+      console.error('Error updating user stats:', error.response?.data || error.message);
     }
   };
+  
   
   
   // Initialize game logic
@@ -230,14 +239,15 @@ const Game = () => {
         }
 
         try {
+            // Check if user has already played today
             if (isLoggedIn) {
                 console.log('Checking if user has played today...');
                 const playStatusResponse = await axiosInstance.get('/game/check-today-status');
-                if (playStatusResponse.data.hasPlayedToday) {
+                if (playStatusResponse.data.hasPlayedToday || stats.lastPlayedDate === today) {
                     console.log('User has already played today');
                     setIsGameComplete(true);
                     if (userId) {
-                        await fetchAndSetStats(userId);
+                        await fetchAndSetStats(userId); // Ensure stats are up-to-date
                     }
                     return;
                 }
@@ -275,8 +285,11 @@ const Game = () => {
         }
     };
 
-    initializeGame(); // Call the function inside useEffect
-}, [userId]);
+    if (!isGameComplete) {
+        initializeGame();
+    }
+}, [userId, stats.lastPlayedDate, isGameComplete]);
+
 
 useEffect(() => {
   if (isGameComplete) {
@@ -290,20 +303,21 @@ useEffect(() => {
 
 
 const fetchAndSetStats = async (userId) => {
-    if (!userId) {
-        console.error('No userId provided to fetch stats.');
-        return;
-    }
+  if (!userId) {
+    console.error('No userId provided to fetch stats.');
+    return;
+  }
 
-    try {
-        const statsResponse = await axiosInstance.get(`/stats/${userId}`);
-        setStats(statsResponse.data);
-        console.log('Fetched user stats:', statsResponse.data);
-    } catch (error) {
-        console.error('Error fetching user stats:', error.response?.data || error.message);
-        setError('Unable to fetch user statistics. Please try again later.');
-    }
-}; 
+  try {
+    const statsResponse = await axiosInstance.get(`/stats/${userId}`);
+    setStats(statsResponse.data); // Set the stats, including the new `mostRecentScore`
+    console.log('Fetched user stats:', statsResponse.data);
+  } catch (error) {
+    console.error('Error fetching user stats:', error.response?.data || error.message);
+    setError('Unable to fetch user statistics. Please try again later.');
+  }
+};
+ 
   
   const handleSelection = (selectedImage, isHumanSelection) => {
     const newSelection = { selected: selectedImage, isHumanSelection };

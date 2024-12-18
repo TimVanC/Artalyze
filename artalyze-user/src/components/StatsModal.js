@@ -12,6 +12,7 @@ const defaultStats = {
   maxStreak: 0,
   perfectPuzzles: 0,
   mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  mostRecentScore: null, // Added mostRecentScore field
   lastPlayedDate: null,
 };
 
@@ -29,12 +30,9 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
       }, {});
       setAnimatedBars(animated);
 
-      if (!hasAnimatedStats.current) {
-        setShouldAnimateNumbers(true);
-        hasAnimatedStats.current = true;
-      } else {
-        setShouldAnimateNumbers(false);
-      }
+      // Always trigger animations when modal opens
+      setShouldAnimateNumbers(true);
+      hasAnimatedStats.current = false;
     }
   }, [isOpen, stats.mistakeDistribution, isLoggedIn]);
 
@@ -57,7 +55,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.gamesPlayed} duration={1.5} />
+                    <CountUp start={0} end={stats.gamesPlayed} duration={3} />
                   ) : (
                     stats.gamesPlayed
                   )}
@@ -67,7 +65,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.winPercentage} duration={1.5} />
+                    <CountUp start={0} end={stats.winPercentage} duration={3} />
                   ) : (
                     stats.winPercentage
                   )}
@@ -77,7 +75,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.currentStreak} duration={1.5} />
+                    <CountUp start={0} end={stats.currentStreak} duration={3} />
                   ) : (
                     stats.currentStreak
                   )}
@@ -87,7 +85,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.maxStreak} duration={1.5} />
+                    <CountUp start={0} end={stats.maxStreak} duration={3} />
                   ) : (
                     stats.maxStreak
                   )}
@@ -100,7 +98,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.perfectPuzzles} duration={1.5} />
+                    <CountUp start={0} end={stats.perfectPuzzles} duration={3} />
                   ) : (
                     stats.perfectPuzzles
                   )}
@@ -113,40 +111,37 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               <h3>Mistake Distribution</h3>
               {Object.keys(stats.mistakeDistribution).map((mistakeCount) => {
                 const value = animatedBars[mistakeCount] || 0;
+                const isActive = parseInt(mistakeCount, 10) === stats.mostRecentScore;
+
+                console.log(
+                  `MistakeCount: ${mistakeCount}, Value: ${value}, isActive: ${isActive}`
+                );
+
                 const barWidth = Math.max((value / maxValue) * 100, 5);
 
                 return (
                   <div className="distribution-bar-container" key={mistakeCount}>
                     <span className="mistake-label">{mistakeCount}</span>
-                    <div className="distribution-bar">
+                    <div
+                      className={`distribution-bar ${isActive ? 'active most-recent' : ''
+                        }`}
+                    >
                       <div
-                        className="bar-fill"
+                        className={`bar-fill ${value === 0 ? 'zero-value' : ''} ${isActive ? 'animate' : ''
+                          }`}
                         style={{
                           width: `${barWidth}%`,
                           minWidth: '5%',
-                          backgroundColor: '#4d73af',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: value === 0 ? 'center' : 'flex-end',
-                          transition: 'width 1s ease-out',
-                          paddingRight: value > 0 ? '5px' : '0',
                         }}
                       >
-                        <span
-                          className="bar-value"
-                          style={{
-                            color: '#ffffff',
-                            marginRight: value > 0 ? '5px' : '0',
-                          }}
-                        >
-                          {value}
-                        </span>
+                        <span className="bar-value">{value}</span>
                       </div>
                     </div>
                   </div>
                 );
               })}
             </div>
+
             <hr className="separator" />
             <button className="share-button" onClick={() => handleShare(stats)}>
               <FaShareAlt /> Share

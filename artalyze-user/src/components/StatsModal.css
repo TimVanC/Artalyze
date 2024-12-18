@@ -25,7 +25,7 @@
     animation: slide-up 0.4s ease;
     height: 85vh;
     overflow-y: auto;
-    font-family: 'Lato', sans-serif; /* Apply font family */
+    font-family: 'Lato', sans-serif;
 }
 
 /* Close Icon */
@@ -70,72 +70,74 @@
 .stat-item {
     font-size: 18px;
     text-align: center;
-    font-family: 'Lato', sans-serif;
 }
 
 .stat-value {
     font-size: 22px;
     font-weight: normal;
-    font-family: 'Lato', sans-serif;
 }
 
 /* Mistake Distribution */
 .mistake-distribution {
     margin-top: 10px;
-    font-family: 'Lato', sans-serif;
 }
 
 .distribution-bar-container {
     display: flex;
     align-items: center;
     margin: 10px 0;
-    position: relative;
 }
 
 .mistake-label {
     flex: 0.2;
     font-size: 16px;
     text-align: left;
-    font-family: 'Lato', sans-serif;
+    color: #333333;
 }
 
 .distribution-bar {
     flex: 4;
     height: 20px;
-    position: relative;
     display: flex;
     align-items: center;
+    background-color: transparent;
+    border-radius: 5px;
+    overflow: hidden;
 }
 
+/* Bar Fill */
 .bar-fill {
     height: 100%;
-    background-color: #4d73af; /* Blue color for the bar */
-    position: relative;
+    background-color: #b0b0b0;
     display: flex;
     align-items: center;
-    justify-content: flex-end; /* Align value to the end of the bar */
+    justify-content: flex-end;
     border-radius: 5px;
-    padding-right: 5px; /* Adding some padding to the right for spacing */
-}
-
-.bar-value {
-    color: white; /* Make it stand out on the bar fill */
+    padding-right: 5px;
+  }
+  
+  /* Animate Most Recent Bar */
+  .bar-fill.animate {
+    transition: width 1.5s ease-in-out, background-color 0.5s ease-in-out;
+  }
+  
+  .distribution-bar.most-recent .bar-fill {
+    background-color: #4d73af;
+  }
+  
+  /* Active Bar Value */
+  .bar-value {
+    color: white;
     font-weight: bold;
     font-size: 14px;
-}
+  }
+  
 
-/* Specific styling for the value of 0 to ensure it's centered */
+/* Zero Value Styling */
 .bar-fill.zero-value {
-    justify-content: center; /* Center the value if the count is zero */
-}
-
-.frequency-value {
-    margin-left: 10px;
-    font-size: 14px;
-    color: #333333;
-    font-family: 'Lato', sans-serif;
-    position: absolute;
-    right: 10px;
+    background-color: #b0b0b0; /* Same grey for zero values */
+    justify-content: center;
+    color: white;
 }
 
 /* Share Button Styles */
@@ -151,53 +153,12 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    margin-top: 20px; /* Add some space between the content above */
-    width: 80%; /* Ensure the button has good prominence */
+    margin-top: 20px;
+    width: 80%;
     justify-content: center;
-    font-family: 'Lato', sans-serif;
 }
 
 .share-button:hover {
-    background-color: #388E3C;
-    transform: scale(1.05);
-}
-
-/* Non-Logged-In View */
-.stats-logo {
-    max-width: 150px;
-    margin: 20px auto;
-}
-
-.non-logged-in-message {
-    font-size: 22px;
-    font-weight: bold;
-    margin: 10px 0;
-    color: #333333;
-}
-
-.non-logged-in-subtext {
-    font-size: 16px;
-    color: #666666;
-    margin-bottom: 20px;
-}
-
-.cta-button {
-    background-color: #4CAF50;
-    color: white;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-    width: 80%;
-    max-width: 300px;
-    margin: 20px auto;
-    display: block;
-}
-
-.cta-button:hover {
     background-color: #388E3C;
     transform: scale(1.05);
 }
