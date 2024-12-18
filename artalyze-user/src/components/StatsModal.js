@@ -161,6 +161,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               Create a Free Account
             </button>
           </>
+
         )}
       </div>
     </div>
