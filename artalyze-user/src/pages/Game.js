@@ -137,158 +137,218 @@ const Game = () => {
   const handleGameComplete = async () => {
     console.log('handleGameComplete called');
     setIsGameComplete(true);
-  
-    if (!userId) {
-      console.error('User ID not found. Ensure the user is logged in.');
-      return;
-    }
-  
-    // Update play status for logged-in users
-    if (isUserLoggedIn()) {
-      try {
-        console.log('Marking game as played for today...');
-        const response = await axiosInstance.post('/game/mark-as-played', {
-          isPerfectPuzzle: correctCount === imagePairs.length,
-        });
-        console.log('Game play status updated for today:', response.data);
-      } catch (error) {
-        console.error('Error marking game as played:', error);
-      }
-    } else {
-      console.log('User is not logged in, using localStorage to track last played date');
-      const today = new Date().toISOString().split('T')[0];
-      localStorage.setItem('lastPlayedDate', today);
-    }
-  
-    // Update stats locally
-    console.log('Attempting to update stats for userId:', userId);
-    const updatedStats = { ...stats };
-  
-    // Increment games played
-    updatedStats.gamesPlayed += 1;
-  
-    const isPerfectPuzzle = correctCount === imagePairs.length;
-  
-    if (isPerfectPuzzle) {
-      updatedStats.perfectPuzzles += 1;
-  
-      // Update streaks
-      const today = new Date().toISOString().split('T')[0];
-      const lastPlayedDate = stats.lastPlayedDate;
-      const lastPlayed = lastPlayedDate ? new Date(lastPlayedDate) : null;
-      const todayDate = new Date(today);
-  
-      if (lastPlayed && todayDate - lastPlayed === 86400000) {
-        // If the previous play was yesterday, increment streak
-        updatedStats.currentStreak += 1;
-      } else {
-        // Otherwise, reset streak
-        updatedStats.currentStreak = 1;
-      }
-  
-      updatedStats.maxStreak = Math.max(updatedStats.maxStreak, updatedStats.currentStreak);
-    } else {
-      updatedStats.currentStreak = 0; // Reset streak
-    }
-  
-    updatedStats.winPercentage = Math.round(
-      (updatedStats.perfectPuzzles / updatedStats.gamesPlayed) * 100
-    );
-  
-    const mistakeCount = imagePairs.length - correctCount;
-    updatedStats.mistakeDistribution[mistakeCount] =
-      (updatedStats.mistakeDistribution[mistakeCount] || 0) + 1;
-  
-    updatedStats.lastPlayedDate = new Date().toISOString();
-    updatedStats.mostRecentScore = mistakeCount; // Update the most recent score
-    setStats(updatedStats);
-  
-    // Send updated stats to the backend
-    try {
-      console.log('Sending updated stats to backend:', updatedStats);
-      const payload = {
-        correctAnswers: correctCount,
-        totalQuestions: imagePairs.length,
-      };
-      await axiosInstance.put(`/stats/${userId}`, payload, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-        },
-      });
-      console.log('User stats updated successfully in the backend.');
-  
-      // Fetch and set stats after successful update
-      await fetchAndSetStats(userId);
-    } catch (error) {
-      console.error('Error updating user stats:', error.response?.data || error.message);
-    }
-  };
-  
-  
-  
-  // Initialize game logic
-  useEffect(() => {
-    const initializeGame = async () => {
-        const today = new Date().toISOString().split('T')[0];
-        const isLoggedIn = isUserLoggedIn();
 
-        if (isLoggedIn && !userId) {
-            console.error('User is logged in but no userId found in localStorage.');
-            setError('User ID is missing. Please log in again.');
+    const today = new Date().toISOString().split('T')[0];
+
+    if (isUserLoggedIn()) {
+        // Logged-in user logic
+        if (!userId) {
+            console.error('User ID not found. Ensure the user is logged in.');
             return;
         }
 
         try {
-            // Check if user has already played today
-            if (isLoggedIn) {
-                console.log('Checking if user has played today...');
-                const playStatusResponse = await axiosInstance.get('/game/check-today-status');
-                if (playStatusResponse.data.hasPlayedToday || stats.lastPlayedDate === today) {
-                    console.log('User has already played today');
-                    setIsGameComplete(true);
-                    if (userId) {
-                        await fetchAndSetStats(userId); // Ensure stats are up-to-date
-                    }
-                    return;
-                }
-            } else {
-                const lastPlayed = localStorage.getItem('lastPlayedDate');
-                if (lastPlayed === today) {
-                    console.log('Guest user has already played today');
-                    setIsGameComplete(true);
-                    return;
-                }
-            }
-
-            console.log('Fetching daily puzzle...');
-            const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
-            if (puzzleResponse.data?.imagePairs?.length > 0) {
-                const shuffledPairs = puzzleResponse.data.imagePairs.map((pair) => ({
-                    human: pair.humanImageURL,
-                    ai: pair.aiImageURL,
-                    images: Math.random() > 0.5
-                        ? [pair.humanImageURL, pair.aiImageURL]
-                        : [pair.aiImageURL, pair.humanImageURL],
-                }));
-                setImagePairs(shuffledPairs);
-            } else {
-                console.warn('No image pairs available for today.');
-                setImagePairs([]);
-            }
-
-            if (isLoggedIn && userId) {
-                await fetchAndSetStats(userId);
-            }
+            console.log('Marking game as played for today...');
+            const response = await axiosInstance.post('/game/mark-as-played', {
+                isPerfectPuzzle: correctCount === imagePairs.length,
+            });
+            console.log('Game play status updated for today:', response.data);
+            localStorage.setItem('lastPlayedDate', today); // Fallback for play status
         } catch (error) {
-            console.error('Error during game initialization:', error.response?.data || error.message);
-            setError('Failed to initialize the game. Please try again later.');
+            console.error('Error marking game as played:', error.response?.data || error.message);
+            localStorage.setItem('lastPlayedDate', today); // Ensure local fallback
         }
-    };
 
-    if (!isGameComplete) {
-        initializeGame();
+        // Update stats for logged-in users
+        try {
+            const updatedStats = { ...stats };
+
+            // Increment games played
+            updatedStats.gamesPlayed += 1;
+
+            const isPerfectPuzzle = correctCount === imagePairs.length;
+
+            if (isPerfectPuzzle) {
+                updatedStats.perfectPuzzles += 1;
+
+                const lastPlayedDate = stats.lastPlayedDate;
+                const lastPlayed = lastPlayedDate ? new Date(lastPlayedDate) : null;
+                const todayDate = new Date(today);
+
+                if (lastPlayed && todayDate - lastPlayed === 86400000) {
+                    // Increment streak if last game was played yesterday
+                    updatedStats.currentStreak += 1;
+                } else {
+                    // Otherwise, reset streak
+                    updatedStats.currentStreak = 1;
+                }
+
+                updatedStats.maxStreak = Math.max(updatedStats.maxStreak, updatedStats.currentStreak);
+            } else {
+                // Reset streak for incorrect results
+                updatedStats.currentStreak = 0;
+            }
+
+            // Calculate win percentage
+            updatedStats.winPercentage = Math.round(
+                (updatedStats.perfectPuzzles / updatedStats.gamesPlayed) * 100
+            );
+
+            // Update mistake distribution
+            const mistakeCount = imagePairs.length - correctCount;
+            updatedStats.mistakeDistribution[mistakeCount] =
+                (updatedStats.mistakeDistribution[mistakeCount] || 0) + 1;
+
+            // Update last played date and most recent score
+            updatedStats.lastPlayedDate = today;
+            updatedStats.mostRecentScore = mistakeCount;
+
+            setStats(updatedStats);
+
+            console.log('Sending updated stats to backend:', updatedStats);
+
+            const payload = {
+                correctAnswers: correctCount,
+                totalQuestions: imagePairs.length,
+            };
+
+            await axiosInstance.put(`/stats/${userId}`, payload, {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+                },
+            });
+
+            console.log('User stats updated successfully in the backend.');
+            await fetchAndSetStats(userId); // Ensure stats are synced
+        } catch (error) {
+            console.error('Error updating user stats:', error.response?.data || error.message);
+        }
+    } else {
+        // Non-logged-in user logic
+        console.log('User is not logged in, using localStorage to track game status and stats');
+        localStorage.setItem('lastPlayedDate', today);
+
+        const updatedStats = { ...stats };
+
+        // Increment games played
+        updatedStats.gamesPlayed += 1;
+
+        const isPerfectPuzzle = correctCount === imagePairs.length;
+
+        if (isPerfectPuzzle) {
+            updatedStats.perfectPuzzles += 1;
+
+            const lastPlayedDate = localStorage.getItem('lastPlayedDate');
+            const lastPlayed = lastPlayedDate ? new Date(lastPlayedDate) : null;
+            const todayDate = new Date(today);
+
+            if (lastPlayed && todayDate - lastPlayed === 86400000) {
+                // Increment streak if last game was played yesterday
+                updatedStats.currentStreak += 1;
+            } else {
+                // Otherwise, reset streak
+                updatedStats.currentStreak = 1;
+            }
+
+            updatedStats.maxStreak = Math.max(updatedStats.maxStreak, updatedStats.currentStreak);
+        } else {
+            // Reset streak for incorrect results
+            updatedStats.currentStreak = 0;
+        }
+
+        // Calculate win percentage
+        updatedStats.winPercentage = Math.round(
+            (updatedStats.perfectPuzzles / updatedStats.gamesPlayed) * 100
+        );
+
+        // Update mistake distribution
+        const mistakeCount = imagePairs.length - correctCount;
+        updatedStats.mistakeDistribution[mistakeCount] =
+            (updatedStats.mistakeDistribution[mistakeCount] || 0) + 1;
+
+        // Update last played date and most recent score
+        updatedStats.lastPlayedDate = today;
+        updatedStats.mostRecentScore = mistakeCount;
+
+        setStats(updatedStats);
+
+        // Save stats and tries left in localStorage
+        localStorage.setItem('triesRemaining', triesLeft);
+        localStorage.setItem('stats', JSON.stringify(updatedStats));
+
+        console.log('Non-logged-in stats saved locally:', updatedStats);
     }
-}, [userId, stats.lastPlayedDate, isGameComplete]);
+}; 
+  
+  // Initialize game logic
+  useEffect(() => {
+    const initializeGame = async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const isLoggedIn = isUserLoggedIn();
+  
+      if (isLoggedIn && !userId) {
+        console.error('User is logged in but no userId found in localStorage.');
+        setError('User ID is missing. Please log in again.');
+        return;
+      }
+  
+      try {
+        if (isLoggedIn) {
+          console.log('Checking if user has played today...');
+          const playStatusResponse = await axiosInstance.get('/game/check-today-status', {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+            },
+          });
+  
+          if (playStatusResponse.data.hasPlayedToday || stats.lastPlayedDate === today) {
+            console.log('User has already played today.');
+            setIsGameComplete(true); // Block further gameplay
+            if (userId) {
+              await fetchAndSetStats(userId); // Ensure stats are up-to-date
+            }
+            return;
+          }
+        } else {
+          const lastPlayed = localStorage.getItem('lastPlayedDate');
+          if (lastPlayed === today) {
+            console.log('Guest user has already played today.');
+            setIsGameComplete(true); // Block further gameplay
+            return;
+          }
+        }
+  
+        console.log('Fetching daily puzzle...');
+        const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
+        if (puzzleResponse.data?.imagePairs?.length > 0) {
+          const shuffledPairs = puzzleResponse.data.imagePairs.map((pair) => ({
+            human: pair.humanImageURL,
+            ai: pair.aiImageURL,
+            images: Math.random() > 0.5
+              ? [pair.humanImageURL, pair.aiImageURL]
+              : [pair.aiImageURL, pair.humanImageURL],
+          }));
+          setImagePairs(shuffledPairs);
+        } else {
+          console.warn('No image pairs available for today.');
+          setImagePairs([]);
+        }
+  
+        if (isLoggedIn && userId) {
+          await fetchAndSetStats(userId);
+        }
+      } catch (error) {
+        console.error('Error during game initialization:', error.response?.data || error.message);
+        setError('Failed to initialize the game. Please try again later.');
+      }
+    };
+  
+    if (!isGameComplete) {
+      initializeGame();
+    }
+  }, [userId, stats.lastPlayedDate, isGameComplete]);
+  
+  
 
 
 useEffect(() => {
@@ -350,32 +410,36 @@ const fetchAndSetStats = async (userId) => {
 
   const handleSubmit = () => {
     let correct = 0;
-  
+
     selections.forEach((selection, index) => {
-      if (selection.isHumanSelection && selection.selected === imagePairs[index].human) {
-        correct++;
-      }
+        if (selection.isHumanSelection && selection.selected === imagePairs[index].human) {
+            correct++;
+        }
     });
-  
+
     setCorrectCount(correct);
     const message = getRandomCompletionMessage(correct);
     setSelectedCompletionMessage(message);
-  
+
     if (correct === imagePairs.length || triesLeft === 1) {
-      setIsGameComplete(true);
-      setShowOverlay(false); // Ensure no mid-turn overlay on game completion
-      handleGameComplete(); // Trigger game complete actions
+        setIsGameComplete(true);
+        setShowOverlay(false); // Ensure no mid-turn overlay on game completion
+        handleGameComplete(); // Trigger game complete actions
     } else {
-      setShowOverlay(true); // Display mid-turn feedback
-      setTriesLeft(triesLeft - 1);
+        setShowOverlay(true); // Display mid-turn feedback
+        // Decrement tries here only when the game is not complete
+        setTriesLeft((prevTries) => Math.max(prevTries - 1, 0));
+        localStorage.setItem('triesRemaining', Math.max(triesLeft - 1, 0)); // Sync with localStorage
     }
-  };  
+};
+
 
   const handleTryAgain = () => {
     setShowOverlay(false);
     setShowResults(false);
     setIsDisappearing(false);
   };
+  
 
   const handleSwipe = (swiper) => {
     setCurrentIndex(swiper.realIndex);
