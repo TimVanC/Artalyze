@@ -1,5 +1,5 @@
 import React from 'react';
-import './InfoModal.css'; // Ensure the CSS path is correct
+import './InfoModal.css';
 import humanExample from '../assets/images/human-example.png';
 import aiExample from '../assets/images/ai-example.png';
 
@@ -13,9 +13,12 @@ const InfoModal = ({ isOpen, onClose }) => {
           ✖
         </span>
         <h2>How to Play</h2>
+        <hr className="section-separator" />
 
         <section className="instructions-section">
           <p>Test your skills in recognizing real human paintings versus AI-generated images.</p>
+          <h3 className="rules-heading">Rules</h3>
+          <hr className="section-separator" />
           <ul>
             <li>Swipe through each pair and choose the painting you believe is created by a human.</li>
             <li>You have three tries to get all five pairs correct.</li>
@@ -25,6 +28,7 @@ const InfoModal = ({ isOpen, onClose }) => {
 
         <section className="examples-section">
           <h3>Examples</h3>
+          <hr className="section-separator" />
           <div className="example">
             <div className="example-image-container">
               <img src={humanExample} alt="Human Example" className="example-image" />
@@ -38,12 +42,14 @@ const InfoModal = ({ isOpen, onClose }) => {
         </section>
 
         <section className="cta-section">
-  <p className="cta-message">
-    A new challenge is released daily at midnight EST. If you haven't already, <a href="/login" className="cta-link">sign up for a free Artalyze account</a> to track your stats!
-  </p>
-</section>
+          <p className="cta-message">
+            A new challenge is released daily at midnight EST. If you haven't already,{' '}
+            <a href="/login" className="cta-link">sign up for a free Artalyze account</a> to track your stats!
+          </p>
+        </section>
 
-
+        {/* Footer */}
+        <footer className="modal-footer">© {new Date().getFullYear()} Artalyze</footer>
       </div>
     </div>
   );

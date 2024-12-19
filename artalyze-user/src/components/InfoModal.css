@@ -8,9 +8,8 @@
   background: rgba(0, 0, 0, 0.8);
   display: flex;
   justify-content: center;
-  align-items: flex-end;
+  align-items: flex-end; /* Align modal to the bottom of the screen */
   z-index: 1000;
-  transition: transform 0.3s ease-in-out;
 }
 
 .modal-content {
@@ -19,15 +18,15 @@
   border-radius: 20px 20px 0 0;
   width: 90%;
   max-width: 500px;
+  height: 90vh;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
   position: relative;
   text-align: center;
-  animation: slide-up 0.4s ease;
-  height: 85vh;
-  overflow-y: auto;
   font-family: 'Lato', sans-serif;
-  line-height: 1.6; /* Slightly reduced line spacing */
-  letter-spacing: 0.3px; /* Subtle letter spacing */
+  line-height: 1.6;
+  letter-spacing: 0.3px;
+  overflow-y: auto; /* Enable scrolling for smaller screens */
+  animation: slide-up 0.4s ease-in-out; /* Slide-up animation */
 }
 
 .close-icon {
@@ -43,20 +42,40 @@
   color: #888888;
 }
 
+.instructions-section p {
+  font-size: 16.5px;
+  margin-bottom: 10px; /* Space below intro text */
+}
+
 .instructions-section ul {
   list-style-type: disc;
   padding-left: 20px;
-  margin-bottom: 12px; /* Subtle spacing between list items */
+  margin: 16px 0;
+  text-align: left;
 }
 
-.examples-section {
-  margin-top: 20px;
+.instructions-section ul li {
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.section-separator {
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.2);
+  margin: 8px 0; /* Reduced spacing around separators */
+  width: 100%;
+}
+
+.rules-heading, .examples-section h3 {
+  font-size: 1.2em;
+  font-weight: bold;
+  margin-bottom: 8px; /* Reduced spacing for closer separator */
 }
 
 .example {
   display: flex;
   justify-content: space-between;
-  margin-top: 12px; /* Reduced spacing between sections */
+  margin-top: 12px;
 }
 
 .example-image-container {
@@ -95,7 +114,15 @@
   text-decoration: underline;
 }
 
+/* Footer Styles */
+.modal-footer {
+  text-align: center;
+  font-size: 14px;
+  color: #aaa;
+  margin-top: 10px;
+}
 
+/* Slide-up Animation */
 @keyframes slide-up {
   from {
     transform: translateY(100%);
