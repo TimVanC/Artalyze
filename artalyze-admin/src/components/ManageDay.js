@@ -35,7 +35,7 @@ const ManageDay = () => {
       }
     } catch (error) {
       console.error('Error fetching image pairs:', error);
-      setError('Failed to load image pairs. Please try again later.');
+      // setError('Failed to load image pairs. Please try again later.');
       setImagePairs([]); // Set an empty array in case of an error
     }
   }, [selectedDate]); // Recreate only when `selectedDate` changes

@@ -11,45 +11,6 @@ import axios from 'axios';
 import { handleShare } from '../utils/shareUtils';
 import './Game.css';
 
-const completionMessages = {
-  0: [
-    "Tough luck! But hey, there's always tomorrow!",
-    "Not your day? Don’t worry, try again tomorrow!",
-    "Missed them all, but the next game awaits!"
-  ],
-  1: [
-    "A small victory! You got 1 right. Come back for more!",
-    "One down, but there’s room to improve!",
-    "You got 1 correct! Keep challenging yourself!"
-  ],
-  2: [
-    "Almost halfway! Keep going, you’re getting there!",
-    "Two right! Not bad, but there’s room for improvement.",
-    "You got 2 right—nicely done! Try for more next time."
-  ],
-  3: [
-    "Solid effort! You’re halfway there. Keep it up!",
-    "Three out of five! You’re on the right track!",
-    "Nicely done! 3 correct answers—almost there!"
-  ],
-  4: [
-    "So close! You nailed 4 out of 5!",
-    "Almost perfect! Just one shy of a full score.",
-    "You got 4 right—fantastic job! Can you make it 5 tomorrow?"
-  ],
-  5: [
-    "Perfect score! 5 out of 5! You’re on fire!",
-    "Amazing! You got them all right! Way to go!",
-    "5/5! You’ve mastered today’s challenge!"
-  ]
-};
-
-const getRandomCompletionMessage = (score) => {
-  const messages = completionMessages[score];
-  const randomIndex = Math.floor(Math.random() * messages.length);
-  return messages[randomIndex];
-};
-
 const generateArtalyzeShareableResult = (results) => {
   const scoreLine = results.map(result => result ? '🟢' : '🔴').join(' ');
   const paintingLine = Array(results.length).fill('🖼️').join(' ');
@@ -64,16 +25,16 @@ const handleStatsShare = (results) => {
   const shareableText = generateArtalyzeShareableResult(results);
 
   if (navigator.share) {
-      navigator.share({
-          title: "Artalyze Score",
-          text: shareableText,
-      }).then(() => {
-          console.log('Thanks for sharing!');
-      }).catch(console.error);
+    navigator.share({
+      title: "Artalyze Score",
+      text: shareableText,
+    }).then(() => {
+      console.log('Thanks for sharing!');
+    }).catch(console.error);
   } else {
-      navigator.clipboard.writeText(shareableText).then(() => {
-          console.log('Score copied to clipboard');
-      }).catch(console.error);
+    navigator.clipboard.writeText(shareableText).then(() => {
+      console.log('Score copied to clipboard');
+    }).catch(console.error);
   }
 };
 
@@ -118,7 +79,7 @@ const Game = () => {
     mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
     lastPlayedDate: null,
   });
-  
+
   // Function to update user stats in the backend
   const updateUserStats = async (userId, updatedStats) => {
     try {
@@ -132,263 +93,252 @@ const Game = () => {
       console.error('Error updating stats in database:', error.response?.data || error.message);
     }
   };
-  
+
   // Function to be called on game completion
   const handleGameComplete = async () => {
     console.log('handleGameComplete called');
     setIsGameComplete(true);
-
+    localStorage.setItem('isGameComplete', true);
+  
     const today = new Date().toISOString().split('T')[0];
-
-    if (isUserLoggedIn()) {
-        // Logged-in user logic
-        if (!userId) {
-            console.error('User ID not found. Ensure the user is logged in.');
-            return;
-        }
-
-        try {
-            console.log('Marking game as played for today...');
-            const response = await axiosInstance.post('/game/mark-as-played', {
-                isPerfectPuzzle: correctCount === imagePairs.length,
-            });
-            console.log('Game play status updated for today:', response.data);
-            localStorage.setItem('lastPlayedDate', today); // Fallback for play status
-        } catch (error) {
-            console.error('Error marking game as played:', error.response?.data || error.message);
-            localStorage.setItem('lastPlayedDate', today); // Ensure local fallback
-        }
-
-        // Update stats for logged-in users
-        try {
-            const updatedStats = { ...stats };
-
-            // Increment games played
-            updatedStats.gamesPlayed += 1;
-
-            const isPerfectPuzzle = correctCount === imagePairs.length;
-
-            if (isPerfectPuzzle) {
-                updatedStats.perfectPuzzles += 1;
-
-                const lastPlayedDate = stats.lastPlayedDate;
-                const lastPlayed = lastPlayedDate ? new Date(lastPlayedDate) : null;
-                const todayDate = new Date(today);
-
-                if (lastPlayed && todayDate - lastPlayed === 86400000) {
-                    // Increment streak if last game was played yesterday
-                    updatedStats.currentStreak += 1;
-                } else {
-                    // Otherwise, reset streak
-                    updatedStats.currentStreak = 1;
-                }
-
-                updatedStats.maxStreak = Math.max(updatedStats.maxStreak, updatedStats.currentStreak);
-            } else {
-                // Reset streak for incorrect results
-                updatedStats.currentStreak = 0;
-            }
-
-            // Calculate win percentage
-            updatedStats.winPercentage = Math.round(
-                (updatedStats.perfectPuzzles / updatedStats.gamesPlayed) * 100
-            );
-
-            // Update mistake distribution
-            const mistakeCount = imagePairs.length - correctCount;
-            updatedStats.mistakeDistribution[mistakeCount] =
-                (updatedStats.mistakeDistribution[mistakeCount] || 0) + 1;
-
-            // Update last played date and most recent score
-            updatedStats.lastPlayedDate = today;
-            updatedStats.mostRecentScore = mistakeCount;
-
-            setStats(updatedStats);
-
-            console.log('Sending updated stats to backend:', updatedStats);
-
-            const payload = {
-                correctAnswers: correctCount,
-                totalQuestions: imagePairs.length,
-            };
-
-            await axiosInstance.put(`/stats/${userId}`, payload, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-                },
-            });
-
-            console.log('User stats updated successfully in the backend.');
-            await fetchAndSetStats(userId); // Ensure stats are synced
-        } catch (error) {
-            console.error('Error updating user stats:', error.response?.data || error.message);
-        }
-    } else {
-        // Non-logged-in user logic
-        console.log('User is not logged in, using localStorage to track game status and stats');
-        localStorage.setItem('lastPlayedDate', today);
-
-        const updatedStats = { ...stats };
-
-        // Increment games played
-        updatedStats.gamesPlayed += 1;
-
-        const isPerfectPuzzle = correctCount === imagePairs.length;
-
-        if (isPerfectPuzzle) {
-            updatedStats.perfectPuzzles += 1;
-
-            const lastPlayedDate = localStorage.getItem('lastPlayedDate');
-            const lastPlayed = lastPlayedDate ? new Date(lastPlayedDate) : null;
-            const todayDate = new Date(today);
-
-            if (lastPlayed && todayDate - lastPlayed === 86400000) {
-                // Increment streak if last game was played yesterday
-                updatedStats.currentStreak += 1;
-            } else {
-                // Otherwise, reset streak
-                updatedStats.currentStreak = 1;
-            }
-
-            updatedStats.maxStreak = Math.max(updatedStats.maxStreak, updatedStats.currentStreak);
+    const isPerfectPuzzle = correctCount === imagePairs.length;
+  
+    const updateStats = (stats, isPerfect) => {
+      stats.gamesPlayed += 1;
+  
+      if (isPerfect) {
+        stats.perfectPuzzles += 1;
+        const lastPlayed = stats.lastPlayedDate ? new Date(stats.lastPlayedDate) : null;
+        const todayDate = new Date(today);
+  
+        if (lastPlayed && todayDate - lastPlayed === 86400000) {
+          stats.currentStreak += 1;
         } else {
-            // Reset streak for incorrect results
-            updatedStats.currentStreak = 0;
+          stats.currentStreak = 1;
         }
-
-        // Calculate win percentage
-        updatedStats.winPercentage = Math.round(
-            (updatedStats.perfectPuzzles / updatedStats.gamesPlayed) * 100
-        );
-
-        // Update mistake distribution
-        const mistakeCount = imagePairs.length - correctCount;
-        updatedStats.mistakeDistribution[mistakeCount] =
-            (updatedStats.mistakeDistribution[mistakeCount] || 0) + 1;
-
-        // Update last played date and most recent score
-        updatedStats.lastPlayedDate = today;
-        updatedStats.mostRecentScore = mistakeCount;
-
-        setStats(updatedStats);
-
-        // Save stats and tries left in localStorage
-        localStorage.setItem('triesRemaining', triesLeft);
-        localStorage.setItem('stats', JSON.stringify(updatedStats));
-
-        console.log('Non-logged-in stats saved locally:', updatedStats);
-    }
-}; 
   
-  // Initialize game logic
-  useEffect(() => {
-    const initializeGame = async () => {
-      const today = new Date().toISOString().split('T')[0];
-      const isLoggedIn = isUserLoggedIn();
+        stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
+      } else {
+        stats.currentStreak = 0;
+      }
   
-      if (isLoggedIn && !userId) {
-        console.error('User is logged in but no userId found in localStorage.');
-        setError('User ID is missing. Please log in again.');
+      stats.winPercentage = Math.round((stats.perfectPuzzles / stats.gamesPlayed) * 100);
+      const mistakeCount = imagePairs.length - correctCount;
+      stats.mistakeDistribution[mistakeCount] =
+        (stats.mistakeDistribution[mistakeCount] || 0) + 1;
+  
+      stats.lastPlayedDate = today;
+      stats.mostRecentScore = mistakeCount;
+  
+      return stats;
+    };
+  
+    if (isUserLoggedIn()) {
+      if (!userId) {
+        console.error('User ID not found. Ensure the user is logged in.');
         return;
       }
   
       try {
-        if (isLoggedIn) {
-          console.log('Checking if user has played today...');
-          const playStatusResponse = await axiosInstance.get('/game/check-today-status', {
+        console.log('Marking game as played for today...');
+        await axiosInstance.post('/game/mark-as-played', {
+          isPerfectPuzzle,
+          triesLeft,
+        }, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        });
+  
+        let updatedStats = updateStats({ ...stats }, isPerfectPuzzle);
+        setStats(updatedStats);
+  
+        await axiosInstance.put(
+          `/stats/${userId}`,
+          {
+            correctAnswers: correctCount,
+            totalQuestions: imagePairs.length,
+            triesRemaining: triesLeft,
+          },
+          {
             headers: {
               Authorization: `Bearer ${localStorage.getItem('authToken')}`,
             },
-          });
-  
-          if (playStatusResponse.data.hasPlayedToday || stats.lastPlayedDate === today) {
-            console.log('User has already played today.');
-            setIsGameComplete(true); // Block further gameplay
-            if (userId) {
-              await fetchAndSetStats(userId); // Ensure stats are up-to-date
-            }
-            return;
           }
-        } else {
-          const lastPlayed = localStorage.getItem('lastPlayedDate');
-          if (lastPlayed === today) {
-            console.log('Guest user has already played today.');
-            setIsGameComplete(true); // Block further gameplay
-            return;
-          }
-        }
+        );
   
-        console.log('Fetching daily puzzle...');
-        const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
-        if (puzzleResponse.data?.imagePairs?.length > 0) {
-          const shuffledPairs = puzzleResponse.data.imagePairs.map((pair) => ({
-            human: pair.humanImageURL,
-            ai: pair.aiImageURL,
-            images: Math.random() > 0.5
-              ? [pair.humanImageURL, pair.aiImageURL]
-              : [pair.aiImageURL, pair.humanImageURL],
-          }));
-          setImagePairs(shuffledPairs);
-        } else {
-          console.warn('No image pairs available for today.');
-          setImagePairs([]);
-        }
-  
-        if (isLoggedIn && userId) {
-          await fetchAndSetStats(userId);
-        }
+        console.log('User stats updated successfully in the backend.');
+        await fetchAndSetStats(userId);
       } catch (error) {
-        console.error('Error during game initialization:', error.response?.data || error.message);
-        setError('Failed to initialize the game. Please try again later.');
+        console.error('Error updating user stats:', error.response?.data || error.message);
       }
-    };
+    } else {
+      console.log('User is not logged in, using localStorage to track game status and stats');
+      localStorage.setItem('lastPlayedDate', today);
+      let updatedStats = updateStats({ ...stats }, isPerfectPuzzle);
   
-    if (!isGameComplete) {
-      initializeGame();
+      localStorage.setItem('triesRemaining', triesLeft);
+      localStorage.setItem('stats', JSON.stringify(updatedStats));
+  
+      setStats(updatedStats);
+      console.log('Non-logged-in stats saved locally:', updatedStats);
     }
-  }, [userId, stats.lastPlayedDate, isGameComplete]);
+  };
   
   
+// Initialization effect for the game
+useEffect(() => {
+  const initializeGame = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const isLoggedIn = isUserLoggedIn();
+
+    if (isLoggedIn && !userId) {
+      console.error('User is logged in but no userId found in localStorage.');
+      setError('User ID is missing. Please log in again.');
+      return;
+    }
+
+    try {
+      if (isLoggedIn) {
+        console.log('Checking if user has played today...');
+        const playStatusResponse = await axiosInstance.get('/game/check-today-status', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+          },
+        });
+
+        if (playStatusResponse.data.hasPlayedToday) {
+          console.log('User has already played today.');
+          setTriesLeft(playStatusResponse.data.triesLeft);
+          setIsGameComplete(playStatusResponse.data.triesLeft === 0);
+          await fetchAndSetStats(userId);
+          return;
+        } else {
+          setTriesLeft(3);
+          localStorage.setItem('triesRemaining', 3);
+        }
+      } else {
+        const lastPlayed = localStorage.getItem('lastPlayedDate');
+        const storedTries = parseInt(localStorage.getItem('triesRemaining'), 10);
+        const storedSelections = JSON.parse(localStorage.getItem('selections')) || [];
+        const storedGameComplete = localStorage.getItem('isGameComplete') === 'true';
+        const storedImagePairs = JSON.parse(localStorage.getItem('imagePairs')) || [];
+
+        if (lastPlayed === today) {
+          console.log('Guest user has already played today.');
+          setTriesLeft(storedTries || 0);
+          setSelections(storedSelections); // Restore selections
+          setImagePairs(storedImagePairs); // Restore image pairs
+          setIsGameComplete(storedGameComplete);
+          return;
+        } else {
+          console.log('New day for guest user.');
+          localStorage.setItem('triesRemaining', 3);
+          setTriesLeft(3);
+          localStorage.setItem('lastPlayedDate', today);
+          localStorage.removeItem('selections'); // Clear selections for new day
+          localStorage.removeItem('isGameComplete');
+        }
+      }
+
+      console.log('Fetching daily puzzle...');
+      const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
+      if (puzzleResponse.data?.imagePairs?.length > 0) {
+        const shuffledPairs = puzzleResponse.data.imagePairs.map((pair) => ({
+          human: pair.humanImageURL,
+          ai: pair.aiImageURL,
+          images: Math.random() > 0.5
+            ? [pair.humanImageURL, pair.aiImageURL]
+            : [pair.aiImageURL, pair.humanImageURL],
+        }));
+        setImagePairs(shuffledPairs);
+        localStorage.setItem('imagePairs', JSON.stringify(shuffledPairs));
+      } else {
+        console.warn('No image pairs available for today.');
+        setImagePairs([]);
+        localStorage.removeItem('imagePairs');
+      }
+
+      if (isLoggedIn && userId) {
+        await fetchAndSetStats(userId);
+      }
+    } catch (error) {
+      console.error('Error during game initialization:', error.response?.data || error.message);
+      setError('Failed to initialize the game. Please try again later.');
+    }
+  };
+
+  if (!isGameComplete) {
+    initializeGame();
+  }
+}, [userId, stats.lastPlayedDate, isGameComplete]);
 
 
+// Effect to automatically open stats modal after game completion
 useEffect(() => {
   if (isGameComplete) {
-      const timer = setTimeout(() => {
-          setIsStatsOpen(true); // Automatically open stats modal after completion
-      }, 500); // 0.5 seconds delay
+    const timer = setTimeout(() => {
+      setIsStatsOpen(true); // Automatically open stats modal after completion
+    }, 500); // 0.5 seconds delay
 
-      return () => clearTimeout(timer); // Cleanup timeout on unmount or re-run
+    return () => clearTimeout(timer); // Cleanup timeout on unmount or re-run
   }
 }, [isGameComplete]);
 
+// Effect to persist tries in localStorage or database
+useEffect(() => {
+  if (triesLeft !== undefined && triesLeft !== null) {
+    const isLoggedIn = isUserLoggedIn();
 
-const fetchAndSetStats = async (userId) => {
-  if (!userId) {
-    console.error('No userId provided to fetch stats.');
-    return;
+    if (isLoggedIn && userId) {
+      axiosInstance.put(
+        '/game/update-tries',
+        { triesLeft },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+        }
+      ).catch((error) => {
+        console.error('Failed to update tries for logged-in user:', error);
+      });
+    } else {
+      localStorage.setItem('triesLeft', triesLeft); // Save triesLeft for guest users
+    }
   }
+}, [triesLeft, userId]);
 
-  try {
-    const statsResponse = await axiosInstance.get(`/stats/${userId}`);
-    setStats(statsResponse.data); // Set the stats, including the new `mostRecentScore`
-    console.log('Fetched user stats:', statsResponse.data);
-  } catch (error) {
-    console.error('Error fetching user stats:', error.response?.data || error.message);
-    setError('Unable to fetch user statistics. Please try again later.');
-  }
-};
- 
-  
+
+
+  const fetchAndSetStats = async (userId) => {
+    if (!userId) {
+      console.error('No userId provided to fetch stats.');
+      return;
+    }
+
+    try {
+      const statsResponse = await axiosInstance.get(`/stats/${userId}`);
+      setStats(statsResponse.data); // Set the stats, including the new `mostRecentScore`
+      console.log('Fetched user stats:', statsResponse.data);
+    } catch (error) {
+      console.error('Error fetching user stats:', error.response?.data || error.message);
+      setError('Unable to fetch user statistics. Please try again later.');
+    }
+  };
+
+
   const handleSelection = (selectedImage, isHumanSelection) => {
     const newSelection = { selected: selectedImage, isHumanSelection };
     const updatedSelections = [...selections];
     updatedSelections[currentIndex] = newSelection;
     setSelections(updatedSelections);
-
+  
+    // Save selections to localStorage
+    localStorage.setItem('selections', JSON.stringify(updatedSelections));
+  
     if (swiperRef.current && currentIndex + 1 < imagePairs.length) {
       swiperRef.current.slideNext();
     }
   };
+  
 
   const handleLongPress = (image) => {
     clearTimeout(longPressTimer);
@@ -406,40 +356,53 @@ const fetchAndSetStats = async (userId) => {
     setTimeout(() => {
       setIsDisappearing(true);
     }, 1300); // Example delay for the disappearing animation
-  };  
+  };
 
   const handleSubmit = () => {
     let correct = 0;
 
     selections.forEach((selection, index) => {
-        if (selection.isHumanSelection && selection.selected === imagePairs[index].human) {
-            correct++;
-        }
+      if (selection.isHumanSelection && selection.selected === imagePairs[index].human) {
+        correct++;
+      }
     });
 
     setCorrectCount(correct);
-    const message = getRandomCompletionMessage(correct);
-    setSelectedCompletionMessage(message);
 
     if (correct === imagePairs.length || triesLeft === 1) {
-        setIsGameComplete(true);
-        setShowOverlay(false); // Ensure no mid-turn overlay on game completion
-        handleGameComplete(); // Trigger game complete actions
+      setIsGameComplete(true);
+      setShowOverlay(false); // Ensure no mid-turn overlay on game completion
+      handleGameComplete(); // Trigger game complete actions
     } else {
-        setShowOverlay(true); // Display mid-turn feedback
-        // Decrement tries here only when the game is not complete
-        setTriesLeft((prevTries) => Math.max(prevTries - 1, 0));
-        localStorage.setItem('triesRemaining', Math.max(triesLeft - 1, 0)); // Sync with localStorage
+      setShowOverlay(true); // Display mid-turn feedback
+      // Decrement tries here only when the game is not complete
+      setTriesLeft((prevTries) => Math.max(prevTries - 1, 0));
+      localStorage.setItem('triesRemaining', Math.max(triesLeft - 1, 0)); // Sync with localStorage
     }
-};
+  };
 
+  const handleTry = async () => {
+    if (triesLeft > 0) {
+      try {
+        const response = await axiosInstance.post("/game/use-try");
+        setTriesLeft(response.data.triesLeft);
+        if (response.data.isGameComplete) {
+          setIsGameComplete(true);
+        }
+      } catch (error) {
+        console.error("Error using a try:", error);
+      }
+    } else {
+      console.log("No tries left!");
+    }
+  };
 
   const handleTryAgain = () => {
     setShowOverlay(false);
     setShowResults(false);
     setIsDisappearing(false);
   };
-  
+
 
   const handleSwipe = (swiper) => {
     setCurrentIndex(swiper.realIndex);
@@ -461,7 +424,7 @@ const fetchAndSetStats = async (userId) => {
           <FaCog className="icon" title="Settings" onClick={() => setIsSettingsOpen(true)} />
         </div>
       </div>
-  
+
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
       <StatsModal
         isOpen={isStatsOpen}
@@ -470,7 +433,7 @@ const fetchAndSetStats = async (userId) => {
         isLoggedIn={isLoggedIn} // Pass isLoggedIn to StatsModal
       />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-  
+
       {!isGameComplete && (
         <>
           <h1>Guess the human painting from each pair!</h1>
@@ -487,7 +450,7 @@ const fetchAndSetStats = async (userId) => {
               ))}
             </div>
           </div>
-  
+
           <div className={`status-bar ${showOverlay ? 'blurred' : ''}`}>
             <div className="tries-left">
               <span>Tries Left:</span>
@@ -496,7 +459,7 @@ const fetchAndSetStats = async (userId) => {
               ))}
             </div>
           </div>
-  
+
           <Swiper
             loop={true}
             onSlideChange={handleSwipe}
@@ -524,13 +487,13 @@ const fetchAndSetStats = async (userId) => {
               </SwiperSlide>
             ))}
           </Swiper>
-  
+
           {enlargedImage && (
             <div className="enlarge-modal" onClick={closeEnlargedImage}>
               <img src={enlargedImage} alt="Enlarged view" className="enlarged-image" />
             </div>
           )}
-  
+
           <div className="navigation-buttons">
             {imagePairs.map((_, index) => (
               <button
@@ -546,7 +509,7 @@ const fetchAndSetStats = async (userId) => {
               </button>
             ))}
           </div>
-  
+
           <button
             className={`submit-button ${isSubmitEnabled ? 'enabled' : 'disabled'}`}
             onClick={handleSubmit}
@@ -556,7 +519,7 @@ const fetchAndSetStats = async (userId) => {
           </button>
         </>
       )}
-  
+
       {showOverlay && (
         <div className="results-overlay">
           <div className="overlay-content">
@@ -576,7 +539,7 @@ const fetchAndSetStats = async (userId) => {
           </div>
         </div>
       )}
-  
+
       {isGameComplete && (
         <div className="completion-screen">
           <p>{selectedCompletionMessage}</p>
@@ -584,7 +547,7 @@ const fetchAndSetStats = async (userId) => {
             {imagePairs.map((pair, index) => {
               const selection = selections[index];
               const isCorrect = selection?.selected === pair.human;
-  
+
               return (
                 <div key={index} className="pair-thumbnails-horizontal">
                   <div className={`thumbnail-container ${isCorrect && pair.images[0] === pair.human ? 'correct' : (selection?.selected === pair.images[0] ? 'incorrect' : '')}`}>
@@ -607,7 +570,7 @@ const fetchAndSetStats = async (userId) => {
           </div>
         </div>
       )}
-  
+
       {enlargedImage && (
         <div className="enlarge-modal" onClick={closeEnlargedImage}>
           <img src={enlargedImage} alt="Enlarged view" className="enlarged-image" />
@@ -615,7 +578,7 @@ const fetchAndSetStats = async (userId) => {
       )}
     </div>
   );
-  
+
 };
 
 export default Game;

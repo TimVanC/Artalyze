@@ -12,22 +12,30 @@ router.get('/test', (req, res) => {
 });
 
 // GET endpoint to fetch the image pairs for today's puzzle
-router.get('/daily-puzzle', (req, res) => {
+router.get('/daily-puzzle', async (req, res) => {
   console.log('Received request for /daily-puzzle');
-  gameController.getDailyPuzzle(req, res);
+  await gameController.getDailyPuzzle(req, res);
 });
 
 // GET endpoint to check if the user has played today (requires authentication)
-router.get('/check-today-status', authMiddleware.authenticateToken, (req, res) => {
-  console.log('Received request for /check-today-status');
-  gameController.checkIfPlayedToday(req, res);
-});
+router.get(
+  '/check-today-status',
+  authMiddleware.authenticateToken,
+  async (req, res) => {
+    console.log('Received request for /check-today-status');
+    await gameController.checkIfPlayedToday(req, res);
+  }
+);
 
 // POST endpoint to mark the user as played today (requires authentication)
-router.post('/mark-as-played', authMiddleware.authenticateToken, (req, res) => {
-  console.log('Received request for /mark-as-played');
-  gameController.markAsPlayedToday(req, res);
-});
+router.post(
+  '/mark-as-played',
+  authMiddleware.authenticateToken,
+  async (req, res) => {
+    console.log('Received request for /mark-as-played');
+    await gameController.markAsPlayedToday(req, res);
+  }
+);
 
 // Middleware for unhandled routes
 router.use('*', (req, res) => {

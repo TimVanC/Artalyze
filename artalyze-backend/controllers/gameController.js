@@ -49,9 +49,7 @@ exports.checkIfPlayedToday = async (req, res) => {
 
     // Convert UTC to EST/EDT
     const nowEST = new Date(nowUTC.getTime() + offset * 60 * 60 * 1000);
-
-    const todayEST = new Date(nowEST);
-    todayEST.setHours(0, 0, 0, 0); // Reset to midnight EST
+    nowEST.setHours(0, 0, 0, 0); // Reset to midnight EST
 
     const lastPlayedUTC = user.lastPlayedDate ? new Date(user.lastPlayedDate) : null;
 
@@ -59,14 +57,14 @@ exports.checkIfPlayedToday = async (req, res) => {
       const lastPlayedEST = new Date(lastPlayedUTC.getTime() + offset * 60 * 60 * 1000);
       lastPlayedEST.setHours(0, 0, 0, 0); // Reset to midnight EST
 
-      if (todayEST.getTime() === lastPlayedEST.getTime()) {
+      if (nowEST.getTime() === lastPlayedEST.getTime()) {
         console.log('User has already played today.');
-        return res.status(200).json({ hasPlayedToday: true });
+        return res.status(200).json({ hasPlayedToday: true, triesLeft: user.triesLeft || 3 });
       }
     }
 
     console.log('User has not played today.');
-    return res.status(200).json({ hasPlayedToday: false });
+    return res.status(200).json({ hasPlayedToday: false, triesLeft: user.triesLeft || 3 });
   } catch (error) {
     console.error('Error checking play status:', error);
     res.status(500).json({ message: 'Server error' });
@@ -79,7 +77,7 @@ exports.markAsPlayedToday = async (req, res) => {
   console.log('markAsPlayedToday called');
   try {
     const userId = req.user.userId;
-    const { isPerfectPuzzle } = req.body; // Include this in the request body
+    const { isPerfectPuzzle, triesLeft } = req.body; // Ensure triesLeft is passed in the request body
     const nowUTC = new Date();
 
     const user = await User.findById(userId);
@@ -94,22 +92,14 @@ exports.markAsPlayedToday = async (req, res) => {
     const todayEST = new Date(nowUTC.getTime() + offset * 60 * 60 * 1000);
     todayEST.setHours(0, 0, 0, 0); // Reset to midnight
 
-    const lastPlayedUTC = user.lastPlayedDate ? new Date(user.lastPlayedDate) : null;
-    const lastPlayedEST = lastPlayedUTC
-      ? new Date(lastPlayedUTC.getTime() + offset * 60 * 60 * 1000)
-      : null;
+    user.triesLeft = triesLeft || 3; // Persist tries left if provided
 
-    // Check if the play date is consecutive
-    if (
-      isPerfectPuzzle &&
-      lastPlayedEST &&
-      todayEST - lastPlayedEST === 86400000 // Difference is exactly one day
-    ) {
+    // Update other game-related stats
+    const isPerfect = isPerfectPuzzle && triesLeft > 0;
+    if (isPerfect) {
       user.currentStreak += 1; // Increment streak
-    } else if (isPerfectPuzzle) {
-      user.currentStreak = 1; // Start a new streak
     } else {
-      user.currentStreak = 0; // Reset streak if not perfect
+      user.currentStreak = 0; // Reset streak
     }
 
     user.maxStreak = Math.max(user.maxStreak, user.currentStreak);
@@ -117,11 +107,9 @@ exports.markAsPlayedToday = async (req, res) => {
 
     await user.save();
 
-    console.log('User play status and streak updated successfully.');
     res.status(200).json({ message: 'User play status and streak updated successfully' });
   } catch (error) {
     console.error('Error updating play status and streak:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
-
