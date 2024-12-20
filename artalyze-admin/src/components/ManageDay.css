@@ -23,13 +23,9 @@
     justify-content: center; /* Center align all pairs */
 }
 
-.existing-pair {
-    width: calc(33% - 20px); /* Three items per row, taking into account the gap */
-    box-sizing: border-box; /* Include padding and border in the width calculation */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 20px; /* Adds some spacing below to separate rows */
+.existing-pair-container {
+    text-align: center;
+    margin-bottom: 20px;
 }
 
 .existing-images {
@@ -38,7 +34,6 @@
 }
 
 .image-wrapper {
-    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -49,18 +44,9 @@
     height: 150px;
     object-fit: cover;
     margin-bottom: 5px;
-}
-
-.dropzone-container {
-    width: 150px;
-    height: 150px;
-    border: 2px dashed #aaa;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    cursor: pointer;
-    background-color: rgba(0, 0, 0, 0.03);
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .image-pairs-container {
@@ -72,6 +58,8 @@
 }
 
 .pair-container {
+    width: calc(50% - 20px); /* Two pairs per row */
+    box-sizing: border-box; /* Include padding and border in width calculation */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -79,19 +67,59 @@
     padding: 10px;
     border-radius: 5px;
     background-color: #f9f9f9;
+    margin-bottom: 20px;
 }
 
-.pair-container.half-width {
-    width: calc(50% - 20px);
-    box-sizing: border-box; /* Include padding and border in width calculation */
+.dropzone-container {
+    display: flex; /* Flex layout for side-by-side alignment */
+    gap: 20px; /* Space between the two dropzones */
+    justify-content: center; /* Center the dropzones horizontally */
+    width: 100%; /* Ensure it takes the full width of the parent container */
+    margin-top: 10px;
 }
 
-.pair-container.full-width {
-    width: calc(50% - 20px);
-    margin-left: auto;
-    margin-right: auto; /* Center the 5th pair */
+.dropzone {
+    width: 150px;
+    height: 150px;
+    border: 2px dashed #aaa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    background-color: rgba(0, 0, 0, 0.03);
+    border-radius: 5px;
+    transition: border-color 0.3s ease, background-color 0.3s ease;
 }
 
+.dropzone:hover {
+    border-color: #4caf50;
+    background-color: #e8f5e9;
+}
+
+.dropzone p {
+    font-size: 14px;
+    color: #666;
+}
+
+
+
+/* Error and upload messages */
+.error-message {
+    color: red;
+    font-weight: bold;
+    margin: 10px 0;
+    text-align: center;
+}
+
+.upload-message {
+    color: #4caf50;
+    font-weight: bold;
+    margin: 10px 0;
+    text-align: center;
+}
+
+/* Upload button */
 .upload-button {
     margin-top: 40px; /* Increase spacing above the upload button */
     padding: 10px 20px;
@@ -100,6 +128,8 @@
     border: none;
     cursor: pointer;
     border-radius: 5px;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
 }
 
 .upload-button:hover {

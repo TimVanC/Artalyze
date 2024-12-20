@@ -109,14 +109,12 @@ router.get('/get-image-pairs-by-date/:scheduledDate', async (req, res) => {
     const { scheduledDate } = req.params;
     console.log("Received request for image pairs on date:", scheduledDate);
 
-    // Create a new Date object from the scheduledDate and set the correct UTC time
+    // Parse the incoming scheduledDate as a Date object
     const selectedDate = new Date(scheduledDate);
-    selectedDate.setUTCHours(4, 0, 0, 0); // Set time to 4:00 AM UTC to match stored value
+    console.log("Parsed Date for Query:", selectedDate.toISOString());
 
-    console.log("Searching for image pairs with date (UTC):", selectedDate.toISOString());
-
-    // Find the document by scheduled date using Unix timestamp or consistent value
-    const imagePairs = await ImagePair.findOne({ scheduledDate: selectedDate.getTime() });
+    // Find the document by matching the exact ISO string
+    const imagePairs = await ImagePair.findOne({ scheduledDate: selectedDate.toISOString() });
 
     if (!imagePairs) {
       console.log("No existing image pairs found for this date:", selectedDate.toISOString());
@@ -130,6 +128,7 @@ router.get('/get-image-pairs-by-date/:scheduledDate', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch image pairs' });
   }
 });
+
 
 
 module.exports = router;
