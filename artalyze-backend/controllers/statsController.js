@@ -5,10 +5,6 @@ exports.getUserStats = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    if (!userId) {
-      return res.status(400).json({ message: 'User ID is required.' });
-    }
-
     const stats = await Stats.findOne({ userId });
     if (!stats) {
       return res.status(404).json({ message: 'Statistics not found for this user.' });
@@ -21,11 +17,13 @@ exports.getUserStats = async (req, res) => {
   }
 };
 
-// Update user statistics
 exports.updateUserStats = async (req, res) => {
   try {
     const { userId } = req.params;
     const { correctAnswers, totalQuestions } = req.body;
+
+    console.log('Received update request for userId:', userId);
+    console.log('Payload:', { correctAnswers, totalQuestions });
 
     if (!userId || correctAnswers == null || totalQuestions == null) {
       return res
@@ -50,13 +48,19 @@ exports.updateUserStats = async (req, res) => {
       { new: true, upsert: true }
     );
 
+    if (!updatedStats) {
+      return res.status(404).json({ message: 'Stats document not found for this user.' });
+    }
 
+    console.log('Updated stats successfully:', updatedStats);
     res.status(200).json(updatedStats);
   } catch (error) {
     console.error('Error updating stats:', error);
     res.status(500).json({ message: 'Failed to update stats.' });
   }
 };
+
+
 
 // Reset all user statistics (optional utility function)
 exports.resetUserStats = async (req, res) => {

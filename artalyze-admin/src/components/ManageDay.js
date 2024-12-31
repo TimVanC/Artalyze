@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css'; // Import calendar styles
@@ -11,39 +11,42 @@ const ManageDay = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [imagePairs, setImagePairs] = useState([]); // State to store the fetched image pairs
   const [error, setError] = useState(null); // State for managing error messages
-  const [uploadMessage, setUploadMessage] = useState(""); // State for managing upload messages
+  const [uploadMessage, setUploadMessage] = useState(''); // State for managing upload messages
 
-  useEffect(() => {
-    fetchImagePairs();
-  }, [selectedDate]);
-
-  // Function to fetch image pairs for the selected date
-  const fetchImagePairs = async () => {
+  const fetchImagePairs = useCallback(async () => {
     try {
-      // Format the selectedDate to ensure it matches the expected format in the backend
-      const formattedDate = format(selectedDate, "yyyy-MM-dd'T'04:00:00.000XXX");
-      console.log("Formatted Date for Fetch:", formattedDate);
+      // Normalize selected date to UTC midnight
+      const utcDate = new Date(selectedDate);
+      utcDate.setUTCHours(5, 0, 0, 0); // Match UTC 5:00 AM as stored in the database
 
-      const response = await axiosInstance.get(`/admin/get-image-pairs-by-date/${formattedDate}`);
-      console.log("Fetched Image Pairs:", response.data);
+      console.log('Normalized Date for Fetch (UTC):', utcDate.toISOString());
+
+      const response = await axiosInstance.get(
+        `/admin/get-image-pairs-by-date/${utcDate.toISOString()}`
+      );
+
+      console.log('Fetched Image Pairs:', response.data);
 
       if (response.data && response.data.pairs) {
         setImagePairs(response.data.pairs); // Set state with the fetched image pairs
       } else {
-        console.warn("No image pairs available for the selected date.");
+        console.warn('No image pairs available for the selected date.');
         setImagePairs([]); // Set an empty array if no pairs are found
       }
     } catch (error) {
-      console.error("Error fetching image pairs:", error);
-      setError("Failed to load image pairs. Please try again later.");
+      console.error('Error fetching image pairs:', error);
+      // setError('Failed to load image pairs. Please try again later.');
       setImagePairs([]); // Set an empty array in case of an error
     }
-  };
+  }, [selectedDate]); // Recreate only when `selectedDate` changes
 
-  // Function to handle date selection from the calendar
+  useEffect(() => {
+    fetchImagePairs();
+  }, [fetchImagePairs]); // Runs only when `fetchImagePairs` changes
+
   const handleDateClick = (date) => {
     setSelectedDate(date);
-    setUploadMessage(""); // Clear any existing upload messages when a new date is selected
+    setUploadMessage(''); // Clear any existing upload messages when a new date is selected
   };
 
   const onDrop = (acceptedFiles, index, type) => {
@@ -52,15 +55,20 @@ const ManageDay = () => {
       updatedPairs[index] = {}; // Ensure the pair object exists
     }
 
+    const file = acceptedFiles[0];
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload a valid image file.');
+      return;
+    }
+
     if (type === 'human') {
-      updatedPairs[index].human = acceptedFiles[0];
+      updatedPairs[index].human = file;
     } else if (type === 'ai') {
-      updatedPairs[index].ai = acceptedFiles[0];
+      updatedPairs[index].ai = file;
     }
     setImagePairs(updatedPairs);
   };
 
-  // Function to handle the image upload
   const handleUpload = async () => {
     if (!selectedDate) {
       setUploadMessage('Please select a date first.');
@@ -68,7 +76,6 @@ const ManageDay = () => {
     }
 
     try {
-      // Adjust the date to 12:00 AM EST
       const date = new Date(selectedDate);
       const isDaylightSaving = date.getMonth() >= 2 && date.getMonth() <= 10; // DST
       if (isDaylightSaving) {
@@ -112,7 +119,9 @@ const ManageDay = () => {
         <>
           <h2>Manage Image Pairs for {selectedDate.toDateString()}</h2>
 
-          {/* Display existing image pairs for the selected date */}
+          {error && <p className="error-message">{error}</p>}
+
+          {/* Existing Image Pairs Section */}
           <div className="existing-image-pairs-container">
             <h3>Existing Image Pairs for {selectedDate.toDateString()}</h3>
             {imagePairs.length === 0 && <p>No existing image pairs found for this date.</p>}
@@ -141,24 +150,27 @@ const ManageDay = () => {
             </div>
           </div>
 
-          {/* Dropzones for uploading new image pairs */}
+          {/* Dropzones for Uploading */}
           <div className="image-pairs-container">
             {[...Array(5)].map((_, index) => (
               <div key={index} className={`pair-container ${index < 4 ? 'half-width' : 'full-width'}`}>
                 <h3>Pair {index + 1}</h3>
-                <DropzoneComponent
-                  onDrop={(files) => onDrop(files, index, 'human')}
-                  label="Drop Human Image"
-                  currentFile={imagePairs[index]?.human}
-                />
-                <DropzoneComponent
-                  onDrop={(files) => onDrop(files, index, 'ai')}
-                  label="Drop AI Image"
-                  currentFile={imagePairs[index]?.ai}
-                />
+                <div className="dropzone-container">
+                  <DropzoneComponent
+                    onDrop={(files) => onDrop(files, index, 'human')}
+                    label="Drop Human Image"
+                    currentFile={imagePairs[index]?.human}
+                  />
+                  <DropzoneComponent
+                    onDrop={(files) => onDrop(files, index, 'ai')}
+                    label="Drop AI Image"
+                    currentFile={imagePairs[index]?.ai}
+                  />
+                </div>
               </div>
             ))}
           </div>
+
           <button className="upload-button" onClick={handleUpload}>
             Upload Pairs
           </button>

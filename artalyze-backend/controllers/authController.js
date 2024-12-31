@@ -79,7 +79,6 @@ exports.verifyOtp = (req, res) => {
 
 // Register user after OTP verification
 exports.registerUser = async (req, res) => {
-  console.log("Received data:", req.body);
   try {
     const { email, password, firstName, lastName } = req.body;
 
@@ -116,12 +115,22 @@ exports.registerUser = async (req, res) => {
     // Generate a JWT
     const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET);
 
-    res.status(201).json({ token, user: { email: newUser.email, firstName, lastName } });
+    // Include userId in the response
+    res.status(201).json({
+      token,
+      user: {
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        userId: newUser._id // Include userId
+      }
+    });
   } catch (error) {
     console.error("Registration error:", error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 // Login user
 // Assuming you have a function to store this in localStorage
