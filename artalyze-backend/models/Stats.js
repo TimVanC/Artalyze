@@ -48,6 +48,14 @@ const statsSchema = new mongoose.Schema(
       type: String, // Storing as a string in YYYY-MM-DD format for simplicity
       default: null,
     },
+    triesRemaining: {
+      type: Number, // Tracks the remaining tries for the current day
+      default: 3,
+    },
+    selections: {
+      type: Array, // Stores user selections for the current game
+      default: [],
+    },
   },
   { timestamps: true }
 );

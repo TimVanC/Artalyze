@@ -119,3 +119,103 @@ exports.deleteUserStats = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete stats.' });
   }
 };
+
+// Fetch triesRemaining
+exports.getTriesRemaining = async (req, res) => {
+  try {
+    const { userId } = req.user; // Extract userId from authenticated token
+    const stats = await Stats.findOne({ userId });
+
+    if (!stats) {
+      return res.status(404).json({ message: 'Stats not found for this user.' });
+    }
+
+    res.status(200).json({ triesRemaining: stats.triesRemaining });
+  } catch (error) {
+    console.error('Error fetching triesRemaining:', error);
+    res.status(500).json({ message: 'Failed to fetch triesRemaining.' });
+  }
+};
+
+
+// Decrement triesRemaining
+exports.decrementTries = async (req, res) => {
+  try {
+    const { userId } = req.user;
+
+    const stats = await Stats.findOneAndUpdate(
+      { userId },
+      { $inc: { triesRemaining: -1 } },
+      { new: true }
+    );
+
+    if (!stats) {
+      return res.status(404).json({ message: 'Stats not found for this user.' });
+    }
+
+    res.status(200).json({ triesRemaining: stats.triesRemaining });
+  } catch (error) {
+    console.error('Error decrementing triesRemaining:', error);
+    res.status(500).json({ message: 'Failed to decrement triesRemaining.' });
+  }
+};
+
+
+// Reset triesRemaining at midnight
+exports.resetTries = async (req, res) => {
+  try {
+    const { userId } = req.user;
+
+    const stats = await Stats.findOneAndUpdate(
+      { userId },
+      { $set: { triesRemaining: 3 } },
+      { new: true }
+    );
+
+    if (!stats) {
+      return res.status(404).json({ message: 'Stats not found for user.' });
+    }
+
+    res.status(200).json({ triesRemaining: stats.triesRemaining });
+  } catch (error) {
+    console.error('Error resetting triesRemaining:', error);
+    res.status(500).json({ message: 'Failed to reset triesRemaining.' });
+  }
+};
+
+// Fetch selections
+exports.getSelections = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    const stats = await Stats.findOne({ userId });
+
+    if (!stats) {
+      return res.status(404).json({ message: 'Stats not found for this user.' });
+    }
+
+    res.status(200).json({ selections: stats.selections });
+  } catch (error) {
+    console.error('Error fetching selections:', error);
+    res.status(500).json({ message: 'Failed to fetch selections.' });
+  }
+};
+
+// Save selections
+exports.saveSelections = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    const { selections } = req.body;
+
+    const stats = await Stats.findOneAndUpdate(
+      { userId },
+      { $set: { selections } },
+      { new: true, upsert: true }
+    );
+
+    res.status(200).json({ selections: stats.selections });
+  } catch (error) {
+    console.error('Error saving selections:', error);
+    res.status(500).json({ message: 'Failed to save selections.' });
+  }
+};
+
