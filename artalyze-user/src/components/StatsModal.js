@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './StatsModal.css';
 import { FaShareAlt } from 'react-icons/fa';
-import { handleShare } from '../utils/shareUtils';
 import CountUp from 'react-countup';
 import logo from '../assets/images/artalyze-logo.png';
 
@@ -12,7 +11,7 @@ const defaultStats = {
   maxStreak: 0,
   perfectPuzzles: 0,
   mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-  mostRecentScore: null, // Added mostRecentScore field
+  mostRecentScore: null,
   lastPlayedDate: null,
 };
 
@@ -29,8 +28,6 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
         return acc;
       }, {});
       setAnimatedBars(animated);
-
-      // Always trigger animations when modal opens
       setShouldAnimateNumbers(true);
       hasAnimatedStats.current = false;
     }
@@ -73,8 +70,8 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
 
   return (
     <div className="stats-overlay">
-<div className={`stats-overlay-content ${isOpen ? 'animate-slide-up' : ''}`}>
-          <span className="close-icon" onClick={onClose}>
+      <div className={`stats-overlay-content ${isOpen ? 'animate-slide-up' : ''}`}>
+        <span className="close-icon" onClick={onClose}>
           ✖
         </span>
         {isLoggedIn ? (
@@ -141,23 +138,18 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               {Object.keys(stats.mistakeDistribution).map((mistakeCount) => {
                 const value = animatedBars[mistakeCount] || 0;
                 const isActive = parseInt(mistakeCount, 10) === stats.mostRecentScore;
-
-                console.log(
-                  `MistakeCount: ${mistakeCount}, Value: ${value}, isActive: ${isActive}`
-                );
-
                 const barWidth = Math.max((value / maxValue) * 100, 5);
 
                 return (
                   <div className="distribution-bar-container" key={mistakeCount}>
                     <span className="mistake-label">{mistakeCount}</span>
                     <div
-                      className={`distribution-bar ${isActive ? 'active most-recent' : ''
-                        }`}
+                      className={`distribution-bar ${isActive ? 'active most-recent' : ''}`}
                     >
                       <div
-                        className={`bar-fill ${value === 0 ? 'zero-value' : ''} ${isActive ? 'animate' : ''
-                          }`}
+                        className={`bar-fill ${value === 0 ? 'zero-value' : ''} ${
+                          isActive ? 'animate' : ''
+                        }`}
                         style={{
                           width: `${barWidth}%`,
                           minWidth: '5%',
@@ -170,31 +162,31 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
                 );
               })}
             </div>
-
             <hr className="separator" />
-            <button
-              className="share-button"
-              onClick={() => handleStatsShare(stats)}
-            >
+            <button className="share-button" onClick={() => handleStatsShare(stats)}>
               <FaShareAlt /> Share
             </button>
-
           </>
         ) : (
-          <>
-            <img src={logo} alt="Artalyze Logo" className="stats-logo" />
-            <h2 className="non-logged-in-message">Track Your Artalyze Stats</h2>
-            <p className="non-logged-in-subtext">
+          <div className="guest-stats-content">
+            <img
+              src={logo}
+              alt="Track your stats illustration"
+              className="guest-stats-image"
+            />
+            <h2>Track Your Artalyze Stats</h2>
+            <p>
               Register to follow your streaks, total completed puzzles, win rate, and more.
             </p>
             <button
               className="cta-button"
-              onClick={() => (window.location.href = '/login')}
+              onClick={() => {
+                window.location.href = '/register';
+              }}
             >
               Create a Free Account
             </button>
-          </>
-
+          </div>
         )}
       </div>
     </div>

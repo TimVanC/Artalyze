@@ -113,22 +113,22 @@
     align-items: center;
     justify-content: flex-end;
     border-radius: 5px;
+    padding-right: 5px;
     transition: width 1.5s ease-in-out;
-    padding-right: 8px; /* Add space for all values */
-    position: relative;
 }
-  
-  /* Animate Most Recent Bar */
-  .bar-fill.animate {
-    transition: width 1.5s ease-in-out, background-color 0.5s ease-in-out;
-  }
-  
-  .distribution-bar.most-recent .bar-fill {
+
+/* Active Bar Fill */
+.distribution-bar.active .bar-fill {
     background-color: #4d73af;
-  }
-  
-  /* Active Bar Value */
-  .bar-value {
+}
+
+/* Animate Most Recent Bar */
+.bar-fill.animate {
+    transition: width 1.5s ease-in-out, background-color 0.5s ease-in-out;
+}
+
+/* Bar Value */
+.bar-value {
     color: white;
     font-weight: bold;
     font-size: 14px;
@@ -136,38 +136,38 @@
 
 /* Zero Value Styling */
 .bar-fill.zero-value {
-    justify-content: center; /* Perfectly center zero values */
-    padding-right: 0; /* Remove padding for zero values */
-}
-
-.bar-fill.zero-value .bar-value {
-    margin-right: 0; /* Override for centering */
-}
-.bar-fill.zero-value .bar-value {
-    position: static; /* Override absolute positioning for 0 values */
+    background-color: #b0b0b0;
+    justify-content: center;
+    color: white;
 }
 
 /* Share Button Styles */
-.share-button {
-    background-color: #4CAF50;
-    color: white;
-    padding: 10px 25px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s, transform 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    margin-top: 20px;
-    width: 80%;
-    justify-content: center;
+.stats-overlay .share-button {
+    background-color: #4CAF50 !important;
+    color: white !important;
+    padding: 12px 40px !important;
+    border: none !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+    transition: background-color 0.3s, transform 0.2s !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin: 20px auto 0 !important;
+    width: 250px !important;
+    justify-content: center !important;
 }
 
 .share-button:hover {
     background-color: #388E3C;
     transform: scale(1.05);
+}
+
+.share-button:focus {
+    outline: 3px solid #82b1ff;
+    outline-offset: 2px;
 }
 
 /* Slide-Up Animation */
@@ -179,3 +179,40 @@
         transform: translateY(0);
     }
 }
+
+/* Guest Stats Modal */
+.guest-stats-content {
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .guest-stats-image {
+    width: 150px;
+    height: auto;
+    margin: 0 auto 20px;
+  }
+  
+  .cta-button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 25px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+    display: inline-block;
+    margin-top: 20px;
+  }
+  
+  .cta-button:hover {
+    background-color: #388E3C;
+    transform: scale(1.05);
+  }
+  
+  .cta-button:focus {
+    outline: 3px solid #82b1ff;
+    outline-offset: 2px;
+  }
+  
