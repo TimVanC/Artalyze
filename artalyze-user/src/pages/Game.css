@@ -314,8 +314,9 @@ h1 {
 /* Completion Buttons */
 .completion-buttons {
   display: flex;
-  justify-content: center;
-  gap: 20px;
+  justify-content: center; /* Centers the buttons horizontally */
+  align-items: center; /* Aligns buttons vertically */
+  gap: 20px; /* Equal spacing between buttons */
   margin-top: 20px;
 }
 
@@ -330,20 +331,18 @@ h1 {
   font-weight: bold;
   cursor: pointer;
   display: flex;
-  align-items: center;
-  gap: 8px; /* Add space between icon and text */
+  justify-content: center; /* Centers content horizontally within the button */
+  align-items: center; /* Centers content vertically within the button */
+  gap: 8px; /* Space between icon and text */
+  width: 200px; /* Fixed width for both buttons */
+  height: 50px; /* Fixed height for both buttons */
+  margin-top: 0 !important; /* Override any inherited margin-top */
   transition: all 0.3s ease;
 }
 
 .stats-button:hover,
 .share-button:hover {
-  background-color: #388E3C;
   transform: scale(1.05);
-}
-
-.stats-button .icon,
-.share-button .icon {
-  font-size: 18px;
 }
 
 .stats-button {
@@ -354,18 +353,20 @@ h1 {
   background-color: #355a86;
 }
 
-/* Accessibility */
-
-.share-button.completion {
-  padding: 12px 30px;
-  font-size: 16px;
-  min-width: 150px;
+.share-button {
+  background-color: #28a745; /* Green for share */
 }
 
+.share-button:hover {
+  background-color: #218838;
+}
+
+/* Accessibility */
 .completion-buttons button:focus {
   outline: 3px solid #82b1ff; /* Highlight focus for accessibility */
   outline-offset: 2px;
 }
+
 
 /* Keyframes for Animations */
 @keyframes fadeIn {
