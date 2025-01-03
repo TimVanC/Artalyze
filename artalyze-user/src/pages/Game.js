@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaInfoCircle, FaChartBar, FaCog, FaShareAlt, FaPalette } from 'react-icons/fa';
 import SwiperCore, { Swiper, SwiperSlide } from 'swiper/react';
+import { getTodayInEST } from '../utils/dateUtils';
 import 'swiper/css';
 import axiosInstance from '../axiosInstance';
 import InfoModal from '../components/InfoModal';
@@ -83,107 +84,116 @@ const Game = () => {
 
   // Function to be called on game completion
   const handleGameComplete = async () => {
-    console.log('handleGameComplete called');
+    console.log("handleGameComplete called");
     setIsGameComplete(true);
-
-    const today = new Date().toISOString().split('T')[0];
-
+  
+    const today = getTodayInEST(); // Use the consistent EST utility function
+    const yesterday = new Date(new Date().setDate(new Date().getDate() - 1));
+    const yesterdayInEST = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+      .format(yesterday)
+      .split("/")
+      .reverse()
+      .join("-");
+  
     if (isUserLoggedIn()) {
       if (!userId) {
-        console.error('User ID not found. Ensure the user is logged in.');
+        console.error("User ID not found. Ensure the user is logged in.");
         return;
       }
-
+  
       try {
-        console.log('Marking game as played for today...');
-        const response = await axiosInstance.post('/game/mark-as-played', {
-          isPerfectPuzzle: correctCount === imagePairs.length,
-        });
-        console.log('Game play status updated for today:', response.data);
-        localStorage.setItem('lastPlayedDate', today);
+        console.log("Marking game as played for today...");
+        const playStatusResponse = await axiosInstance.post(
+          "/game/mark-as-played",
+          { isPerfectPuzzle: correctCount === imagePairs.length },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            },
+          }
+        );
+        console.log("Game play status updated for today:", playStatusResponse.data);
       } catch (error) {
-        console.error('Error marking game as played:', error.response?.data || error.message);
-        localStorage.setItem('lastPlayedDate', today);
+        console.error("Error marking game as played:", error.response?.data || error.message);
       }
-
+  
       try {
         const payload = {
           correctAnswers: correctCount,
           totalQuestions: imagePairs.length,
         };
-
-        console.log('Sending payload to update stats:', payload);
-
-        const response = await axiosInstance.put(`/stats/${userId}`, payload, {
+  
+        console.log("Sending payload to update stats:", payload);
+  
+        const statsResponse = await axiosInstance.put(`/stats/${userId}`, payload, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
         });
-
-        console.log('Stats updated successfully:', response.data);
-
-        await fetchAndSetStats(userId);
+  
+        console.log("Stats updated successfully:", statsResponse.data);
+        await fetchAndSetStats(userId); // Update stats state in frontend
       } catch (error) {
-        console.error('Error updating user stats:', error.response?.data || error.message);
+        console.error("Error updating user stats:", error.response?.data || error.message);
       }
     } else {
-      console.log('User is not logged in, using localStorage to track game status and stats');
-      localStorage.setItem('lastPlayedDate', today);
-
+      console.log("User is not logged in, using localStorage to track game status and stats");
       const updatedStats = { ...stats };
-
-      updatedStats.gamesPlayed += 1;
-
       const isPerfectPuzzle = correctCount === imagePairs.length;
-
-      if (isPerfectPuzzle) {
-        updatedStats.perfectPuzzles += 1;
-
-        const lastPlayedDate = localStorage.getItem('lastPlayedDate');
-        const lastPlayed = lastPlayedDate ? new Date(lastPlayedDate) : null;
-        const todayDate = new Date(today);
-
-        if (lastPlayed && todayDate - lastPlayed === 86400000) {
-          updatedStats.currentStreak += 1;
-        } else {
-          updatedStats.currentStreak = 1;
-        }
-
-        updatedStats.maxStreak = Math.max(updatedStats.maxStreak, updatedStats.currentStreak);
-      } else {
-        updatedStats.currentStreak = 0;
+  
+      // Update stats for non-logged-in users
+      updatedStats.gamesPlayed += 1;
+      updatedStats.perfectPuzzles += isPerfectPuzzle ? 1 : 0;
+  
+      const lastPlayedDate = localStorage.getItem("lastPlayedDate");
+  
+      if (lastPlayedDate === yesterdayInEST) {
+        updatedStats.currentStreak += 1;
+      } else if (lastPlayedDate !== today) {
+        updatedStats.currentStreak = 1;
       }
-
+  
+      updatedStats.maxStreak = Math.max(updatedStats.maxStreak, updatedStats.currentStreak);
+  
+      if (isPerfectPuzzle) {
+        updatedStats.perfectStreak = (updatedStats.perfectStreak || 0) + 1;
+        updatedStats.maxPerfectStreak = Math.max(
+          updatedStats.maxPerfectStreak || 0,
+          updatedStats.perfectStreak
+        );
+      } else {
+        updatedStats.perfectStreak = 0; // Reset perfect streak if not 5/5
+      }
+  
       updatedStats.winPercentage = Math.round(
         (updatedStats.perfectPuzzles / updatedStats.gamesPlayed) * 100
       );
-
+  
       const mistakeCount = imagePairs.length - correctCount;
       updatedStats.mistakeDistribution[mistakeCount] =
         (updatedStats.mistakeDistribution[mistakeCount] || 0) + 1;
-
+  
       updatedStats.lastPlayedDate = today;
       updatedStats.mostRecentScore = mistakeCount;
-
+  
       setStats(updatedStats);
-
-      localStorage.setItem('triesRemaining', triesLeft);
-      localStorage.setItem('stats', JSON.stringify(updatedStats));
-
-      console.log('Non-logged-in stats saved locally:', updatedStats);
+      localStorage.setItem("stats", JSON.stringify(updatedStats));
+      localStorage.setItem("lastPlayedDate", today);
+      console.log("Non-logged-in stats saved locally:", updatedStats);
     }
   };
+  
 
 
   // Initialize game logic
   useEffect(() => {
-    const getTodayInLocalTimezone = () => {
-      const now = new Date();
-      return now.toISOString().split('T')[0]; // Ensure only the date is compared
-    };
-  
     const initializeGame = async () => {
-      const today = getTodayInLocalTimezone();
+      const today = getTodayInEST();
       const isLoggedIn = isUserLoggedIn();
   
       if (isLoggedIn && !userId) {
@@ -196,9 +206,7 @@ const Game = () => {
         if (isLoggedIn) {
           console.log('Checking if user has played today...');
           const playStatusResponse = await axiosInstance.get('/game/check-today-status', {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-            },
+            headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
           });
   
           if (playStatusResponse.data.hasPlayedToday) {
@@ -206,22 +214,17 @@ const Game = () => {
             setIsGameComplete(true);
             restoreGameState();
             await fetchAndSetStats(userId);
-  
             setTimeout(() => setIsStatsOpen(true), 400);
             return;
           }
   
           const triesResponse = await axiosInstance.get('/stats/tries', {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-            },
+            headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
           });
           setTriesLeft(triesResponse.data.triesRemaining);
   
           const selectionsResponse = await axiosInstance.get('/stats/selections', {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-            },
+            headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
           });
           setSelections(selectionsResponse.data.selections || []);
         } else {
@@ -230,18 +233,15 @@ const Game = () => {
             console.log('Guest user has already played today.');
             setIsGameComplete(true);
             restoreGameState();
-  
             setTimeout(() => setIsStatsOpen(true), 400);
             return;
           }
   
           const storedTries = localStorage.getItem('triesRemaining');
-          const storedDate = localStorage.getItem('triesDate');
           const savedSelections = localStorage.getItem('selections');
   
-          if (storedDate !== today || !storedTries) {
+          if (!storedTries || storedTries < 1) {
             localStorage.setItem('triesRemaining', 3);
-            localStorage.setItem('triesDate', today);
             setTriesLeft(3);
           } else {
             setTriesLeft(parseInt(storedTries, 10));
@@ -265,12 +265,10 @@ const Game = () => {
           setImagePairs(shuffledPairs);
           localStorage.setItem('completedPairs', JSON.stringify(shuffledPairs));
   
-          setTimeout(() => {
-            setCurrentIndex(0);
-            if (swiperRef.current) {
-              swiperRef.current.slideToLoop(0);
-            }
-          }, 100); // Adjust delay as needed
+          setCurrentIndex(0);
+          if (swiperRef.current) {
+            swiperRef.current.slideToLoop(0, 0);
+          }
         } else {
           console.warn('No image pairs available for today.');
           setImagePairs([]);
@@ -306,12 +304,10 @@ const Game = () => {
             swiperRef.current.slideToLoop(firstSelectionIndex >= 0 ? firstSelectionIndex : 0, 0);
           }
         } else {
-          setTimeout(() => {
-            setCurrentIndex(0);
-            if (swiperRef.current) {
-              swiperRef.current.slideToLoop(0);
-            }
-          }, 100); // Adjust delay as needed
+          setCurrentIndex(0);
+          if (swiperRef.current) {
+            swiperRef.current.slideToLoop(0, 0);
+          }
         }
       }
     };
@@ -322,6 +318,9 @@ const Game = () => {
       restoreGameState();
     }
   }, [userId, isGameComplete]);
+  
+  
+
   
   
   useEffect(() => {

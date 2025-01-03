@@ -9,6 +9,8 @@ const defaultStats = {
   winPercentage: 0,
   currentStreak: 0,
   maxStreak: 0,
+  perfectStreak: 0,
+  maxPerfectStreak: 0,
   perfectPuzzles: 0,
   mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
   mostRecentScore: null,
@@ -22,7 +24,6 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
 
   useEffect(() => {
     if (isOpen) {
-      console.log(`StatsModal opened. isLoggedIn: ${isLoggedIn}`);
       const animated = Object.keys(stats.mistakeDistribution).reduce((acc, key) => {
         acc[key] = stats.mistakeDistribution[key];
         return acc;
@@ -33,14 +34,16 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
     }
   }, [isOpen, stats.mistakeDistribution, isLoggedIn]);
 
-  const handleStatsShare = (stats) => {
+  const handleStatsShare = () => {
     const shareableText = `
-      🎨 Artalyze Stats 🎨
-      Games Played: ${stats.gamesPlayed}
-      Win %: ${stats.winPercentage}%
-      Current Streak: ${stats.currentStreak}
-      Max Streak: ${stats.maxStreak}
-      Perfect Puzzles: ${stats.perfectPuzzles}
+🎨 Artalyze Stats 🎨
+Games Played: ${stats.gamesPlayed}
+Win %: ${stats.winPercentage}%
+Current Streak: ${stats.currentStreak}
+Max Streak: ${stats.maxStreak}
+Perfect Streak: ${stats.perfectStreak}
+Max Perfect Streak: ${stats.maxPerfectStreak}
+Perfect Games: ${stats.perfectPuzzles}
     `;
 
     if (navigator.share) {
@@ -120,6 +123,28 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               </div>
             </div>
             <hr className="separator" />
+            <div className="stats-overview">
+              <div className="stat-item">
+                <div className="stat-value">
+                  {shouldAnimateNumbers ? (
+                    <CountUp start={0} end={stats.perfectStreak} duration={3} />
+                  ) : (
+                    stats.perfectStreak
+                  )}
+                </div>
+                <div>Perfect Streak</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">
+                  {shouldAnimateNumbers ? (
+                    <CountUp start={0} end={stats.maxPerfectStreak} duration={3} />
+                  ) : (
+                    stats.maxPerfectStreak
+                  )}
+                </div>
+                <div>Max Perfect Streak</div>
+              </div>
+            </div>
             <div className="perfect-puzzles">
               <div className="stat-item">
                 <div className="stat-value">
@@ -163,7 +188,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               })}
             </div>
             <hr className="separator" />
-            <button className="share-button" onClick={() => handleStatsShare(stats)}>
+            <button className="share-button" onClick={handleStatsShare}>
               <FaShareAlt /> Share
             </button>
           </>

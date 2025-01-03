@@ -1,4 +1,5 @@
 const Stats = require('../models/Stats');
+const { getTodayInEST, getYesterdayInEST } = require('../utils/dateUtils');
 
 // Fetch user statistics
 exports.getUserStats = async (req, res) => {
@@ -17,52 +18,96 @@ exports.getUserStats = async (req, res) => {
   }
 };
 
+// Update user statistics
 exports.updateUserStats = async (req, res) => {
   try {
     const { userId } = req.params;
     const { correctAnswers, totalQuestions } = req.body;
 
-    console.log('Received update request for userId:', userId);
-    console.log('Payload:', { correctAnswers, totalQuestions });
+    const todayInEST = getTodayInEST();
+    const yesterdayInEST = new Date(new Date().setDate(new Date().getDate() - 1))
+      .toLocaleDateString("en-US", { timeZone: "America/New_York" })
+      .split("/")
+      .reverse()
+      .join("-");
 
-    if (!userId || correctAnswers == null || totalQuestions == null) {
-      return res
-        .status(400)
-        .json({ message: 'User ID, correctAnswers, and totalQuestions are required.' });
+    const stats = await Stats.findOne({ userId });
+
+    let updates = {};
+    let currentStreak = stats?.currentStreak || 0;
+    let maxStreak = stats?.maxStreak || 0;
+    let perfectStreak = stats?.perfectStreak || 0;
+    let maxPerfectStreak = stats?.maxPerfectStreak || 0;
+
+    // Determine if the game was perfect
+    const isPerfectGame = correctAnswers === totalQuestions;
+
+    if (stats) {
+      // Existing stats document: update streaks based on lastPlayedDate
+      if (stats.lastPlayedDate === yesterdayInEST) {
+        currentStreak += 1;
+        maxStreak = Math.max(maxStreak, currentStreak);
+
+        if (isPerfectGame) {
+          perfectStreak += 1;
+          maxPerfectStreak = Math.max(maxPerfectStreak, perfectStreak);
+        } else {
+          perfectStreak = 0; // Reset perfect streak if not perfect
+        }
+      } else if (stats.lastPlayedDate !== todayInEST) {
+        // New day but not consecutive
+        currentStreak = 1;
+        perfectStreak = isPerfectGame ? 1 : 0;
+      }
+    } else {
+      // No stats document exists; create new stats
+      currentStreak = 1;
+      maxStreak = 1;
+      perfectStreak = isPerfectGame ? 1 : 0;
+      maxPerfectStreak = isPerfectGame ? 1 : 0;
     }
 
-    const mistakes = totalQuestions - correctAnswers;
+    // Increment games played and update mistake distribution
+    updates.$inc = {
+      gamesPlayed: 1,
+      [`mistakeDistribution.${totalQuestions - correctAnswers}`]: 1,
+    };
+
+    if (isPerfectGame) {
+      updates.$inc.perfectPuzzles = 1;
+    }
+
+    // Update streaks, lastPlayedDate, and mostRecentScore
+    updates.$set = {
+      currentStreak,
+      maxStreak,
+      perfectStreak,
+      maxPerfectStreak,
+      lastPlayedDate: todayInEST,
+      mostRecentScore: totalQuestions - correctAnswers,
+    };
+
+    // Calculate win percentage
+    const gamesPlayed = stats ? stats.gamesPlayed + 1 : 1;
+    const perfectPuzzles = stats ? (stats.perfectPuzzles || 0) + (isPerfectGame ? 1 : 0) : (isPerfectGame ? 1 : 0);
+    updates.$set.winPercentage = Math.round((perfectPuzzles / gamesPlayed) * 100);
 
     const updatedStats = await Stats.findOneAndUpdate(
       { userId },
-      {
-        $inc: {
-          gamesPlayed: 1,
-          [`mistakeDistribution.${mistakes}`]: 1,
-        },
-        $set: {
-          lastPlayedDate: new Date().toISOString(),
-          mostRecentScore: mistakes,
-        },
-      },
+      updates,
       { new: true, upsert: true }
     );
 
-    if (!updatedStats) {
-      return res.status(404).json({ message: 'Stats document not found for this user.' });
-    }
-
-    console.log('Updated stats successfully:', updatedStats);
     res.status(200).json(updatedStats);
   } catch (error) {
-    console.error('Error updating stats:', error);
-    res.status(500).json({ message: 'Failed to update stats.' });
+    console.error("Error updating stats:", error);
+    res.status(500).json({ message: "Failed to update stats." });
   }
 };
 
 
 
-// Reset all user statistics (optional utility function)
+// Reset all user statistics
 exports.resetUserStats = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -77,6 +122,8 @@ exports.resetUserStats = async (req, res) => {
       currentStreak: 0,
       maxStreak: 0,
       perfectPuzzles: 0,
+      currentPerfectStreak: 0,
+      maxPerfectStreak: 0,
       mistakeDistribution: {
         0: 0,
         1: 0,
@@ -102,7 +149,7 @@ exports.resetUserStats = async (req, res) => {
   }
 };
 
-// Delete user statistics (optional utility function)
+// Delete user statistics
 exports.deleteUserStats = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -123,7 +170,7 @@ exports.deleteUserStats = async (req, res) => {
 // Fetch triesRemaining
 exports.getTriesRemaining = async (req, res) => {
   try {
-    const { userId } = req.user; // Extract userId from authenticated token
+    const { userId } = req.user;
     const stats = await Stats.findOne({ userId });
 
     if (!stats) {
@@ -136,7 +183,6 @@ exports.getTriesRemaining = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch triesRemaining.' });
   }
 };
-
 
 // Decrement triesRemaining
 exports.decrementTries = async (req, res) => {
@@ -159,7 +205,6 @@ exports.decrementTries = async (req, res) => {
     res.status(500).json({ message: 'Failed to decrement triesRemaining.' });
   }
 };
-
 
 // Reset triesRemaining at midnight
 exports.resetTries = async (req, res) => {
@@ -218,4 +263,3 @@ exports.saveSelections = async (req, res) => {
     res.status(500).json({ message: 'Failed to save selections.' });
   }
 };
-

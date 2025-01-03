@@ -24,6 +24,14 @@ const statsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    perfectStreak: {
+      type: Number,
+      default: 0,
+    },
+    maxPerfectStreak: {
+      type: Number,
+      default: 0,
+    },
     perfectPuzzles: {
       type: Number,
       default: 0,
@@ -41,19 +49,19 @@ const statsSchema = new mongoose.Schema(
       },
     },
     mostRecentScore: {
-      type: Number, // Tracks the last mistake count
+      type: Number,
       default: null,
     },
     lastPlayedDate: {
-      type: String, // Storing as a string in YYYY-MM-DD format for simplicity
+      type: String,
       default: null,
     },
     triesRemaining: {
-      type: Number, // Tracks the remaining tries for the current day
+      type: Number,
       default: 3,
     },
     selections: {
-      type: Array, // Stores user selections for the current game
+      type: Array,
       default: [],
     },
   },
