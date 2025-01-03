@@ -44,25 +44,12 @@ exports.checkIfPlayedToday = async (req, res) => {
     }
 
     const nowUTC = new Date();
-    const isDaylightSaving = nowUTC.getMonth() >= 2 && nowUTC.getMonth() <= 10; // March to November
-    const offset = isDaylightSaving ? -4 : -5;
-
-    // Convert UTC to EST/EDT
-    const nowEST = new Date(nowUTC.getTime() + offset * 60 * 60 * 1000);
-
-    const todayEST = new Date(nowEST);
-    todayEST.setHours(0, 0, 0, 0); // Reset to midnight EST
-
+    const todayUTC = new Date(nowUTC.toISOString().split('T')[0]); // UTC midnight
     const lastPlayedUTC = user.lastPlayedDate ? new Date(user.lastPlayedDate) : null;
 
-    if (lastPlayedUTC) {
-      const lastPlayedEST = new Date(lastPlayedUTC.getTime() + offset * 60 * 60 * 1000);
-      lastPlayedEST.setHours(0, 0, 0, 0); // Reset to midnight EST
-
-      if (todayEST.getTime() === lastPlayedEST.getTime()) {
-        console.log('User has already played today.');
-        return res.status(200).json({ hasPlayedToday: true });
-      }
+    if (lastPlayedUTC && todayUTC.getTime() === lastPlayedUTC.getTime()) {
+      console.log('User has already played today.');
+      return res.status(200).json({ hasPlayedToday: true });
     }
 
     console.log('User has not played today.');
@@ -72,6 +59,7 @@ exports.checkIfPlayedToday = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 
 // Mark the user as played today

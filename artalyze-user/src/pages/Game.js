@@ -177,8 +177,13 @@ const Game = () => {
 
   // Initialize game logic
   useEffect(() => {
+    const getTodayInLocalTimezone = () => {
+      const now = new Date();
+      return now.toISOString().split('T')[0]; // Ensure only the date is compared
+    };
+  
     const initializeGame = async () => {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayInLocalTimezone();
       const isLoggedIn = isUserLoggedIn();
   
       if (isLoggedIn && !userId) {
@@ -266,7 +271,6 @@ const Game = () => {
               swiperRef.current.slideToLoop(0);
             }
           }, 100); // Adjust delay as needed
-          
         } else {
           console.warn('No image pairs available for today.');
           setImagePairs([]);
@@ -308,7 +312,6 @@ const Game = () => {
               swiperRef.current.slideToLoop(0);
             }
           }, 100); // Adjust delay as needed
-          
         }
       }
     };
@@ -319,6 +322,7 @@ const Game = () => {
       restoreGameState();
     }
   }, [userId, isGameComplete]);
+  
   
   useEffect(() => {
     if (swiperRef.current && imagePairs.length > 0) {
