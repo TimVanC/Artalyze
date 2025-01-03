@@ -49,6 +49,7 @@ const defaultStats = {
 
 const Game = () => {
   const navigate = useNavigate();
+  const statsTimerRef = useRef(null);
   const isLoggedIn = isUserLoggedIn();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -198,7 +199,10 @@ const Game = () => {
           if (playStatusResponse.data.hasPlayedToday) {
             console.log('User has already played today.');
             setIsGameComplete(true);
+            restoreGameState();
             await fetchAndSetStats(userId);
+  
+            setTimeout(() => setIsStatsOpen(true), 400);
             return;
           }
   
@@ -220,6 +224,9 @@ const Game = () => {
           if (lastPlayed === today) {
             console.log('Guest user has already played today.');
             setIsGameComplete(true);
+            restoreGameState();
+  
+            setTimeout(() => setIsStatsOpen(true), 400);
             return;
           }
   
@@ -251,14 +258,15 @@ const Game = () => {
               : [pair.aiImageURL, pair.humanImageURL],
           }));
           setImagePairs(shuffledPairs);
+          localStorage.setItem('completedPairs', JSON.stringify(shuffledPairs));
   
-          // Delay setting Swiper until it's fully initialized
           setTimeout(() => {
             setCurrentIndex(0);
             if (swiperRef.current) {
               swiperRef.current.slideToLoop(0);
             }
           }, 100); // Adjust delay as needed
+          
         } else {
           console.warn('No image pairs available for today.');
           setImagePairs([]);
@@ -273,25 +281,58 @@ const Game = () => {
       }
     };
   
+    const restoreGameState = () => {
+      const savedPairs = localStorage.getItem('completedPairs');
+      const savedSelections = localStorage.getItem('selections');
+  
+      if (savedPairs) {
+        const pairs = JSON.parse(savedPairs);
+        setImagePairs(pairs);
+  
+        if (savedSelections) {
+          const selections = JSON.parse(savedSelections);
+          setSelections(selections);
+  
+          const firstSelectionIndex = selections.findIndex(
+            (selection) => selection && selection.selected
+          );
+  
+          setCurrentIndex(firstSelectionIndex >= 0 ? firstSelectionIndex : 0);
+          if (swiperRef.current) {
+            swiperRef.current.slideToLoop(firstSelectionIndex >= 0 ? firstSelectionIndex : 0, 0);
+          }
+        } else {
+          setTimeout(() => {
+            setCurrentIndex(0);
+            if (swiperRef.current) {
+              swiperRef.current.slideToLoop(0);
+            }
+          }, 100); // Adjust delay as needed
+          
+        }
+      }
+    };
+  
     if (!isGameComplete) {
       initializeGame();
+    } else {
+      restoreGameState();
     }
   }, [userId, isGameComplete]);
   
+  useEffect(() => {
+    if (swiperRef.current && imagePairs.length > 0) {
+      swiperRef.current.slideToLoop(currentIndex, 0);
+    }
+  }, [currentIndex, imagePairs]);
   
 
-
-
+  // Save selections to localStorage whenever they are updated
   useEffect(() => {
-    if (isGameComplete) {
-      const timer = setTimeout(() => {
-        setIsStatsOpen(true); // Automatically open stats modal after completion
-      }, 500); // 0.5 seconds delay
-
-      return () => clearTimeout(timer); // Cleanup timeout on unmount or re-run
+    if (selections.length > 0) {
+      localStorage.setItem('selections', JSON.stringify(selections));
     }
-  }, [isGameComplete]);
-
+  }, [selections]);
 
   const fetchAndSetStats = async () => {
     const userId = localStorage.getItem("userId"); // Ensure userId is fetched correctly
@@ -389,6 +430,35 @@ const Game = () => {
     }
   };
 
+  const handleCompletionShare = (selections, imagePairs) => {
+    const shareableText = `
+      🎨 Artalyze Results 🎨
+      ${selections
+        .map((isHumanSelection, index) => {
+          const pair = imagePairs[index];
+          return `Pair ${index + 1}: ${isHumanSelection ? 'Correct' : 'Wrong'} (${pair.human})`;
+        })
+        .join('\n')}
+    `;
+
+    if (navigator.share) {
+      navigator
+        .share({
+          title: 'My Artalyze Results',
+          text: shareableText,
+        })
+        .catch((error) => console.log('Error sharing:', error));
+    } else {
+      navigator.clipboard
+        .writeText(shareableText)
+        .then(() => {
+          alert('Results copied to clipboard! You can now paste it anywhere.');
+        })
+        .catch((error) => {
+          console.error('Failed to copy:', error);
+        });
+    }
+  };
 
 
   const handleLongPress = (image) => {
@@ -511,31 +581,29 @@ const Game = () => {
           </div>
 
           <Swiper
-  loop={true}
-  onSlideChange={(swiper) => setCurrentIndex(swiper.realIndex)}
-  onSwiper={(swiper) => {
-    swiperRef.current = swiper; // Store the Swiper instance
-  }}
->
-  {imagePairs.map((pair, index) => (
-    <SwiperSlide key={index}>
-      <div className="image-pair-container">
-        {pair.images.map((image, idx) => (
-          <div
-            key={idx}
-            className={`image-container ${selections[index]?.selected === image ? 'selected' : ''}`}
-            onClick={() => handleSelection(image, image === pair.human)}
+            loop={true}
+            onSlideChange={(swiper) => setCurrentIndex(swiper.realIndex)}
+            onSwiper={(swiper) => {
+              swiperRef.current = swiper;
+              swiper.slideToLoop(currentIndex, 0); // Sync Swiper to currentIndex on mount
+            }}
           >
-            <img src={image} alt={`Painting ${idx + 1}`} />
-          </div>
-        ))}
-      </div>
-    </SwiperSlide>
-  ))}
-</Swiper>
-
-
-
+            {imagePairs.map((pair, index) => (
+              <SwiperSlide key={index}>
+                <div className="image-pair-container">
+                  {pair.images.map((image, idx) => (
+                    <div
+                      key={idx}
+                      className={`image-container ${selections[index]?.selected === image ? 'selected' : ''}`}
+                      onClick={() => handleSelection(image, image === pair.human)}
+                    >
+                      <img src={image} alt={`Painting ${idx + 1}`} />
+                    </div>
+                  ))}
+                </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
 
           {enlargedImage && (
             <div className="enlarge-modal" onClick={closeEnlargedImage}>
@@ -549,10 +617,8 @@ const Game = () => {
                 key={index}
                 className={`nav-button ${currentIndex === index ? 'active' : ''}`}
                 onClick={() => {
-                  if (swiperRef.current) {
-                    swiperRef.current.slideToLoop(index);
-                  }
-                  setCurrentIndex(index);
+                  setCurrentIndex(index); // Update `currentIndex`
+                  swiperRef.current.slideToLoop(index); // Sync Swiper
                 }}
               >
                 {index + 1}
@@ -589,7 +655,8 @@ const Game = () => {
 
       {isGameComplete && (
         <div className="completion-screen">
-          <p>{selectedCompletionMessage}</p>
+          <p className="completion-message">{selectedCompletionMessage}</p>
+          <p className="image-pair-message">Here are the image pairs and your results:</p>
           <div className="horizontal-thumbnail-grid">
             {imagePairs.map((pair, index) => {
               const selection = selections[index];
@@ -597,12 +664,22 @@ const Game = () => {
 
               return (
                 <div key={index} className="pair-thumbnails-horizontal">
-                  <div className={`thumbnail-container ${isCorrect && pair.images[0] === pair.human ? 'correct' : (selection?.selected === pair.images[0] ? 'incorrect' : '')}`}>
-                    <img src={pair.images[0]} alt={`First painting for pair ${index + 1}`} />
-                  </div>
-                  <div className={`thumbnail-container ${isCorrect && pair.images[1] === pair.human ? 'correct' : (selection?.selected === pair.images[1] ? 'incorrect' : '')}`}>
-                    <img src={pair.images[1]} alt={`Second painting for pair ${index + 1}`} />
-                  </div>
+                  {pair.images.map((image, imgIndex) => (
+                    <div
+                      key={imgIndex}
+                      className={`thumbnail-container ${isCorrect && image === pair.human
+                        ? 'correct'
+                        : selection?.selected === image
+                          ? 'incorrect'
+                          : ''
+                        }`}
+                    >
+                      <img
+                        src={image}
+                        alt={`Painting ${imgIndex + 1} for pair ${index + 1}`}
+                      />
+                    </div>
+                  ))}
                 </div>
               );
             })}
@@ -611,12 +688,18 @@ const Game = () => {
             <button className="stats-button" onClick={() => setIsStatsOpen(true)}>
               <FaChartBar /> See Stats
             </button>
-            <button className="share-button" onClick={() => handleStatsShare(selections.map(selection => selection?.isHumanSelection))}>
+            <button
+              className="share-button"
+              onClick={() => handleCompletionShare(selections.map(s => s?.isHumanSelection), imagePairs)}
+            >
               <FaShareAlt /> Share
             </button>
+
           </div>
         </div>
       )}
+
+
 
       {enlargedImage && (
         <div className="enlarge-modal" onClick={closeEnlargedImage}>

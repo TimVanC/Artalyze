@@ -36,6 +36,35 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
     }
   }, [isOpen, stats.mistakeDistribution, isLoggedIn]);
 
+  const handleStatsShare = (stats) => {
+    const shareableText = `
+      🎨 Artalyze Stats 🎨
+      Games Played: ${stats.gamesPlayed}
+      Win %: ${stats.winPercentage}%
+      Current Streak: ${stats.currentStreak}
+      Max Streak: ${stats.maxStreak}
+      Perfect Puzzles: ${stats.perfectPuzzles}
+    `;
+
+    if (navigator.share) {
+      navigator
+        .share({
+          title: 'My Artalyze Stats',
+          text: shareableText,
+        })
+        .catch((error) => console.log('Error sharing:', error));
+    } else {
+      navigator.clipboard
+        .writeText(shareableText)
+        .then(() => {
+          alert('Stats copied to clipboard! You can now paste it anywhere.');
+        })
+        .catch((error) => {
+          console.error('Failed to copy:', error);
+        });
+    }
+  };
+
   if (!isOpen) {
     return null;
   }
@@ -44,8 +73,8 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
 
   return (
     <div className="stats-overlay">
-      <div className="stats-overlay-content">
-        <span className="close-icon" onClick={onClose}>
+<div className={`stats-overlay-content ${isOpen ? 'animate-slide-up' : ''}`}>
+          <span className="close-icon" onClick={onClose}>
           ✖
         </span>
         {isLoggedIn ? (
@@ -143,9 +172,13 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
             </div>
 
             <hr className="separator" />
-            <button className="share-button" onClick={() => handleShare(stats)}>
+            <button
+              className="share-button"
+              onClick={() => handleStatsShare(stats)}
+            >
               <FaShareAlt /> Share
             </button>
+
           </>
         ) : (
           <>
