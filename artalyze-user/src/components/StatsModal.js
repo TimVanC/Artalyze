@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import './StatsModal.css';
 import { FaShareAlt } from 'react-icons/fa';
 import CountUp from 'react-countup';
+import axiosInstance from '../axiosInstance';
 import logo from '../assets/images/artalyze-logo.png';
 
 const defaultStats = {
@@ -17,10 +18,29 @@ const defaultStats = {
   lastPlayedDate: null,
 };
 
-const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false }) => {
+const StatsModal = ({ isOpen, onClose, userId, isLoggedIn = false }) => {
+  const [stats, setStats] = useState(defaultStats);
+  const [error, setError] = useState(null);
   const [animatedBars, setAnimatedBars] = useState({});
   const [shouldAnimateNumbers, setShouldAnimateNumbers] = useState(false);
   const hasAnimatedStats = useRef(false);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!isOpen || !isLoggedIn || !userId) return;
+
+      try {
+        const response = await axiosInstance.get(`/stats/${userId}`);
+        setStats(response.data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching stats:', err);
+        setError('Failed to load stats. Please try again later.');
+      }
+    };
+
+    fetchStats();
+  }, [isOpen, isLoggedIn, userId]);
 
   useEffect(() => {
     if (isOpen) {
@@ -32,7 +52,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
       setShouldAnimateNumbers(true);
       hasAnimatedStats.current = false;
     }
-  }, [isOpen, stats.mistakeDistribution, isLoggedIn]);
+  }, [isOpen, stats.mistakeDistribution]);
 
   const handleStatsShare = () => {
     const shareableText = `

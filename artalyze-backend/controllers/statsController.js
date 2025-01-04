@@ -24,88 +24,75 @@ exports.updateUserStats = async (req, res) => {
     const { userId } = req.params;
     const { correctAnswers, totalQuestions } = req.body;
 
+    console.log('Received Payload:', { correctAnswers, totalQuestions });
+
     const todayInEST = getTodayInEST();
-    const yesterdayInEST = new Date(new Date().setDate(new Date().getDate() - 1))
-      .toLocaleDateString("en-US", { timeZone: "America/New_York" })
-      .split("/")
-      .reverse()
-      .join("-");
+    const yesterdayInEST = getYesterdayInEST();
 
     const stats = await Stats.findOne({ userId });
 
-    let updates = {};
-    let currentStreak = stats?.currentStreak || 0;
-    let maxStreak = stats?.maxStreak || 0;
-    let perfectStreak = stats?.perfectStreak || 0;
-    let maxPerfectStreak = stats?.maxPerfectStreak || 0;
+    if (!stats) {
+      console.error('Stats not found for user:', userId);
+      return res.status(404).json({ message: 'Stats not found for this user.' });
+    }
 
-    // Determine if the game was perfect
     const isPerfectGame = correctAnswers === totalQuestions;
 
-    if (stats) {
-      // Existing stats document: update streaks based on lastPlayedDate
-      if (stats.lastPlayedDate === yesterdayInEST) {
-        currentStreak += 1;
-        maxStreak = Math.max(maxStreak, currentStreak);
+    // Update streaks
+    let currentStreak = stats.currentStreak || 0;
+    let perfectStreak = stats.perfectStreak || 0;
 
-        if (isPerfectGame) {
-          perfectStreak += 1;
-          maxPerfectStreak = Math.max(maxPerfectStreak, perfectStreak);
-        } else {
-          perfectStreak = 0; // Reset perfect streak if not perfect
-        }
-      } else if (stats.lastPlayedDate !== todayInEST) {
-        // New day but not consecutive
-        currentStreak = 1;
-        perfectStreak = isPerfectGame ? 1 : 0;
-      }
-    } else {
-      // No stats document exists; create new stats
+    if (stats.lastPlayedDate === yesterdayInEST) {
+      currentStreak += 1;
+      perfectStreak = isPerfectGame ? perfectStreak + 1 : 0;
+    } else if (stats.lastPlayedDate !== todayInEST) {
       currentStreak = 1;
-      maxStreak = 1;
       perfectStreak = isPerfectGame ? 1 : 0;
-      maxPerfectStreak = isPerfectGame ? 1 : 0;
     }
 
-    // Increment games played and update mistake distribution
-    updates.$inc = {
-      gamesPlayed: 1,
-      [`mistakeDistribution.${totalQuestions - correctAnswers}`]: 1,
-    };
+    // Update mistake distribution
+    const mistakeCount = totalQuestions - correctAnswers;
+    const updatedMistakeDistribution = Object.fromEntries(stats.mistakeDistribution); // Convert to object
+    updatedMistakeDistribution[mistakeCount] = (updatedMistakeDistribution[mistakeCount] || 0) + 1;
 
-    if (isPerfectGame) {
-      updates.$inc.perfectPuzzles = 1;
-    }
+    console.log('Updated Mistake Distribution:', updatedMistakeDistribution);
 
-    // Update streaks, lastPlayedDate, and mostRecentScore
-    updates.$set = {
+    // Recalculate win percentage
+    const gamesPlayed = stats.gamesPlayed + 1;
+    const perfectPuzzles = stats.perfectPuzzles + (isPerfectGame ? 1 : 0);
+    const winPercentage = Math.round((perfectPuzzles / gamesPlayed) * 100);
+
+    console.log('Stats Before Save:', {
+      gamesPlayed,
+      winPercentage,
       currentStreak,
-      maxStreak,
       perfectStreak,
-      maxPerfectStreak,
+      perfectPuzzles,
+      mistakeDistribution: updatedMistakeDistribution,
       lastPlayedDate: todayInEST,
-      mostRecentScore: totalQuestions - correctAnswers,
-    };
+      mostRecentScore: mistakeCount,
+    });
 
-    // Calculate win percentage
-    const gamesPlayed = stats ? stats.gamesPlayed + 1 : 1;
-    const perfectPuzzles = stats ? (stats.perfectPuzzles || 0) + (isPerfectGame ? 1 : 0) : (isPerfectGame ? 1 : 0);
-    updates.$set.winPercentage = Math.round((perfectPuzzles / gamesPlayed) * 100);
+    // Save updated stats
+    stats.gamesPlayed = gamesPlayed;
+    stats.winPercentage = winPercentage;
+    stats.currentStreak = currentStreak;
+    stats.perfectStreak = perfectStreak;
+    stats.perfectPuzzles = perfectPuzzles;
+    stats.mistakeDistribution = updatedMistakeDistribution; // Assign updated distribution
+    stats.lastPlayedDate = todayInEST;
+    stats.mostRecentScore = mistakeCount;
 
-    const updatedStats = await Stats.findOneAndUpdate(
-      { userId },
-      updates,
-      { new: true, upsert: true }
-    );
+    await stats.save();
 
-    res.status(200).json(updatedStats);
+    console.log('Stats Saved Successfully:', stats);
+
+    res.status(200).json(stats);
   } catch (error) {
-    console.error("Error updating stats:", error);
-    res.status(500).json({ message: "Failed to update stats." });
+    console.error('Error updating stats:', error);
+    res.status(500).json({ message: 'Failed to update stats.' });
   }
 };
-
-
 
 // Reset all user statistics
 exports.resetUserStats = async (req, res) => {

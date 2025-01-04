@@ -86,7 +86,7 @@ const Game = () => {
   const handleGameComplete = async () => {
     console.log("handleGameComplete called");
     setIsGameComplete(true);
-  
+
     const today = getTodayInEST(); // Use the consistent EST utility function
     const yesterday = new Date(new Date().setDate(new Date().getDate() - 1));
     const yesterdayInEST = new Intl.DateTimeFormat("en-US", {
@@ -99,13 +99,13 @@ const Game = () => {
       .split("/")
       .reverse()
       .join("-");
-  
+
     if (isUserLoggedIn()) {
       if (!userId) {
         console.error("User ID not found. Ensure the user is logged in.");
         return;
       }
-  
+
       try {
         console.log("Marking game as played for today...");
         const playStatusResponse = await axiosInstance.post(
@@ -121,23 +121,24 @@ const Game = () => {
       } catch (error) {
         console.error("Error marking game as played:", error.response?.data || error.message);
       }
-  
+
       try {
         const payload = {
           correctAnswers: correctCount,
           totalQuestions: imagePairs.length,
         };
-  
+
         console.log("Sending payload to update stats:", payload);
-  
+
         const statsResponse = await axiosInstance.put(`/stats/${userId}`, payload, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
         });
-  
+
         console.log("Stats updated successfully:", statsResponse.data);
-        await fetchAndSetStats(userId); // Update stats state in frontend
+        await fetchAndSetStats(userId);
+        setTimeout(() => setIsStatsOpen(true), 400);
       } catch (error) {
         console.error("Error updating user stats:", error.response?.data || error.message);
       }
@@ -145,21 +146,21 @@ const Game = () => {
       console.log("User is not logged in, using localStorage to track game status and stats");
       const updatedStats = { ...stats };
       const isPerfectPuzzle = correctCount === imagePairs.length;
-  
+
       // Update stats for non-logged-in users
       updatedStats.gamesPlayed += 1;
       updatedStats.perfectPuzzles += isPerfectPuzzle ? 1 : 0;
-  
+
       const lastPlayedDate = localStorage.getItem("lastPlayedDate");
-  
+
       if (lastPlayedDate === yesterdayInEST) {
         updatedStats.currentStreak += 1;
       } else if (lastPlayedDate !== today) {
         updatedStats.currentStreak = 1;
       }
-  
+
       updatedStats.maxStreak = Math.max(updatedStats.maxStreak, updatedStats.currentStreak);
-  
+
       if (isPerfectPuzzle) {
         updatedStats.perfectStreak = (updatedStats.perfectStreak || 0) + 1;
         updatedStats.maxPerfectStreak = Math.max(
@@ -169,31 +170,29 @@ const Game = () => {
       } else {
         updatedStats.perfectStreak = 0; // Reset perfect streak if not 5/5
       }
-  
+
       updatedStats.winPercentage = Math.round(
         (updatedStats.perfectPuzzles / updatedStats.gamesPlayed) * 100
       );
-  
+
       const mistakeCount = imagePairs.length - correctCount;
       updatedStats.mistakeDistribution[mistakeCount] =
         (updatedStats.mistakeDistribution[mistakeCount] || 0) + 1;
-  
+
       updatedStats.lastPlayedDate = today;
       updatedStats.mostRecentScore = mistakeCount;
-  
+
       setStats(updatedStats);
       localStorage.setItem("stats", JSON.stringify(updatedStats));
       localStorage.setItem("lastPlayedDate", today);
       console.log("Non-logged-in stats saved locally:", updatedStats);
     }
   };
-  
-
 
   // Initialize game logic
   useEffect(() => {
     const initializeGame = async () => {
-      const today = getTodayInEST();
+      const today = getTodayInEST(); // Ensure this returns the correct EST date
       const isLoggedIn = isUserLoggedIn();
   
       if (isLoggedIn && !userId) {
@@ -229,6 +228,10 @@ const Game = () => {
           setSelections(selectionsResponse.data.selections || []);
         } else {
           const lastPlayed = localStorage.getItem('lastPlayedDate');
+          const storedTries = localStorage.getItem('triesRemaining');
+          const storedDate = localStorage.getItem('triesDate');
+          const savedSelections = localStorage.getItem('selections');
+  
           if (lastPlayed === today) {
             console.log('Guest user has already played today.');
             setIsGameComplete(true);
@@ -237,11 +240,9 @@ const Game = () => {
             return;
           }
   
-          const storedTries = localStorage.getItem('triesRemaining');
-          const savedSelections = localStorage.getItem('selections');
-  
-          if (!storedTries || storedTries < 1) {
+          if (storedDate !== today || !storedTries) {
             localStorage.setItem('triesRemaining', 3);
+            localStorage.setItem('triesDate', today);
             setTriesLeft(3);
           } else {
             setTriesLeft(parseInt(storedTries, 10));
@@ -265,10 +266,12 @@ const Game = () => {
           setImagePairs(shuffledPairs);
           localStorage.setItem('completedPairs', JSON.stringify(shuffledPairs));
   
-          setCurrentIndex(0);
-          if (swiperRef.current) {
-            swiperRef.current.slideToLoop(0, 0);
-          }
+          setTimeout(() => {
+            setCurrentIndex(0);
+            if (swiperRef.current) {
+              swiperRef.current.slideToLoop(0);
+            }
+          }, 100); // Ensure Swiper is initialized before syncing
         } else {
           console.warn('No image pairs available for today.');
           setImagePairs([]);
@@ -299,15 +302,19 @@ const Game = () => {
             (selection) => selection && selection.selected
           );
   
-          setCurrentIndex(firstSelectionIndex >= 0 ? firstSelectionIndex : 0);
-          if (swiperRef.current) {
-            swiperRef.current.slideToLoop(firstSelectionIndex >= 0 ? firstSelectionIndex : 0, 0);
-          }
+          setTimeout(() => {
+            setCurrentIndex(firstSelectionIndex >= 0 ? firstSelectionIndex : 0);
+            if (swiperRef.current) {
+              swiperRef.current.slideToLoop(firstSelectionIndex >= 0 ? firstSelectionIndex : 0, 0);
+            }
+          }, 100); // Delay ensures Swiper is fully initialized
         } else {
-          setCurrentIndex(0);
-          if (swiperRef.current) {
-            swiperRef.current.slideToLoop(0, 0);
-          }
+          setTimeout(() => {
+            setCurrentIndex(0);
+            if (swiperRef.current) {
+              swiperRef.current.slideToLoop(0);
+            }
+          }, 100);
         }
       }
     };
@@ -319,23 +326,19 @@ const Game = () => {
     }
   }, [userId, isGameComplete]);
   
-  
 
-  
-  
   useEffect(() => {
     if (swiperRef.current && imagePairs.length > 0) {
       swiperRef.current.slideToLoop(currentIndex, 0);
     }
   }, [currentIndex, imagePairs]);
-  
 
   // Save selections to localStorage whenever they are updated
   useEffect(() => {
     if (selections.length > 0) {
       localStorage.setItem('selections', JSON.stringify(selections));
     }
-  }, [selections]);
+  }, [selections]); 
 
   const fetchAndSetStats = async () => {
     const userId = localStorage.getItem("userId"); // Ensure userId is fetched correctly
@@ -588,9 +591,11 @@ const Game = () => {
             onSlideChange={(swiper) => setCurrentIndex(swiper.realIndex)}
             onSwiper={(swiper) => {
               swiperRef.current = swiper;
-              swiper.slideToLoop(currentIndex, 0); // Sync Swiper to currentIndex on mount
+              swiper.slideToLoop(currentIndex, 0); // Sync Swiper to `currentIndex`
+              console.log('Swiper Initialized to Index:', currentIndex);
             }}
           >
+
             {imagePairs.map((pair, index) => (
               <SwiperSlide key={index}>
                 <div className="image-pair-container">
@@ -620,14 +625,16 @@ const Game = () => {
                 key={index}
                 className={`nav-button ${currentIndex === index ? 'active' : ''}`}
                 onClick={() => {
-                  setCurrentIndex(index); // Update `currentIndex`
-                  swiperRef.current.slideToLoop(index); // Sync Swiper
+                  setCurrentIndex(index);
+                  swiperRef.current.slideToLoop(index);
                 }}
               >
                 {index + 1}
               </button>
             ))}
           </div>
+
+
 
 
           <button

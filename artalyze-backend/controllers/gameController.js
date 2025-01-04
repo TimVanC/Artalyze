@@ -1,17 +1,26 @@
 const User = require('../models/User');
 const ImagePair = require('../models/ImagePair');
 const Stats = require('../models/Stats');
-const { getTodayInEST } = require('../utils/dateUtils');
+const { getTodayInEST, getYesterdayInEST } = require('../utils/dateUtils');
 
 // GET endpoint to fetch the image pairs for today's puzzle
 exports.getDailyPuzzle = async (req, res) => {
   console.log('getDailyPuzzle called');
   try {
     const todayInEST = getTodayInEST();
-
     console.log("Today's Date (EST):", todayInEST);
 
-    const dailyPuzzle = await ImagePair.findOne({ scheduledDate: todayInEST });
+    // Convert EST date to correct UTC range
+    const startOfDayUTC = new Date(`${todayInEST}T05:00:00Z`); // Midnight EST = 5 AM UTC
+    const endOfDayUTC = new Date(new Date(`${todayInEST}T05:00:00Z`).getTime() + 24 * 60 * 60 * 1000 - 1); // 24 hours later - 1 ms
+
+    console.log('Start of Day UTC:', startOfDayUTC);
+    console.log('End of Day UTC:', endOfDayUTC);
+
+    // Query MongoDB for puzzles within the UTC range
+    const dailyPuzzle = await ImagePair.findOne({
+      scheduledDate: { $gte: startOfDayUTC, $lte: endOfDayUTC },
+    });
 
     if (dailyPuzzle) {
       console.log('Found Daily Puzzle:', dailyPuzzle);
@@ -25,6 +34,11 @@ exports.getDailyPuzzle = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+
+
+
+
 
 // Check if the user has played today
 exports.checkIfPlayedToday = async (req, res) => {
@@ -50,40 +64,47 @@ exports.checkIfPlayedToday = async (req, res) => {
 exports.markAsPlayedToday = async (req, res) => {
   console.log('markAsPlayedToday called');
   try {
-    const userId = req.user.userId;
-    const { isPerfectPuzzle } = req.body; // Include this in the request body
-    const todayInEST = getTodayInEST();
+    const { userId } = req.user;
+    const { isPerfectPuzzle } = req.body;
 
+    const todayInEST = getTodayInEST();
+    const yesterdayInEST = getYesterdayInEST();
+
+    // Retrieve and update stats for the user
     const stats = await Stats.findOne({ userId });
 
     if (!stats) {
-      // Create a new stats document for the user
-      await Stats.create({
-        userId,
-        lastPlayedDate: todayInEST,
-        currentStreak: isPerfectPuzzle ? 1 : 0,
-        maxStreak: isPerfectPuzzle ? 1 : 0,
-      });
-
-      return res.status(200).json({ message: 'User play status created successfully' });
+      return res.status(404).json({ message: 'Stats not found for this user.' });
     }
 
-    // Update stats based on whether the game was perfect
-    if (stats.lastPlayedDate === getYesterdayInEST()) {
-      stats.currentStreak += 1;
+    let currentStreak = stats.currentStreak || 0;
+    let perfectStreak = stats.perfectStreak || 0;
+
+    if (stats.lastPlayedDate === yesterdayInEST) {
+      // Increment streaks for consecutive days
+      currentStreak += 1;
+      if (isPerfectPuzzle) {
+        perfectStreak += 1;
+      } else {
+        perfectStreak = 0; // Reset perfect streak if not a perfect game
+      }
     } else if (stats.lastPlayedDate !== todayInEST) {
-      stats.currentStreak = isPerfectPuzzle ? 1 : 0;
+      // Reset streaks for non-consecutive play
+      currentStreak = 1;
+      perfectStreak = isPerfectPuzzle ? 1 : 0;
     }
 
-    stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
     stats.lastPlayedDate = todayInEST;
+    stats.currentStreak = currentStreak;
+    stats.perfectStreak = perfectStreak;
 
     await stats.save();
 
-    console.log('User play status and streak updated successfully.');
-    res.status(200).json({ message: 'User play status and streak updated successfully' });
+    console.log('Play status and streaks updated:', { currentStreak, perfectStreak });
+    res.status(200).json({ message: 'Play status and streaks updated successfully.' });
   } catch (error) {
     console.error('Error updating play status and streak:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
