@@ -26,6 +26,10 @@ exports.updateUserStats = async (req, res) => {
 
     console.log('Received Payload:', { correctAnswers, totalQuestions });
 
+    if (correctAnswers === undefined || totalQuestions === undefined) {
+      return res.status(400).json({ message: 'Invalid payload: correctAnswers and totalQuestions are required.' });
+    }
+
     const todayInEST = getTodayInEST();
     const yesterdayInEST = getYesterdayInEST();
 
@@ -50,10 +54,17 @@ exports.updateUserStats = async (req, res) => {
       perfectStreak = isPerfectGame ? 1 : 0;
     }
 
-    // Update mistake distribution
+    // Calculate mistake count
     const mistakeCount = totalQuestions - correctAnswers;
-    const updatedMistakeDistribution = Object.fromEntries(stats.mistakeDistribution); // Convert to object
-    updatedMistakeDistribution[mistakeCount] = (updatedMistakeDistribution[mistakeCount] || 0) + 1;
+    console.log('Mistake Count:', mistakeCount);
+
+    // Initialize or update mistake distribution
+    const mistakeDistributionKeys = [0, 1, 2, 3, 4, 5];
+    const updatedMistakeDistribution = mistakeDistributionKeys.reduce((acc, key) => {
+      acc[key] = stats.mistakeDistribution?.[key] || 0; // Initialize keys if not present
+      return acc;
+    }, {});
+    updatedMistakeDistribution[mistakeCount] += 1;
 
     console.log('Updated Mistake Distribution:', updatedMistakeDistribution);
 
@@ -62,6 +73,16 @@ exports.updateUserStats = async (req, res) => {
     const perfectPuzzles = stats.perfectPuzzles + (isPerfectGame ? 1 : 0);
     const winPercentage = Math.round((perfectPuzzles / gamesPlayed) * 100);
 
+    // Save updated stats
+    stats.gamesPlayed = gamesPlayed;
+    stats.winPercentage = winPercentage;
+    stats.currentStreak = currentStreak;
+    stats.perfectStreak = perfectStreak;
+    stats.perfectPuzzles = perfectPuzzles;
+    stats.mistakeDistribution = updatedMistakeDistribution;
+    stats.mostRecentScore = mistakeCount; // Update with the latest mistake count
+    stats.lastPlayedDate = todayInEST;
+
     console.log('Stats Before Save:', {
       gamesPlayed,
       winPercentage,
@@ -69,19 +90,8 @@ exports.updateUserStats = async (req, res) => {
       perfectStreak,
       perfectPuzzles,
       mistakeDistribution: updatedMistakeDistribution,
-      lastPlayedDate: todayInEST,
       mostRecentScore: mistakeCount,
     });
-
-    // Save updated stats
-    stats.gamesPlayed = gamesPlayed;
-    stats.winPercentage = winPercentage;
-    stats.currentStreak = currentStreak;
-    stats.perfectStreak = perfectStreak;
-    stats.perfectPuzzles = perfectPuzzles;
-    stats.mistakeDistribution = updatedMistakeDistribution; // Assign updated distribution
-    stats.lastPlayedDate = todayInEST;
-    stats.mostRecentScore = mistakeCount;
 
     await stats.save();
 
@@ -93,6 +103,8 @@ exports.updateUserStats = async (req, res) => {
     res.status(500).json({ message: 'Failed to update stats.' });
   }
 };
+
+
 
 // Reset all user statistics
 exports.resetUserStats = async (req, res) => {

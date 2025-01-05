@@ -2,57 +2,27 @@ import React, { useEffect, useState, useRef } from 'react';
 import './StatsModal.css';
 import { FaShareAlt } from 'react-icons/fa';
 import CountUp from 'react-countup';
-import axiosInstance from '../axiosInstance';
 import logo from '../assets/images/artalyze-logo.png';
 
-const defaultStats = {
-  gamesPlayed: 0,
-  winPercentage: 0,
-  currentStreak: 0,
-  maxStreak: 0,
-  perfectStreak: 0,
-  maxPerfectStreak: 0,
-  perfectPuzzles: 0,
-  mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-  mostRecentScore: null,
-  lastPlayedDate: null,
-};
-
-const StatsModal = ({ isOpen, onClose, userId, isLoggedIn = false }) => {
-  const [stats, setStats] = useState(defaultStats);
-  const [error, setError] = useState(null);
+const StatsModal = ({ isOpen, onClose, stats, isLoggedIn = false }) => {
   const [animatedBars, setAnimatedBars] = useState({});
   const [shouldAnimateNumbers, setShouldAnimateNumbers] = useState(false);
   const hasAnimatedStats = useRef(false);
 
+  // Animate mistake distribution bars when stats are updated
   useEffect(() => {
-    const fetchStats = async () => {
-      if (!isOpen || !isLoggedIn || !userId) return;
-
-      try {
-        const response = await axiosInstance.get(`/stats/${userId}`);
-        setStats(response.data);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching stats:', err);
-        setError('Failed to load stats. Please try again later.');
-      }
-    };
-
-    fetchStats();
-  }, [isOpen, isLoggedIn, userId]);
-
-  useEffect(() => {
-    if (isOpen) {
-      const animated = Object.keys(stats.mistakeDistribution).reduce((acc, key) => {
-        acc[key] = stats.mistakeDistribution[key];
+    if (isOpen && stats) {
+      console.log('Stats received in StatsModal props:', stats);
+      const animated = Object.keys(stats.mistakeDistribution || {}).reduce((acc, key) => {
+        acc[key] = stats.mistakeDistribution[key] || 0;
         return acc;
       }, {});
+      console.log('Animated Bars:', animated);
       setAnimatedBars(animated);
       setShouldAnimateNumbers(true);
       hasAnimatedStats.current = false;
     }
-  }, [isOpen, stats.mistakeDistribution]);
+  }, [isOpen, stats]);
 
   const handleStatsShare = () => {
     const shareableText = `
@@ -89,7 +59,7 @@ Perfect Games: ${stats.perfectPuzzles}
     return null;
   }
 
-  const maxValue = Math.max(1, ...Object.values(stats.mistakeDistribution));
+  const maxValue = Math.max(1, ...Object.values(stats.mistakeDistribution || {}));
 
   return (
     <div className="stats-overlay">
@@ -180,7 +150,7 @@ Perfect Games: ${stats.perfectPuzzles}
             <hr className="separator" />
             <div className="mistake-distribution">
               <h3>Mistake Distribution</h3>
-              {Object.keys(stats.mistakeDistribution).map((mistakeCount) => {
+              {Object.keys(stats.mistakeDistribution || {}).map((mistakeCount) => {
                 const value = animatedBars[mistakeCount] || 0;
                 const isActive = parseInt(mistakeCount, 10) === stats.mostRecentScore;
                 const barWidth = Math.max((value / maxValue) * 100, 5);
@@ -192,9 +162,7 @@ Perfect Games: ${stats.perfectPuzzles}
                       className={`distribution-bar ${isActive ? 'active most-recent' : ''}`}
                     >
                       <div
-                        className={`bar-fill ${value === 0 ? 'zero-value' : ''} ${
-                          isActive ? 'animate' : ''
-                        }`}
+                        className="bar-fill"
                         style={{
                           width: `${barWidth}%`,
                           minWidth: '5%',
