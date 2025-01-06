@@ -37,8 +37,7 @@ const statsSchema = new mongoose.Schema(
       default: 0,
     },
     mistakeDistribution: {
-      type: Map,
-      of: Number,
+      type: Object,
       default: {
         '0': 0,
         '1': 0,
@@ -48,6 +47,7 @@ const statsSchema = new mongoose.Schema(
         '5': 0,
       },
     },
+    
     mostRecentScore: {
       type: Number,
       default: null,

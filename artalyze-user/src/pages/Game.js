@@ -82,67 +82,82 @@ const Game = () => {
     lastPlayedDate: null,
   });
 
+  // Place fetchSelections above handleGameComplete in Game.js
+  const fetchSelections = async () => {
+    const response = await axiosInstance.get(`/stats/selections`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+      },
+    });
+  
+    // Ensure the response is an array
+    const selections = Array.isArray(response.data) ? response.data : response.data.selections;
+  
+    console.log("Fetched selections from backend:", selections);
+    return selections;
+  }; 
+
   // Function to be called on game completion
   const handleGameComplete = async () => {
     console.log("handleGameComplete called");
     setIsGameComplete(true);
-    
-    // Debug correctCount
-    console.log("Correct answers count (correctCount):", correctCount);
-    console.log("Total questions (imagePairs.length):", imagePairs.length);
-    
-    const today = getTodayInEST(); // Use the consistent EST utility function
-    
-    if (isUserLoggedIn()) {
-      if (!userId) {
-        console.error("User ID not found. Ensure the user is logged in.");
-        return;
-      }
-    
-      try {
-        console.log("Marking game as played for today...");
-        const playStatusResponse = await axiosInstance.post(
-          "/game/mark-as-played",
-          { isPerfectPuzzle: correctCount === imagePairs.length },
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-            },
-          }
-        );
-        console.log("Game play status updated for today:", playStatusResponse.data);
-      } catch (error) {
-        console.error("Error marking game as played:", error.response?.data || error.message);
-      }
-    
-      try {
-        const payload = {
-          correctAnswers: correctCount,
-          totalQuestions: imagePairs.length,
-        };
-    
-        // Debug payload before sending
-        console.log("Sending payload to update stats:", payload);
-    
-        const statsResponse = await axiosInstance.put(`/stats/${userId}`, payload, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          },
-        });
-    
-        console.log("Stats updated successfully in handleGameComplete:", statsResponse.data);
-        await fetchAndSetStats(userId);
-        console.log("Stats re-fetched after game completion in handleGameComplete:", stats);
-        setTimeout(() => setIsStatsOpen(true), 400);
-      } catch (error) {
-        console.error("Error updating user stats:", error.response?.data || error.message);
-      }
-    } else {
-      console.log("User is not logged in. Local stats management will be used.");
+  
+    // Debugging: Log initial selections state
+    console.log("Selections state before handleGameComplete:", selections);
+  
+    // Fetch the latest selections from the backend
+    const latestSelections = await fetchSelections();
+    console.log("Latest selections fetched:", latestSelections);
+  
+    // Ensure latestSelections is an array
+    if (!Array.isArray(latestSelections)) {
+      console.error("Invalid selections data format:", latestSelections);
+      return;
     }
-    
-    };
-
+  
+    // Calculate correct answers with detailed debugging
+    const correctCount = latestSelections.reduce((count, selection, index) => {
+      console.log(`Selection ${index}:`, selection);
+      console.log(`Image Pair ${index}:`, imagePairs[index]);
+      if (
+        selection &&
+        imagePairs[index] &&
+        selection.selected === imagePairs[index].human // Adjust this logic
+      ) {
+        console.log(`Correct Match at index ${index}`);
+        return count + 1;
+      }
+      console.log(`Mismatch at index ${index}`);
+      return count;
+    }, 0);
+  
+    console.log("Final Correct Answers Count (correctCount):", correctCount);
+    console.log("Total questions (imagePairs.length):", imagePairs.length);
+  
+    // Proceed with marking the game as played and updating stats
+    try {
+      const payload = {
+        correctAnswers: correctCount,
+        totalQuestions: imagePairs.length,
+      };
+  
+      console.log("Sending payload to update stats:", payload);
+  
+      const statsResponse = await axiosInstance.put(`/stats/${userId}`, payload, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
+  
+      console.log("Stats updated successfully in handleGameComplete:", statsResponse.data);
+      await fetchAndSetStats(userId);
+      console.log("Stats re-fetched after game completion in handleGameComplete:", stats);
+      setTimeout(() => setIsStatsOpen(true), 400);
+    } catch (error) {
+      console.error("Error updating user stats:", error.response?.data || error.message);
+    }
+  };
+  
 
   // Initialize game logic
   useEffect(() => {

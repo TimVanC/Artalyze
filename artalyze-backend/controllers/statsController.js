@@ -60,16 +60,23 @@ exports.updateUserStats = async (req, res) => {
   console.log('Updated streaks:', { currentStreak, perfectStreak });
   
   // Calculate mistake count
-  const mistakeCount = Math.max(totalQuestions - correctAnswers, 0); // Ensure no negative values
+  const mistakeCount = Math.max(totalQuestions - correctAnswers, 0);
   console.log('Calculated Mistake Count:', mistakeCount);
   
+  // Ensure mistake count falls within valid range
+  if (mistakeCount > totalQuestions) {
+    console.error('Error: Mistake Count exceeds totalQuestions. Resetting to 0.');
+    mistakeCount = 0;
+  }
+  
+  if (mistakeCount < 0) {
+    console.error('Error: Mistake Count is negative. Resetting to 0.');
+    mistakeCount = 0;
+  }
+  
   // Initialize or update mistake distribution
-  const mistakeDistributionKeys = [0, 1, 2, 3, 4, 5];
-  const updatedMistakeDistribution = mistakeDistributionKeys.reduce((acc, key) => {
-    acc[key] = stats.mistakeDistribution?.[key] || 0; // Initialize keys if not present
-    return acc;
-  }, {});
-  updatedMistakeDistribution[mistakeCount] += 1;
+  const updatedMistakeDistribution = { ...stats.mistakeDistribution };
+  updatedMistakeDistribution[mistakeCount] = (updatedMistakeDistribution[mistakeCount] || 0) + 1;
   
   console.log('Updated Mistake Distribution:', updatedMistakeDistribution);
   
@@ -98,19 +105,7 @@ exports.updateUserStats = async (req, res) => {
   stats.mostRecentScore = mistakeCount; // Update with the latest mistake count
   stats.lastPlayedDate = todayInEST;
   
-  console.log('Stats Before Save:', {
-    gamesPlayed,
-    winPercentage,
-    currentStreak,
-    maxStreak,
-    perfectStreak,
-    maxPerfectStreak,
-    perfectPuzzles,
-    mistakeDistribution: updatedMistakeDistribution,
-    mostRecentScore: mistakeCount,
-  });
-  
-  stats.markModified('mistakeDistribution');
+  console.log('Stats Before Save:', stats);
   
   await stats.save();
   
@@ -123,6 +118,7 @@ exports.updateUserStats = async (req, res) => {
   res.status(500).json({ message: 'Failed to update stats.' });
   }
   };
+
   
   
 
