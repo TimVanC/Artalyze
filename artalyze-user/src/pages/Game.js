@@ -310,11 +310,17 @@ const Game = () => {
         },
       });
       console.log("Fetched user stats from API in fetchAndSetStats:", statsResponse.data);
-      setStats(statsResponse.data); // Update state directly
+  
+      // Log mistake distribution specifically
+      console.log("Fetched Mistake Distribution:", statsResponse.data.mistakeDistribution);
+  
+      // Update the stats state
+      setStats(statsResponse.data);
     } catch (error) {
       console.error("Error fetching user stats:", error.response?.data || error.message);
     }
   };
+  
   
 
   const decrementTries = async () => {
