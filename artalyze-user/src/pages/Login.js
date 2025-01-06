@@ -82,7 +82,7 @@ const Login = () => {
     try {
       console.log("Submitting registration/login data for:", email);
       const response = await axiosInstance.post(endpoint, { email, password, firstName, lastName });
-      
+
       // Store user info in localStorage
       const { token, user } = response.data;
       localStorage.setItem('authToken', token);
@@ -167,81 +167,94 @@ const Login = () => {
 
   return (
     <div className="login-container">
-      {step === 1 && (
-        <form onSubmit={handleEmailSubmit}>
-          <h2>Enter Your Email</h2>
-          <input
-            type="email"
-            placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          {error && <p className="error-message">{error}</p>}
-          <button type="submit">Next</button>
-          <button type="button" onClick={handleForgotPassword}>Forgot Password?</button>
-        </form>
-      )}
+      <div className="top-bar">
+        <div className="app-title">Artalyze</div>
+      </div>
+      {
+        step === 1 && (
+          <form onSubmit={handleEmailSubmit}>
+            <h2>Enter Your Email</h2>
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            {error && <p className="error-message">{error}</p>}
+            <button type="submit">Next</button>
+            <button type="button" onClick={handleForgotPassword}>Forgot Password?</button>
+          </form>
+        )
+      }
 
-      {step === 2 && (
-        <form onSubmit={forgotPassword ? handleOtpSubmitForReset : handleOtpSubmit}>
-          <h2>Enter OTP</h2>
-          <input
-            type="text"
-            placeholder="Enter OTP"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            required
-          />
-          {error && <p className="error-message">{error}</p>}
-          <button type="submit">Verify OTP</button>
-          <button type="button" onClick={handleResendOtp}>Resend OTP</button>
-          {resendMessage && <p className="resend-message">{resendMessage}</p>}
-        </form>
-      )}
+      {
+        step === 2 && (
+          <form onSubmit={forgotPassword ? handleOtpSubmitForReset : handleOtpSubmit}>
+            <h2>Enter OTP</h2>
+            <input
+              type="text"
+              placeholder="Enter OTP"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              required
+            />
+            {error && <p className="error-message">{error}</p>}
+            <button type="submit">Verify OTP</button>
+            <button type="button" onClick={handleResendOtp}>Resend OTP</button>
+            {resendMessage && <p className="resend-message">{resendMessage}</p>}
+          </form>
+        )
+      }
 
-      {step === 3 && (
-        <form onSubmit={handleLoginOrRegisterSubmit}>
-          <h2>Create Your Account</h2>
-          <input type="text" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-          <input type="text" placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-          <input type="email" placeholder="Email" value={email} readOnly disabled />
-          <input type="password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          {error && <p className="error-message">{error}</p>}
-          <button type="submit">Sign Up</button>
-        </form>
-      )}
+      {
+        step === 3 && (
+          <form onSubmit={handleLoginOrRegisterSubmit}>
+            <h2>Create Your Account</h2>
+            <input type="text" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+            <input type="text" placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+            <input type="email" placeholder="Email" value={email} readOnly disabled />
+            <input type="password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            {error && <p className="error-message">{error}</p>}
+            <button type="submit">Sign Up</button>
+          </form>
+        )
+      }
 
-      {step === 4 && (
-        <form onSubmit={handleLoginSubmit}>
-          <h2>Log In</h2>
-          <input
-            type="password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {error && <p className="error-message">{error}</p>}
-          <button type="submit">Log In</button>
-        </form>
-      )}
+      {
+        step === 4 && (
+          <form onSubmit={handleLoginSubmit}>
+            <h2>Log In</h2>
+            <input
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            {error && <p className="error-message">{error}</p>}
+            <button type="submit">Log In</button>
+          </form>
+        )
+      }
 
-      {step === 5 && (
-        <form onSubmit={handleResetPasswordSubmit}>
-          <h2>Reset Your Password</h2>
-          <input
-            type="password"
-            placeholder="Enter new password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            required
-          />
-          {error && <p className="error-message">{error}</p>}
-          <button type="submit">Reset Password</button>
-        </form>
-      )}
-    </div>
+      {
+        step === 5 && (
+          <form onSubmit={handleResetPasswordSubmit}>
+            <h2>Reset Your Password</h2>
+            <input
+              type="password"
+              placeholder="Enter new password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+            />
+            {error && <p className="error-message">{error}</p>}
+            <button type="submit">Reset Password</button>
+          </form>
+        )
+      }
+    </div >
   );
 };
 
