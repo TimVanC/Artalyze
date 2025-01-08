@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../axiosInstance';
 import logo from '../assets/images/artalyze-logo.png';
+import { validatePassword } from '../utils/authHelpers';
 import './Login.css';
 
 const Login = () => {
@@ -22,9 +23,6 @@ const Login = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [subheadingText, setSubheadingText] = useState('Log in or create an account');
   const [showLoginSubheading, setShowLoginSubheading] = useState(false); // To toggle between the subheadings
-
-
-
 
   // Validate email format
   const isEmailValid = (email) => {
@@ -73,8 +71,6 @@ const Login = () => {
       setError('An error occurred during email check. Please try again.');
     }
   };
-
-
 
   // Step 2: Handle OTP verification
   const handleOtpSubmit = async (e) => {
@@ -157,7 +153,7 @@ const Login = () => {
     setError('');
     try {
       console.log("Submitting forgot password request for:", email);
-      const response = await axiosInstance.post('/auth/forgot-password', { email });
+      await axiosInstance.post('/auth/forgot-password', { email });
       setForgotPassword(true);
       setStep(2); // Reuse OTP step
     } catch (error) {
@@ -165,18 +161,6 @@ const Login = () => {
       setError('Unable to send reset code. Please try again.');
     }
   };
-
-  const validatePassword = (password) => {
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    const isLongEnough = password.length >= 8;
-
-    return hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar && isLongEnough;
-  };
-
-
 
   // Handle OTP verification for password reset
   const handleOtpSubmitForReset = async (e) => {
@@ -198,6 +182,16 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
+    if (!validatePassword(newPassword)) {
+      setError('Password must include uppercase, lowercase, number, and special character.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     try {
       console.log("Submitting new password for:", email);
       await axiosInstance.post('/auth/reset-password', { email, newPassword });
@@ -208,8 +202,6 @@ const Login = () => {
       setError('Failed to reset password. Please try again.');
     }
   };
-
-
 
   return (
     <div className="login-container">
@@ -332,18 +324,22 @@ const Login = () => {
 
       {step === 2 && (
         <>
-          <h2>Verify your email address</h2>
-          <p className="subheading-otp">
-            Enter the code we sent to <strong>{email}</strong> to complete your registration. This
-            code expires in 10 minutes.
-          </p>
+          <h2>{forgotPassword ? 'Recover your password' : 'Verify your email address'}</h2>
+          <p
+            className="subheading-otp"
+            dangerouslySetInnerHTML={{
+              __html: forgotPassword
+                ? `Enter the code we sent to <strong>${email}</strong> to recover your password. This code expires in 10 minutes.`
+                : `Enter the code we sent to <strong>${email}</strong> to complete your registration. This code expires in 10 minutes.`,
+            }}
+          />
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (otp.length === 6 && /^\d{6}$/.test(otp)) {
-                handleOtpSubmit(e);
-              } else {
+              if (otp.length !== 6) {
                 setError('OTP must be exactly 6 digits.');
+              } else {
+                forgotPassword ? handleOtpSubmitForReset(e) : handleOtpSubmit(e);
               }
             }}
           >
@@ -353,13 +349,16 @@ const Login = () => {
               value={otp}
               onChange={(e) => {
                 const value = e.target.value;
+
+                // Allow only numeric input
                 if (/^\d*$/.test(value)) {
                   setOtp(value);
-                  setError('');
+                  setError(value.length !== 6 ? 'OTP must be exactly 6 digits.' : '');
                 } else {
-                  setError('OTP must be numeric.');
+                  setError('Your code must only contain numeric digits.');
                 }
               }}
+              maxLength="6" // Limit input length to 6 characters
               required
             />
             {error && <p className="error-message">{error}</p>}
@@ -401,126 +400,143 @@ const Login = () => {
       )}
 
       {step === 3 && (
-        <>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleLoginOrRegisterSubmit(e);
+          }}
+        >
           <h2>Create Your Account</h2>
           <p className="subheading-signup">Complete the form below to start your journey with Artalyze.</p>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleLoginOrRegisterSubmit(e);
-            }}
-          >
-            <input
-              type="text"
-              placeholder="First Name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-            />
-            <input
-              type="text"
-              placeholder="Last Name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              readOnly
-              disabled
-            />
-            <input
-              type="password"
-              placeholder="Create a password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (!validatePassword(e.target.value)) {
-                  setError(
-                    'Password must be 8+ characters and include uppercase, lowercase, number, and special character.'
-                  );
-                } else {
-                  setError('');
-                }
-              }}
-              required
-            />
-            {password && !validatePassword(password) && (
-              <p className="error-message">
-                Password must be 8+ characters and include uppercase, lowercase, number, and special character.
-              </p>
-            )}
-            <input
-              type="password"
-              placeholder="Confirm password"
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                if (password !== e.target.value) {
-                  setError('Passwords do not match.');
-                } else {
-                  setError('');
-                }
-              }}
-              required
-            />
-            {confirmPassword && password !== confirmPassword && (
-              <p className="error-message">Passwords do not match.</p>
-            )}
-            <button
-              type="submit"
-              className="next-button"
-              style={{
-                backgroundColor:
-                  firstName &&
-                    lastName &&
-                    email &&
-                    validatePassword(password) &&
-                    password === confirmPassword
-                    ? '#4d73af'
-                    : '#333',
-                cursor:
-                  firstName &&
-                    lastName &&
-                    email &&
-                    validatePassword(password) &&
-                    password === confirmPassword
-                    ? 'pointer'
-                    : 'not-allowed',
-              }}
-              disabled={
-                !firstName ||
-                !lastName ||
-                !email ||
-                !validatePassword(password) ||
-                password !== confirmPassword
-              }
-            >
-              Sign Up
-            </button>
-          </form>
-        </>
-      )}
-
-      {step === 4 && (
-        <form onSubmit={handleLoginSubmit}>
-          <h2>Log In</h2>
           <input
-            type="password"
-            placeholder="Enter your password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            type="text"
+            placeholder="First Name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
             required
           />
-          <button type="button" className="forgot-password-button" onClick={handleForgotPassword}>
-            Forgot Password?
+          <input
+            type="text"
+            placeholder="Last Name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            required
+          />
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            readOnly
+            disabled
+          />
+          <input
+            type="password"
+            placeholder="Create a password"
+            value={password}
+            onChange={(e) => {
+              const value = e.target.value;
+              setPassword(value);
+
+              // Validate password dynamically
+              if (!validatePassword(value)) {
+                setError(
+                  'Password must be 8+ characters and include uppercase, lowercase, number, and special character.'
+                );
+              } else if (confirmPassword && value !== confirmPassword) {
+                setError('Passwords do not match.');
+              } else {
+                setError('');
+              }
+            }}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Confirm password"
+            value={confirmPassword}
+            onChange={(e) => {
+              const value = e.target.value;
+              setConfirmPassword(value);
+
+              // Check if passwords match
+              if (password !== value) {
+                setError('Passwords do not match.');
+              } else if (!validatePassword(password)) {
+                setError(
+                  'Password must be 8+ characters and include uppercase, lowercase, number, and special character.'
+                );
+              } else {
+                setError('');
+              }
+            }}
+            required
+          />
+          {error && (
+            <p className="error-message">{error}</p>
+          )}
+          <button
+            type="submit"
+            className="next-button"
+            style={{
+              backgroundColor:
+                firstName &&
+                  lastName &&
+                  validatePassword(password) &&
+                  password === confirmPassword
+                  ? '#4d73af'
+                  : '#333',
+              cursor:
+                firstName &&
+                  lastName &&
+                  validatePassword(password) &&
+                  password === confirmPassword
+                  ? 'pointer'
+                  : 'not-allowed',
+            }}
+            disabled={
+              !firstName ||
+              !lastName ||
+              !validatePassword(password) ||
+              password !== confirmPassword
+            }
+          >
+            Sign Up
           </button>
-          {error && <p className="error-message">{error}</p>}
-          <button type="submit">Log In</button>
         </form>
       )}
+
+
+{step === 4 && (
+  <form onSubmit={handleLoginSubmit}>
+    <h2>Log In</h2>
+    {/* Email field for pre-filled email */}
+    {email && (
+      <input
+        type="email"
+        placeholder="Enter your email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        readOnly
+        className="prefilled-email" // Optional class for styling pre-filled email
+      />
+    )}
+    <input
+      type="password"
+      placeholder="Enter your password"
+      value={password}
+      onChange={(e) => setPassword(e.target.value)}
+      required
+    />
+    <button type="button" className="forgot-password-button" onClick={handleForgotPassword}>
+      Forgot Password?
+    </button>
+    {error && <p className="error-message">{error}</p>}
+    <button type="submit" className="next-button">
+      Log In
+    </button>
+  </form>
+)}
+
 
       {step === 5 && (
         <form onSubmit={handleResetPasswordSubmit}>
@@ -529,13 +545,69 @@ const Login = () => {
             type="password"
             placeholder="Enter new password"
             value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setNewPassword(value);
+
+              // Only set error if validation fails
+              if (!validatePassword(value)) {
+                setError(
+                  'Password must be 8+ characters and include uppercase, lowercase, number, and special character.'
+                );
+              } else if (confirmPassword && value !== confirmPassword) {
+                setError('Passwords do not match.');
+              } else {
+                setError(''); // Clear error when valid
+              }
+            }}
             required
           />
-          {error && <p className="error-message">{error}</p>}
-          <button type="submit">Reset Password</button>
+          <input
+            type="password"
+            placeholder="Confirm new password"
+            value={confirmPassword}
+            onChange={(e) => {
+              const value = e.target.value;
+              setConfirmPassword(value);
+
+              // Only set error if passwords don't match
+              if (newPassword !== value) {
+                setError('Passwords do not match.');
+              } else if (!validatePassword(newPassword)) {
+                setError(
+                  'Password must be 8+ characters and include uppercase, lowercase, number, and special character.'
+                );
+              } else {
+                setError(''); // Clear error when valid
+              }
+            }}
+            required
+          />
+          {error && (
+            <p className="error-message">{error}</p>
+          )}
+          <button
+            type="submit"
+            className="next-button"
+            style={{
+              backgroundColor:
+                validatePassword(newPassword) && newPassword === confirmPassword
+                  ? '#4d73af'
+                  : '#333',
+              cursor:
+                validatePassword(newPassword) && newPassword === confirmPassword
+                  ? 'pointer'
+                  : 'not-allowed',
+            }}
+            disabled={
+              !validatePassword(newPassword) || newPassword !== confirmPassword
+            }
+          >
+            Reset Password
+          </button>
         </form>
       )}
+
       <footer className="footer">&copy; {new Date().getFullYear()} Artalyze</footer>
     </div>
   );

@@ -77,7 +77,18 @@ h2 {
   transform: translateY(0);
 }
 
-/* New additions */
+.subheading-otp {
+  font-family: 'Lato', sans-serif;
+  font-size: 16px; /* Adjusted font size for readability */
+  font-weight: 500; /* Moderate weight */
+  color: #555; /* Subtle gray for text */
+  text-align: center; /* Center-align text */
+  margin: 20px auto; /* Add spacing and center margin */
+  max-width: 90%; /* Limit the width of the subheading */
+  line-height: 1.5; /* Improve readability */
+}
+
+
 .hidden {
   opacity: 0;
   height: 0; /* Ensures no space is taken */

@@ -109,7 +109,6 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
       </div>
     </div>
   );
-  
 };
 
 export default SettingsModal;

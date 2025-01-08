@@ -537,7 +537,11 @@ const Game = () => {
         isLoggedIn={isLoggedIn}
       />
 
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+<SettingsModal 
+  isOpen={isSettingsOpen} 
+  onClose={() => setIsSettingsOpen(false)} 
+  isLoggedIn={Boolean(localStorage.getItem('authToken'))} 
+/>
 
       {!isGameComplete && (
         <>
