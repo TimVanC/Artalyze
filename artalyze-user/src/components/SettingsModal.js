@@ -1,13 +1,28 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './SettingsModal.css';
 
-const SettingsModal = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
+const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(savedDarkMode);
+    document.body.classList.toggle('dark-mode', savedDarkMode);
+  }, []);
+
+  const toggleDarkMode = () => {
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    document.body.classList.toggle('dark-mode', newMode);
+    localStorage.setItem('darkMode', newMode);
+  };
 
   const handleLogout = () => {
     localStorage.clear(); // Clear all local storage
     window.location.href = '/'; // Redirect to the homepage or login page
   };
+
+  if (!isOpen) return null;
 
   const currentYear = new Date().getFullYear(); // Dynamically fetch the current year
 
@@ -17,15 +32,13 @@ const SettingsModal = ({ isOpen, onClose }) => {
         <h2>Settings</h2>
         <ul className="settings-options">
           <li>
-            <button
-              className="settings-button"
-              onClick={() => {
-                onClose();
-                window.location.href = '/';
-              }}
-            >
-              About
-            </button>
+            <div className="dark-mode-toggle-container">
+              <span>Dark Mode</span>
+              <div
+                className={`dark-mode-toggle ${darkMode ? 'active' : ''}`}
+                onClick={toggleDarkMode}
+              ></div>
+            </div>
           </li>
           <li>
             <button
@@ -43,6 +56,17 @@ const SettingsModal = ({ isOpen, onClose }) => {
               className="settings-button"
               onClick={() => {
                 onClose();
+                window.location.href = '/privacy-policy';
+              }}
+            >
+              Privacy Policy
+            </button>
+          </li>
+          <li>
+            <button
+              className="settings-button"
+              onClick={() => {
+                onClose();
                 window.location.href = 'mailto:info@artalyze.app?subject=Bug Report';
               }}
             >
@@ -50,8 +74,29 @@ const SettingsModal = ({ isOpen, onClose }) => {
             </button>
           </li>
           <li>
-            <button className="settings-button" onClick={handleLogout}>
-              Log Out
+            <button
+              className="settings-button"
+              onClick={() => {
+                onClose();
+                window.location.href = '/terms-of-service';
+              }}
+            >
+              Terms of Service
+            </button>
+          </li>
+          <li>
+            <button
+              className="settings-button"
+              onClick={() => {
+                onClose();
+                if (isLoggedIn) {
+                  handleLogout(); // Log out if user is logged in
+                } else {
+                  window.location.href = '/login'; // Redirect to login/create account page
+                }
+              }}
+            >
+              {isLoggedIn ? 'Log Out' : 'Create Account'}
             </button>
           </li>
         </ul>
@@ -64,6 +109,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
       </div>
     </div>
   );
+  
 };
 
 export default SettingsModal;
