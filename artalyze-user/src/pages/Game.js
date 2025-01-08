@@ -60,6 +60,7 @@ const Game = () => {
   const [isGameComplete, setIsGameComplete] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState(null);
+  const longPressTimer = useRef(null);
   const [showOverlay, setShowOverlay] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [showScoreOverlay, setShowScoreOverlay] = useState(true);
@@ -69,7 +70,6 @@ const Game = () => {
   const [isDisappearing, setIsDisappearing] = useState(false); // Added this state
   const [error, setError] = useState('');
   const swiperRef = useRef(null);
-  let longPressTimer;
 
   const [userId, setUserId] = useState(localStorage.getItem("userId"));
   const [stats, setStats] = useState({
@@ -446,15 +446,16 @@ const Game = () => {
 
 
   const handleLongPress = (image) => {
-    clearTimeout(longPressTimer);
-    longPressTimer = setTimeout(() => {
+    clearTimeout(longPressTimer.current);
+    longPressTimer.current = setTimeout(() => {
       setEnlargedImage(image);
-    }, 500);
+    }, 500); // Adjust time as needed
   };
 
   const handleRelease = () => {
-    clearTimeout(longPressTimer);
+    clearTimeout(longPressTimer.current);
   };
+
 
   const handleMidTurnFeedback = () => {
     setIsDisappearing(false);
@@ -587,6 +588,10 @@ const Game = () => {
                       key={idx}
                       className={`image-container ${selections[index]?.selected === image ? 'selected' : ''}`}
                       onClick={() => handleSelection(image, image === pair.human)}
+                      onMouseDown={() => handleLongPress(image)}
+                      onMouseUp={handleRelease}
+                      onTouchStart={() => handleLongPress(image)}
+                      onTouchEnd={handleRelease}
                     >
                       <img src={image} alt={`Painting ${idx + 1}`} />
                     </div>
@@ -617,9 +622,6 @@ const Game = () => {
             ))}
           </div>
 
-
-
-
           <button
             className={`submit-button ${isSubmitEnabled ? 'enabled' : 'disabled'}`}
             onClick={handleSubmit}
@@ -644,7 +646,6 @@ const Game = () => {
           </div>
         </div>
       )}
-
 
       {isGameComplete && (
         <div className="completion-screen">
@@ -691,8 +692,6 @@ const Game = () => {
           </div>
         </div>
       )}
-
-
 
       {enlargedImage && (
         <div className="enlarge-modal" onClick={closeEnlargedImage}>
