@@ -54,8 +54,10 @@ exports.requestOtp = async (req, res) => {
     await sendEmail(
       email,
       'Your Artalyze Verification Code',
-      otp
+      'account-verification', // Email type
+      { otp, expiry: 10 } // Dynamic data for the template
     );
+    
 
     console.log("OTP sent successfully to email:", email); // Log successful email send
     res.status(200).json({ message: 'OTP sent to email' });
@@ -192,8 +194,10 @@ exports.resendOtp = async (req, res) => {
     await sendEmail(
       email,
       'Your Artalyze Verification Code (Resend)',
-      otp
+      'account-verification', // Email type
+      { otp, expiry: 10 } // Dynamic data for the template
     );
+    
 
     console.log("OTP resent successfully to email:", email);
     res.status(200).json({ message: 'OTP resent to email successfully.' });
@@ -219,9 +223,11 @@ exports.forgotPassword = async (req, res) => {
     // Send OTP email for password reset
     await sendEmail(
       email,
-      'Your Artalyze Password Reset Code',
-      otp
+      'Reset Your Artalyze Password',
+      'reset-password', // The email type
+      { otp, expiry: 10 } // Dynamic data for the template
     );
+    
 
     res.status(200).json({ message: 'OTP sent to your email for password reset' });
   } catch (error) {

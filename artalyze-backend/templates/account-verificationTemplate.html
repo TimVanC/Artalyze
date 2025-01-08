@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artalyze Verification Code</title>
+    <link rel="stylesheet" href="emailStyles.css"> <!-- Link to shared CSS -->
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">Verify Your Artalyze Account</div>
+        <p class="instruction">Please enter this code on the Artalyze website to confirm your email:</p>
+        <div class="code">{{otp}}</div>
+        <p class="instruction">This code will expire in {{expiry}} minutes. If you didn’t request this code, you can
+            ignore this email.</p>
+        <div class="footer">
+            You received this email because you signed up for Artalyze. If you didn't create an account, please ignore
+            this message.
+        </div>
+    </div>
+</body>
+
+</html>
