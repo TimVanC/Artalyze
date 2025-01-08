@@ -1,66 +1,15 @@
 .login-container {
+  background-color: white; /* Set the background to white */
+  height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  height: 100vh;
-  background-color: #f0f0f0;
-  padding: 20px;
-  text-align: center;
+  justify-content: center; /* Center content vertically */
+  padding-bottom: 60px; /* Add padding to avoid overlap with the footer */
 }
 
-h2 {
-  font-family: 'Lato', sans-serif;
-  font-size: 24px;
-  margin-bottom: 20px;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 400px;
-}
-
-input {
-  padding: 10px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 16px;
-}
-
-.login-container button {
-  padding: 10px;
-  font-size: 16px;
-  border: none;
-  border-radius: 5px;
-  background-color: #333;
-  color: white;
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: #555;
-}
-
-.error-message {
-  color: red;
-  font-size: 14px;
-  margin-top: -10px;
-  margin-bottom: 15px;
-}
-
-.back-button {
-  margin-top: 20px;
-  background-color: transparent;
-  color: #333;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-/* Top Bar */
-.top-bar {
+/* Login Page Top Bar */
+.login-top-bar {
   display: flex;
   justify-content: center; /* Center the title horizontally */
   align-items: center; /* Center the title vertically */
@@ -68,20 +17,264 @@ button:hover {
   width: 100%; /* Make it span the entire width */
   background-color: white; /* Background color */
   border-bottom: 2px solid #ccc; /* Separator */
-  position: fixed; /* Fix it at the top */
+  position: fixed; /* Fix it at the very top */
   top: 0; /* Stick it to the very top */
   z-index: 10; /* Ensure it stays above other elements */
 }
 
-/* App Title */
-.app-title {
+/* Login App Title */
+.login-app-title {
   font-size: 20px;
   font-weight: 700;
   font-family: 'Lato', sans-serif;
   color: #333;
 }
 
+/* Login Logo Container */
+.login-logo-container {
+  margin: 20px 0; /* Add some spacing around the logo */
+  text-align: center;
+}
+
+/* Login Logo Styling */
+.login-app-logo {
+  width: 125px; /* Set the logo width */
+  max-width: 90%; /* Ensure it resizes properly on smaller screens */
+  height: auto; /* Maintain the aspect ratio */
+}
+
+h2 {
+  font-family: 'Lato', sans-serif;
+  font-size: 24px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.subheading {
+  font-family: 'Lato', sans-serif;
+  font-size: 18px; /* Increased font size */
+  font-weight: 600; /* Increased font weight */
+  color: #555;
+  margin-bottom: 20px;
+  text-align: center;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.subheading.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.subheading.enhanced {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.subheading.enhanced.fade-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* New additions */
+.hidden {
+  opacity: 0;
+  height: 0; /* Ensures no space is taken */
+  overflow: hidden;
+  transition: opacity 0.3s ease, height 0.3s ease;
+}
+
+.hidden.fade-in {
+  opacity: 1;
+  height: auto; /* Restores height when visible */
+}
+
+.subheading.hidden {
+  display: none; /* Hides the "Log in" subheading initially */
+}
+
+.subheading-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px; /* Placeholder space for subheading transitions */
+  transition: min-height 0.3s ease;
+}
+
+.subheading-container.expand {
+  min-height: 60px; /* Adjust if more space is required during animation */
+}
 
 
+form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 350px;
+}
+
+input {
+  padding: 12px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-field input {
+  width: 100%;
+  padding-right: 40px; /* Space for the icon */
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 12px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.password-container {
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.5s ease, max-height 0.5s ease;
+}
+
+.password-container.fade-in {
+  opacity: 1;
+  max-height: 100px; /* Adjust based on content */
+}
+
+.password-toggle {
+  position: absolute;
+  right: 10px; /* Positioning within the field */
+  top: calc(50% - 1px); /* Slight adjustment to move the icon up */
+  transform: translateY(-50%); /* Center vertically */
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #555;
+  display: flex;
+  align-items: center;
+}
+
+.password-toggle i {
+  font-size: 18px; /* Icon size */
+  transition: color 0.3s ease, transform 0.3s ease; /* Smooth transitions */
+}
+
+.password-toggle i.fa-lock-open {
+  margin-left: -2px; /* Adjust the body alignment for the open icon */
+}
+
+.password-toggle i.fa-lock {
+  margin-left: 0; /* Ensure no offset for the closed lock */
+}
+
+.password-toggle:hover i {
+  color: #333; /* Darker color on hover */
+}
+
+.next-button {
+  padding: 12px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  background-color: #333;
+  color: white;
+  cursor: pointer;
+  width: 50%;
+  align-self: center;
+  transition: background-color 0.3s ease;
+}
+
+.next-button:hover {
+  background-color: #555;
+}
+
+.forgot-password-button {
+  background-color: transparent;
+  color: #4d73af;
+  text-decoration: underline;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 5px;
+  margin-bottom: 15px;
+  text-align: left;
+  align-self: flex-start;
+  transition: opacity 0.5s ease;
+  border: none; /* Ensures no border */
+  outline: none; /* Removes focus outline */
+  padding: 0; /* Removes any padding that may create a box */
+}
 
 
+.error-message {
+  color: red;
+  font-size: 14px;
+  margin: 5px 0 15px 0;
+  text-align: center;
+}
+
+.success-message {
+  font-family: 'Lato', sans-serif;
+  font-size: 14px;
+  color: #4caf50; /* Success green */
+  text-align: center;
+  margin-top: 10px;
+}
+
+.footer {
+  width: 100%;
+  text-align: center;
+  position: fixed;
+  bottom: 0;
+  border-top: 2px solid #ccc;
+  padding: 10px 0;
+  background-color: white;
+  font-family: 'Lato', sans-serif;
+  font-size: 14px;
+  color: #555;
+}
+
+.terms-container {
+  font-family: 'Lato', sans-serif;
+  font-size: 14px;
+  color: #555;
+  text-align: center;
+  margin-top: 20px;
+  line-height: 1.5; 
+}
+
+.terms-container a {
+  color: inherit; /* Match link color to surrounding text */
+  text-decoration: underline;
+}
+
+.terms-container a:hover {
+  color: #333; /* Slightly darker for hover effect */
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

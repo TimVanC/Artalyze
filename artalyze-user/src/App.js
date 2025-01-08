@@ -7,6 +7,9 @@ import Login from './pages/Login';
 import PrivateRoute from './routes/PrivateRoute';
 import { AuthProvider } from './AuthContext';
 
+// Import Font Awesome CSS
+import '@fortawesome/fontawesome-free/css/all.min.css';
+
 function App() {
   return (
     <AuthProvider>
