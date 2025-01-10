@@ -199,6 +199,7 @@ exports.getTriesRemaining = async (req, res) => {
   }
 };
 
+
 // Decrement triesRemaining
 exports.decrementTries = async (req, res) => {
   try {
@@ -221,6 +222,7 @@ exports.decrementTries = async (req, res) => {
   }
 };
 
+
 // Reset triesRemaining at midnight
 exports.resetTries = async (req, res) => {
   try {
@@ -242,6 +244,7 @@ exports.resetTries = async (req, res) => {
     res.status(500).json({ message: 'Failed to reset triesRemaining.' });
   }
 };
+
 
 // Fetch selections
 exports.getSelections = async (req, res) => {

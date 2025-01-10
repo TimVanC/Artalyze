@@ -35,30 +35,47 @@ exports.getDailyPuzzle = async (req, res) => {
   }
 };
 
-
-
-
-
-
 // Check if the user has played today
 exports.checkIfPlayedToday = async (req, res) => {
   try {
     const { userId } = req.user; // Get the authenticated user's ID
     const todayInEST = getTodayInEST(); // Get today's date in EST format
 
-    const stats = await Stats.findOne({ userId });
-    if (!stats || stats.lastPlayedDate !== todayInEST) {
-      // User has not played today
-      return res.status(200).json({ hasPlayedToday: false });
+    let stats = await Stats.findOne({ userId });
+
+    if (!stats) {
+      // Initialize stats for a new user
+      stats = new Stats({
+        userId,
+        triesRemaining: 3,
+        lastPlayedDate: todayInEST,
+      });
+      await stats.save();
+      return res.status(200).json({
+        hasPlayedToday: false,
+        triesRemaining: stats.triesRemaining,
+      });
+    }
+
+    if (stats.lastPlayedDate !== todayInEST) {
+      // User hasn't played today; reset game state
+      return res.status(200).json({
+        hasPlayedToday: false,
+        triesRemaining: stats.triesRemaining,
+      });
     }
 
     // User has already played today
-    return res.status(200).json({ hasPlayedToday: true });
+    return res.status(200).json({
+      hasPlayedToday: true,
+      triesRemaining: stats.triesRemaining,
+    });
   } catch (error) {
     console.error('Error checking if user has played today:', error);
     return res.status(500).json({ message: 'Failed to check play status.' });
   }
 };
+
 
 // Mark the user as played today
 exports.markAsPlayedToday = async (req, res) => {

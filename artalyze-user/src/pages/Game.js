@@ -56,6 +56,8 @@ const Game = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selections, setSelections] = useState([]);
   const [triesLeft, setTriesLeft] = useState(3);
+  const [triesRemaining, setTriesRemaining] = useState(3);
+  const [hasPlayedToday, setHasPlayedToday] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
   const [isGameComplete, setIsGameComplete] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -84,37 +86,43 @@ const Game = () => {
 
   // Place fetchSelections above handleGameComplete in Game.js
   const fetchSelections = async () => {
-    const response = await axiosInstance.get(`/stats/selections`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-      },
-    });
-  
-    // Ensure the response is an array
-    const selections = Array.isArray(response.data) ? response.data : response.data.selections;
-  
-    console.log("Fetched selections from backend:", selections);
-    return selections;
-  }; 
+    const isLoggedIn = Boolean(localStorage.getItem('authToken'));
+
+    if (!isLoggedIn) {
+      console.log("Guest user: Fetching selections from localStorage.");
+      const savedSelections = localStorage.getItem('selections');
+      return savedSelections ? JSON.parse(savedSelections) : []; // Ensure an array is returned
+    }
+
+    try {
+      const { data } = await axiosInstance.get('/stats/selections');
+      return data.selections || []; // Ensure an array is returned
+    } catch (error) {
+      console.error('Error fetching selections:', error.response?.data || error.message);
+      return []; // Fallback to an empty array on error
+    }
+  };
+
+  // Helper function to save triesRemaining to localStorage
+  const saveTriesToLocalStorage = (tries) => {
+    localStorage.setItem('triesRemaining', tries);
+  };
 
   // Function to be called on game completion
   const handleGameComplete = async () => {
     console.log("handleGameComplete called");
     setIsGameComplete(true);
-  
-    // Debugging: Log initial selections state
-    console.log("Selections state before handleGameComplete:", selections);
-  
+
     // Fetch the latest selections from the backend
     const latestSelections = await fetchSelections();
-    console.log("Latest selections fetched:", latestSelections);
-  
-    // Ensure latestSelections is an array
+
     if (!Array.isArray(latestSelections)) {
       console.error("Invalid selections data format:", latestSelections);
-      return;
+      return; // Exit gracefully if data is invalid
     }
-  
+
+    console.log("Latest selections fetched:", latestSelections);
+
     // Calculate correct answers with detailed debugging
     const correctCount = latestSelections.reduce((count, selection, index) => {
       console.log(`Selection ${index}:`, selection);
@@ -122,7 +130,7 @@ const Game = () => {
       if (
         selection &&
         imagePairs[index] &&
-        selection.selected === imagePairs[index].human // Adjust this logic
+        selection.selected === imagePairs[index].human
       ) {
         console.log(`Correct Match at index ${index}`);
         return count + 1;
@@ -130,25 +138,25 @@ const Game = () => {
       console.log(`Mismatch at index ${index}`);
       return count;
     }, 0);
-  
+
     console.log("Final Correct Answers Count (correctCount):", correctCount);
     console.log("Total questions (imagePairs.length):", imagePairs.length);
-  
+
     // Proceed with marking the game as played and updating stats
     try {
       const payload = {
         correctAnswers: correctCount,
         totalQuestions: imagePairs.length,
       };
-  
+
       console.log("Sending payload to update stats:", payload);
-  
+
       const statsResponse = await axiosInstance.put(`/stats/${userId}`, payload, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
       });
-  
+
       console.log("Stats updated successfully in handleGameComplete:", statsResponse.data);
       await fetchAndSetStats(userId);
       console.log("Stats re-fetched after game completion in handleGameComplete:", stats);
@@ -157,151 +165,170 @@ const Game = () => {
       console.error("Error updating user stats:", error.response?.data || error.message);
     }
   };
-  
 
   // Initialize game logic
-  useEffect(() => {
-    const initializeGame = async () => {
-      const today = getTodayInEST(); // Ensure this returns the correct EST date
-      const isLoggedIn = isUserLoggedIn();
-
-      if (isLoggedIn && !userId) {
-        console.error('User is logged in but no userId found in localStorage.');
-        setError('User ID is missing. Please log in again.');
-        return;
-      }
-
-      try {
-        if (isLoggedIn) {
-          console.log('Checking if user has played today...');
-          const playStatusResponse = await axiosInstance.get('/game/check-today-status', {
+  const initializeGame = async () => {
+    const today = getTodayInEST();
+    const isLoggedIn = isUserLoggedIn();
+  
+    if (isLoggedIn && !userId) {
+      console.error('User is logged in but no userId found in localStorage.');
+      setError('User ID is missing. Please log in again.');
+      return;
+    }
+  
+    try {
+      if (isLoggedIn) {
+        console.log('Checking if user has played today...');
+        const playStatusResponse = await axiosInstance.get('/game/check-today-status', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+        });
+  
+        const { hasPlayedToday, triesRemaining } = playStatusResponse.data;
+  
+        if (!hasPlayedToday) {
+          console.log('New day detected. Resetting game state.');
+          const resetResponse = await axiosInstance.put('/stats/tries/reset', {}, {
             headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
           });
-
-          if (playStatusResponse.data.hasPlayedToday) {
-            console.log('User has already played today.');
-            setIsGameComplete(true);
-            restoreGameState();
-            await fetchAndSetStats(userId);
-            setTimeout(() => setIsStatsOpen(true), 400);
-            return;
-          }
-
-          const triesResponse = await axiosInstance.get('/stats/tries', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-          });
-          setTriesLeft(triesResponse.data.triesRemaining);
-
-          const selectionsResponse = await axiosInstance.get('/stats/selections', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-          });
-          setSelections(selectionsResponse.data.selections || []);
+  
+          setTriesLeft(resetResponse.data.triesRemaining || 3);
+          setSelections([]);
+          setImagePairs([]);
+          setIsGameComplete(false);
+          await fetchAndSetStats(userId);
         } else {
-          const lastPlayed = localStorage.getItem('lastPlayedDate');
-          const storedTries = localStorage.getItem('triesRemaining');
-          const storedDate = localStorage.getItem('triesDate');
-          const savedSelections = localStorage.getItem('selections');
-
-          if (lastPlayed === today) {
-            console.log('Guest user has already played today.');
-            setIsGameComplete(true);
-            restoreGameState();
-            setTimeout(() => setIsStatsOpen(true), 400);
-            return;
-          }
-
-          if (storedDate !== today || !storedTries) {
-            localStorage.setItem('triesRemaining', 3);
-            localStorage.setItem('triesDate', today);
-            setTriesLeft(3);
-          } else {
+          setTriesLeft(triesRemaining);
+          setIsGameComplete(true);
+          restoreGameState();
+          setTimeout(() => setIsStatsOpen(true), 400);
+        }
+      } else {
+        const lastPlayed = localStorage.getItem('lastPlayedDate');
+        const storedTries = localStorage.getItem('triesRemaining');
+        const savedSelections = localStorage.getItem('selections');
+  
+        if (lastPlayed !== today) {
+          console.log('Guest user: New day detected. Resetting game state.');
+          localStorage.setItem('triesRemaining', 3);
+          localStorage.setItem('lastPlayedDate', today);
+          setTriesLeft(3);
+          setSelections([]);
+          setImagePairs([]);
+          setIsGameComplete(false);
+        } else {
+          if (storedTries) {
             setTriesLeft(parseInt(storedTries, 10));
           }
-
           if (savedSelections) {
             setSelections(JSON.parse(savedSelections));
           }
         }
-
-        console.log('Fetching daily puzzle...');
-        const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
-        if (puzzleResponse.data?.imagePairs?.length > 0) {
-          const shuffledPairs = puzzleResponse.data.imagePairs.map((pair) => ({
-            human: pair.humanImageURL,
-            ai: pair.aiImageURL,
-            images: Math.random() > 0.5
-              ? [pair.humanImageURL, pair.aiImageURL]
-              : [pair.aiImageURL, pair.humanImageURL],
-          }));
-          setImagePairs(shuffledPairs);
-          localStorage.setItem('completedPairs', JSON.stringify(shuffledPairs));
-
-          setTimeout(() => {
-            setCurrentIndex(0);
-            if (swiperRef.current) {
-              swiperRef.current.slideToLoop(0);
-            }
-          }, 100); // Ensure Swiper is initialized before syncing
-        } else {
-          console.warn('No image pairs available for today.');
-          setImagePairs([]);
-        }
-
-        if (isLoggedIn && userId) {
-          await fetchAndSetStats(userId);
-        }
-      } catch (error) {
-        console.error('Error during game initialization:', error.response?.data || error.message);
-        setError('Failed to initialize the game. Please try again later.');
       }
-    };
-
-    const restoreGameState = () => {
-      const savedPairs = localStorage.getItem('completedPairs');
-      const savedSelections = localStorage.getItem('selections');
-
-      if (savedPairs) {
-        const pairs = JSON.parse(savedPairs);
-        setImagePairs(pairs);
-
-        if (savedSelections) {
-          const selections = JSON.parse(savedSelections);
-          setSelections(selections);
-
-          const firstSelectionIndex = selections.findIndex(
-            (selection) => selection && selection.selected
-          );
-
-          setTimeout(() => {
-            setCurrentIndex(firstSelectionIndex >= 0 ? firstSelectionIndex : 0);
-            if (swiperRef.current) {
-              swiperRef.current.slideToLoop(firstSelectionIndex >= 0 ? firstSelectionIndex : 0, 0);
-            }
-          }, 100); // Delay ensures Swiper is fully initialized
-        } else {
-          setTimeout(() => {
-            setCurrentIndex(0);
-            if (swiperRef.current) {
-              swiperRef.current.slideToLoop(0);
-            }
-          }, 100);
-        }
+  
+      console.log("Fetching daily puzzle...");
+      const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
+      console.log("Daily puzzle response:", puzzleResponse.data);
+  
+      if (puzzleResponse.data?.imagePairs?.length > 0) {
+        console.log("Setting image pairs...");
+        setImagePairs(puzzleResponse.data.imagePairs.map((pair) => ({
+          human: pair.humanImageURL,
+          ai: pair.aiImageURL,
+          images: Math.random() > 0.5
+            ? [pair.humanImageURL, pair.aiImageURL]
+            : [pair.aiImageURL, pair.humanImageURL],
+        })));
+      } else {
+        console.warn("No image pairs available for today.");
+        setImagePairs([]);
       }
-    };
+  
+      if (isLoggedIn && userId) {
+        await fetchAndSetStats(userId);
+      }
+    } catch (error) {
+      console.error('Error during game initialization:', error.response?.data || error.message);
+      setError('Failed to initialize the game. Please try again later.');
+    }
+  };
+  
+  
 
+  // Restore game state function
+  const restoreGameState = () => {
+    const savedPairs = localStorage.getItem('completedPairs');
+    const savedSelections = localStorage.getItem('selections');
+
+    if (savedPairs) {
+      const pairs = JSON.parse(savedPairs);
+      setImagePairs(pairs);
+
+      if (savedSelections) {
+        const selections = JSON.parse(savedSelections);
+        setSelections(selections);
+
+        const firstSelectionIndex = selections.findIndex(
+          (selection) => selection && selection.selected
+        );
+
+        setTimeout(() => {
+          setCurrentIndex(firstSelectionIndex >= 0 ? firstSelectionIndex : 0);
+          if (swiperRef.current) {
+            swiperRef.current.slideToLoop(firstSelectionIndex >= 0 ? firstSelectionIndex : 0, 0);
+          }
+        }, 100);
+      } else {
+        setTimeout(() => {
+          setCurrentIndex(0);
+          if (swiperRef.current) {
+            swiperRef.current.slideToLoop(0);
+          }
+        }, 100);
+      }
+    }
+  };
+
+  // useEffect for game logic
+  useEffect(() => {
     if (!isGameComplete) {
-      initializeGame();
+      console.log('Game is not complete. Initializing game state.');
+      initializeGame({
+        isLoggedIn: isUserLoggedIn(),
+        userId,
+        setTriesLeft,
+        setSelections,
+        setImagePairs,
+        setIsGameComplete,
+        saveTriesToLocalStorage,
+        saveSelectionsToLocalStorage,
+        fetchAndSetStats,
+        restoreGameState,
+        setIsStatsOpen,
+        setError,
+      });
     } else {
+      console.log('Game is complete. Restoring game state.');
       restoreGameState();
     }
   }, [userId, isGameComplete]);
 
+// Updated useEffect for imagePairs
+useEffect(() => {
+  console.log('Image pairs state updated:', imagePairs);
 
-  useEffect(() => {
-    if (swiperRef.current && imagePairs.length > 0) {
-      swiperRef.current.slideToLoop(currentIndex, 0);
-    }
-  }, [currentIndex, imagePairs]);
+  if (imagePairs.length > 0) {
+      console.log('Initializing Swiper with current index:', currentIndex);
+      setTimeout(() => {
+          if (swiperRef.current) {
+              swiperRef.current.slideToLoop(currentIndex, 0);
+          }
+      }, 100); // Ensure Swiper is fully initialized
+  } else {
+      console.log('No image pairs available to display.');
+  }
+}, [currentIndex, imagePairs]);
+
 
   // Save selections to localStorage whenever they are updated
   useEffect(() => {
@@ -309,7 +336,7 @@ const Game = () => {
       localStorage.setItem('selections', JSON.stringify(selections));
     }
   }, [selections]);
-  
+
 
   const fetchAndSetStats = async () => {
     const userId = localStorage.getItem("userId");
@@ -317,7 +344,7 @@ const Game = () => {
       console.error("No userId found. Please log in again.");
       return;
     }
-  
+
     try {
       const statsResponse = await axiosInstance.get(`/stats/${userId}`, {
         headers: {
@@ -325,18 +352,17 @@ const Game = () => {
         },
       });
       console.log("Fetched user stats from API in fetchAndSetStats:", statsResponse.data);
-  
+
       // Log mistake distribution specifically
       console.log("Fetched Mistake Distribution:", statsResponse.data.mistakeDistribution);
-  
+
       // Update the stats state
       setStats(statsResponse.data);
     } catch (error) {
       console.error("Error fetching user stats:", error.response?.data || error.message);
     }
   };
-  
-  
+
 
   const decrementTries = async () => {
     try {
@@ -344,17 +370,17 @@ const Game = () => {
         const response = await axiosInstance.put('/stats/tries/decrement', {}, {
           headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
         });
-        setTriesLeft(response.data.triesRemaining); // Update frontend state
+        setTriesLeft(response.data.triesRemaining);
+        saveTriesToLocalStorage(response.data.triesRemaining); // Persist to localStorage
       } else {
         const newTries = Math.max(triesLeft - 1, 0);
-        localStorage.setItem('triesRemaining', newTries);
         setTriesLeft(newTries);
+        saveTriesToLocalStorage(newTries); // Persist to localStorage
       }
     } catch (error) {
       console.error('Error decrementing tries:', error.response?.data || error.message);
     }
   };
-
 
   const updateUserStats = async (updatedStats) => {
     const userId = localStorage.getItem("userId");
@@ -389,6 +415,9 @@ const Game = () => {
     }
   };
 
+  const saveSelectionsToLocalStorage = (selections) => {
+    localStorage.setItem('selections', JSON.stringify(selections));
+  };
 
   const handleSelection = (selectedImage, isHumanSelection) => {
     // Update selections
@@ -397,13 +426,14 @@ const Game = () => {
       selected: selectedImage,
       isHumanSelection: isHumanSelection,
     };
+
     setSelections(updatedSelections);
 
     // Persist selections
     if (isUserLoggedIn()) {
-      saveSelectionsToBackend(updatedSelections);
+      saveSelectionsToBackend(updatedSelections); // Save to backend
     } else {
-      localStorage.setItem('selections', JSON.stringify(updatedSelections));
+      saveSelectionsToLocalStorage(updatedSelections); // Save to localStorage
     }
 
     // Automatically move to the next image pair
@@ -413,6 +443,7 @@ const Game = () => {
       swiperRef.current.slideToLoop(nextIndex); // Advance the Swiper slide
     }
   };
+
 
   const handleCompletionShare = (selections, imagePairs) => {
     const shareableText = `
@@ -444,7 +475,6 @@ const Game = () => {
     }
   };
 
-
   const handleLongPress = (image) => {
     clearTimeout(longPressTimer.current);
     longPressTimer.current = setTimeout(() => {
@@ -455,7 +485,6 @@ const Game = () => {
   const handleRelease = () => {
     clearTimeout(longPressTimer.current);
   };
-
 
   const handleMidTurnFeedback = () => {
     setIsDisappearing(false);
@@ -479,7 +508,6 @@ const Game = () => {
       console.error('Error during registration:', error.response?.data || error.message);
     }
   };
-
 
   const handleSubmit = () => {
     let correct = 0;
@@ -508,6 +536,20 @@ const Game = () => {
     setIsDisappearing(false);
   };
 
+  const handleAttempt = async () => {
+    if (triesRemaining > 0) {
+      try {
+        const { data } = await axios.put('/stats/tries/decrement', {
+          userId: localStorage.getItem('userId')
+        });
+        setTriesRemaining(data.triesRemaining);
+      } catch (error) {
+        console.error('Error decrementing tries:', error);
+      }
+    } else {
+      alert('No tries remaining for today!');
+    }
+  };
 
   const handleSwipe = (swiper) => {
     setCurrentIndex(swiper.realIndex);
@@ -538,11 +580,11 @@ const Game = () => {
         isLoggedIn={isLoggedIn}
       />
 
-<SettingsModal 
-  isOpen={isSettingsOpen} 
-  onClose={() => setIsSettingsOpen(false)} 
-  isLoggedIn={Boolean(localStorage.getItem('authToken'))} 
-/>
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        isLoggedIn={Boolean(localStorage.getItem('authToken'))}
+      />
 
       {!isGameComplete && (
         <>
@@ -570,36 +612,39 @@ const Game = () => {
             </div>
           </div>
 
-          <Swiper
-            loop={true}
-            onSlideChange={(swiper) => setCurrentIndex(swiper.realIndex)}
-            onSwiper={(swiper) => {
-              swiperRef.current = swiper;
-              swiper.slideToLoop(currentIndex, 0); // Sync Swiper to `currentIndex`
-              console.log('Swiper Initialized to Index:', currentIndex);
-            }}
-          >
-
-            {imagePairs.map((pair, index) => (
-              <SwiperSlide key={index}>
-                <div className="image-pair-container">
-                  {pair.images.map((image, idx) => (
-                    <div
-                      key={idx}
-                      className={`image-container ${selections[index]?.selected === image ? 'selected' : ''}`}
-                      onClick={() => handleSelection(image, image === pair.human)}
-                      onMouseDown={() => handleLongPress(image)}
-                      onMouseUp={handleRelease}
-                      onTouchStart={() => handleLongPress(image)}
-                      onTouchEnd={handleRelease}
-                    >
-                      <img src={image} alt={`Painting ${idx + 1}`} />
-                    </div>
-                  ))}
-                </div>
-              </SwiperSlide>
-            ))}
-          </Swiper>
+          {imagePairs.length > 0 ? (
+            <Swiper
+              loop={true}
+              onSlideChange={(swiper) => setCurrentIndex(swiper.realIndex)}
+              onSwiper={(swiper) => {
+                swiperRef.current = swiper;
+                swiper.slideToLoop(0); // Start with the first image pair
+                console.log("Swiper Initialized to Index:", currentIndex);
+              }}
+            >
+              {imagePairs.map((pair, index) => (
+                <SwiperSlide key={index}>
+                  <div className="image-pair-container">
+                    {pair.images.map((image, idx) => (
+                      <div
+                        key={idx}
+                        className={`image-container ${selections[index]?.selected === image ? 'selected' : ''}`}
+                        onClick={() => handleSelection(image, image === pair.human)}
+                        onMouseDown={() => handleLongPress(image)}
+                        onMouseUp={handleRelease}
+                        onTouchStart={() => handleLongPress(image)}
+                        onTouchEnd={handleRelease}
+                      >
+                        <img src={image} alt={`Painting ${idx + 1}`} />
+                      </div>
+                    ))}
+                  </div>
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          ) : (
+            <p>Loading images...</p> // Graceful fallback for no imagePairs
+          )}
 
           {enlargedImage && (
             <div className="enlarge-modal" onClick={closeEnlargedImage}>
@@ -631,6 +676,7 @@ const Game = () => {
           </button>
         </>
       )}
+
 
       {showOverlay && (
         <div className="results-overlay">
@@ -700,6 +746,7 @@ const Game = () => {
       )}
     </div>
   );
+
 
 };
 

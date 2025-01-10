@@ -19,9 +19,11 @@ router.get('/daily-puzzle', (req, res) => {
 
 // GET endpoint to check if the user has played today (requires authentication)
 router.get('/check-today-status', authMiddleware.authenticateToken, (req, res) => {
-  console.log('Received request for /check-today-status');
+  console.log('Received request for /api/game/check-today-status');
   gameController.checkIfPlayedToday(req, res);
 });
+
+
 
 // POST endpoint to mark the user as played today (requires authentication)
 router.post('/mark-as-played', authMiddleware.authenticateToken, (req, res) => {
