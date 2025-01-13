@@ -1,70 +1,60 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './StatsModal.css';
 import { FaShareAlt } from 'react-icons/fa';
+import { handleShare } from '../utils/shareUtils';
 import CountUp from 'react-countup';
 import logo from '../assets/images/artalyze-logo.png';
 
-const StatsModal = ({ isOpen, onClose, stats, isLoggedIn = false }) => {
+const defaultStats = {
+  gamesPlayed: 0,
+  winPercentage: 0,
+  currentStreak: 0,
+  maxStreak: 0,
+  perfectPuzzles: 0,
+  mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  lastPlayedDate: null,
+};
+
+const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false }) => {
   const [animatedBars, setAnimatedBars] = useState({});
   const [shouldAnimateNumbers, setShouldAnimateNumbers] = useState(false);
+  const [isDismissing, setIsDismissing] = useState(false);
   const hasAnimatedStats = useRef(false);
 
-  // Animate mistake distribution bars when stats are updated
   useEffect(() => {
-    if (isOpen && stats) {
-      console.log('Stats received in StatsModal props:', stats);
-      const animated = Object.keys(stats.mistakeDistribution || {}).reduce((acc, key) => {
-        acc[key] = stats.mistakeDistribution[key] || 0;
+    if (isOpen) {
+      console.log(`StatsModal opened. isLoggedIn: ${isLoggedIn}`);
+      const animated = Object.keys(stats.mistakeDistribution).reduce((acc, key) => {
+        acc[key] = stats.mistakeDistribution[key];
         return acc;
       }, {});
-      console.log('Animated Bars:', animated);
       setAnimatedBars(animated);
-      setShouldAnimateNumbers(true);
-      hasAnimatedStats.current = false;
-    }
-  }, [isOpen, stats]);
 
-  const handleStatsShare = () => {
-    const shareableText = `
-🎨 Artalyze Stats 🎨
-Games Played: ${stats.gamesPlayed}
-Win %: ${stats.winPercentage}%
-Current Streak: ${stats.currentStreak}
-Max Streak: ${stats.maxStreak}
-Perfect Streak: ${stats.perfectStreak}
-Max Perfect Streak: ${stats.maxPerfectStreak}
-Perfect Games: ${stats.perfectPuzzles}
-    `;
-
-    if (navigator.share) {
-      navigator
-        .share({
-          title: 'My Artalyze Stats',
-          text: shareableText,
-        })
-        .catch((error) => console.log('Error sharing:', error));
-    } else {
-      navigator.clipboard
-        .writeText(shareableText)
-        .then(() => {
-          alert('Stats copied to clipboard! You can now paste it anywhere.');
-        })
-        .catch((error) => {
-          console.error('Failed to copy:', error);
-        });
+      if (!hasAnimatedStats.current) {
+        setShouldAnimateNumbers(true);
+        hasAnimatedStats.current = true;
+      } else {
+        setShouldAnimateNumbers(false);
+      }
     }
+  }, [isOpen, stats.mistakeDistribution, isLoggedIn]);
+
+  if (!isOpen && !isDismissing) return null;
+
+  const handleDismiss = () => {
+    setIsDismissing(true);
+    setTimeout(() => {
+      setIsDismissing(false); // Reset state
+      onClose(); // Trigger modal close
+    }, 400); // Match the CSS animation duration
   };
 
-  if (!isOpen) {
-    return null;
-  }
-
-  const maxValue = Math.max(1, ...Object.values(stats.mistakeDistribution || {}));
+  const maxValue = Math.max(1, ...Object.values(stats.mistakeDistribution));
 
   return (
-    <div className="stats-overlay">
-      <div className={`stats-overlay-content ${isOpen ? 'animate-slide-up' : ''}`}>
-        <span className="close-icon" onClick={onClose}>
+<div className={`stats-overlay ${isDismissing ? 'transparent' : ''}`}>
+      <div className={`stats-overlay-content ${isDismissing ? 'slide-down' : ''}`}>
+        <span className="close-icon" onClick={handleDismiss}>
           ✖
         </span>
         {isLoggedIn ? (
@@ -74,7 +64,7 @@ Perfect Games: ${stats.perfectPuzzles}
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.gamesPlayed} duration={3} />
+                    <CountUp start={0} end={stats.gamesPlayed} duration={1.5} />
                   ) : (
                     stats.gamesPlayed
                   )}
@@ -84,7 +74,7 @@ Perfect Games: ${stats.perfectPuzzles}
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.winPercentage} duration={3} />
+                    <CountUp start={0} end={stats.winPercentage} duration={1.5} />
                   ) : (
                     stats.winPercentage
                   )}
@@ -94,7 +84,7 @@ Perfect Games: ${stats.perfectPuzzles}
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.currentStreak} duration={3} />
+                    <CountUp start={0} end={stats.currentStreak} duration={1.5} />
                   ) : (
                     stats.currentStreak
                   )}
@@ -104,7 +94,7 @@ Perfect Games: ${stats.perfectPuzzles}
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.maxStreak} duration={3} />
+                    <CountUp start={0} end={stats.maxStreak} duration={1.5} />
                   ) : (
                     stats.maxStreak
                   )}
@@ -113,33 +103,11 @@ Perfect Games: ${stats.perfectPuzzles}
               </div>
             </div>
             <hr className="separator" />
-            <div className="stats-overview">
-              <div className="stat-item">
-                <div className="stat-value">
-                  {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.perfectStreak} duration={3} />
-                  ) : (
-                    stats.perfectStreak
-                  )}
-                </div>
-                <div>Perfect Streak</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-value">
-                  {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.maxPerfectStreak} duration={3} />
-                  ) : (
-                    stats.maxPerfectStreak
-                  )}
-                </div>
-                <div>Max Perfect Streak</div>
-              </div>
-            </div>
             <div className="perfect-puzzles">
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.perfectPuzzles} duration={3} />
+                    <CountUp start={0} end={stats.perfectPuzzles} duration={1.5} />
                   ) : (
                     stats.perfectPuzzles
                   )}
@@ -150,25 +118,36 @@ Perfect Games: ${stats.perfectPuzzles}
             <hr className="separator" />
             <div className="mistake-distribution">
               <h3>Mistake Distribution</h3>
-              {Object.keys(stats.mistakeDistribution || {}).map((mistakeCount) => {
+              {Object.keys(stats.mistakeDistribution).map((mistakeCount) => {
                 const value = animatedBars[mistakeCount] || 0;
-                const isActive = parseInt(mistakeCount, 10) === stats.mostRecentScore;
                 const barWidth = Math.max((value / maxValue) * 100, 5);
 
                 return (
                   <div className="distribution-bar-container" key={mistakeCount}>
                     <span className="mistake-label">{mistakeCount}</span>
-                    <div
-                      className={`distribution-bar ${isActive ? 'active most-recent' : ''}`}
-                    >
+                    <div className="distribution-bar">
                       <div
                         className="bar-fill"
                         style={{
                           width: `${barWidth}%`,
                           minWidth: '5%',
+                          backgroundColor: '#4d73af',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: value === 0 ? 'center' : 'flex-end',
+                          transition: 'width 1s ease-out',
+                          paddingRight: value > 0 ? '5px' : '0',
                         }}
                       >
-                        <span className="bar-value">{value}</span>
+                        <span
+                          className="bar-value"
+                          style={{
+                            color: '#ffffff',
+                            marginRight: value > 0 ? '5px' : '0',
+                          }}
+                        >
+                          {value}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -176,30 +155,24 @@ Perfect Games: ${stats.perfectPuzzles}
               })}
             </div>
             <hr className="separator" />
-            <button className="share-button" onClick={handleStatsShare}>
+            <button className="share-button" onClick={() => handleShare(stats)}>
               <FaShareAlt /> Share
             </button>
           </>
         ) : (
-          <div className="guest-stats-content">
-            <img
-              src={logo}
-              alt="Track your stats illustration"
-              className="guest-stats-image"
-            />
-            <h2>Track Your Artalyze Stats</h2>
-            <p>
+          <>
+            <img src={logo} alt="Artalyze Logo" className="stats-logo" />
+            <h2 className="non-logged-in-message">Track Your Artalyze Stats</h2>
+            <p className="non-logged-in-subtext">
               Register to follow your streaks, total completed puzzles, win rate, and more.
             </p>
             <button
               className="cta-button"
-              onClick={() => {
-                window.location.href = '/register';
-              }}
+              onClick={() => (window.location.href = '/login')}
             >
               Create a Free Account
             </button>
-          </div>
+          </>
         )}
       </div>
     </div>

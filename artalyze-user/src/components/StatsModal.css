@@ -1,32 +1,38 @@
-/* Stats Overlay Full-Screen */
+/* Stats Overlay */
 .stats-overlay {
     position: fixed;
-    bottom: 0;
+    top: 0;
     left: 0;
     right: 0;
-    top: 0;
-    background: rgba(0, 0, 0, 0.8);
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1000;
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    z-index: 1000;
-    transition: transform 0.3s ease-in-out;
-}
-
-.stats-overlay-content {
-    background: #ffffff;
-    padding: 20px;
-    border-radius: 20px 20px 0 0;
+    transition: background 0.3s ease;
+  }
+  
+  .stats-overlay.transparent {
+    background: transparent;
+  }
+  
+  /* Stats Content */
+  .stats-overlay-content {
+    background: #fff;
     width: 90%;
     max-width: 500px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    position: relative;
-    text-align: center;
-    animation: slide-up 0.4s ease;
+    border-radius: 20px 20px 0 0;
     height: 85vh;
+    padding: 20px;
     overflow-y: auto;
-    font-family: 'Lato', sans-serif;
-}
+    position: relative;
+    animation: slide-up 0.4s ease;
+  }
+  
+  .stats-overlay-content.slide-down {
+    animation: slide-down 0.4s ease;
+  }  
 
 /* Close Icon */
 .close-icon {
@@ -35,8 +41,7 @@
     right: 20px;
     font-size: 24px;
     cursor: pointer;
-    transition: color 0.3s;
-}
+  }
 
 .close-icon:hover {
     color: #888888;
@@ -70,94 +75,91 @@
 .stat-item {
     font-size: 18px;
     text-align: center;
+    font-family: 'Lato', sans-serif;
 }
 
 .stat-value {
     font-size: 22px;
     font-weight: normal;
+    font-family: 'Lato', sans-serif;
 }
 
 /* Mistake Distribution */
 .mistake-distribution {
     margin-top: 10px;
+    font-family: 'Lato', sans-serif;
 }
 
 .distribution-bar-container {
     display: flex;
     align-items: center;
     margin: 10px 0;
+    position: relative;
 }
 
 .mistake-label {
     flex: 0.2;
     font-size: 16px;
     text-align: left;
-    color: #333333;
+    font-family: 'Lato', sans-serif;
 }
 
 .distribution-bar {
     flex: 4;
     height: 20px;
+    position: relative;
     display: flex;
     align-items: center;
-    background-color: transparent;
-    border-radius: 5px;
-    overflow: hidden;
 }
 
-/* Bar Fill */
 .bar-fill {
     height: 100%;
-    background-color: #b0b0b0;
+    background-color: #4d73af; /* Blue color for the bar */
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-end; /* Align value to the end of the bar */
     border-radius: 5px;
-    padding-right: 5px;
-    transition: width 1.5s ease-in-out;
+    padding-right: 5px; /* Adding some padding to the right for spacing */
 }
 
-/* Active Bar Fill */
-.distribution-bar.active .bar-fill {
-    background-color: #4d73af;
-}
-
-/* Animate Most Recent Bar */
-.bar-fill.animate {
-    transition: width 1.5s ease-in-out, background-color 0.5s ease-in-out;
-}
-
-/* Bar Value */
 .bar-value {
-    color: white;
+    color: white; /* Make it stand out on the bar fill */
     font-weight: bold;
     font-size: 14px;
 }
 
-/* Zero Value Styling */
+/* Specific styling for the value of 0 to ensure it's centered */
 .bar-fill.zero-value {
-    background-color: #b0b0b0;
-    justify-content: center;
-    color: white;
+    justify-content: center; /* Center the value if the count is zero */
+}
+
+.frequency-value {
+    margin-left: 10px;
+    font-size: 14px;
+    color: #333333;
+    font-family: 'Lato', sans-serif;
+    position: absolute;
+    right: 10px;
 }
 
 /* Share Button Styles */
-.stats-overlay .share-button {
-    background-color: #4CAF50 !important;
-    color: white !important;
-    padding: 12px 40px !important;
-    border: none !important;
-    border-radius: 10px !important;
-    cursor: pointer !important;
-    font-size: 16px !important;
-    font-weight: bold !important;
-    transition: background-color 0.3s, transform 0.2s !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    margin: 20px auto 0 !important;
-    width: 250px !important;
-    justify-content: center !important;
+.share-button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 25px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s, transform 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 20px; /* Add some space between the content above */
+    width: 80%; /* Ensure the button has good prominence */
+    justify-content: center;
+    font-family: 'Lato', sans-serif;
 }
 
 .share-button:hover {
@@ -165,54 +167,61 @@
     transform: scale(1.05);
 }
 
-.share-button:focus {
-    outline: 3px solid #82b1ff;
-    outline-offset: 2px;
+/* Non-Logged-In View */
+.stats-logo {
+    max-width: 150px;
+    margin: 20px auto;
 }
 
-/* Slide-Up Animation */
-@keyframes slide-up {
-    from {
-        transform: translateY(100%);
-    }
-    to {
-        transform: translateY(0);
-    }
+.non-logged-in-message {
+    font-size: 22px;
+    font-weight: bold;
+    margin: 10px 0;
+    color: #333333;
 }
 
-/* Guest Stats Modal */
-.guest-stats-content {
-    text-align: center;
-    padding: 20px;
-  }
-  
-  .guest-stats-image {
-    width: 150px;
-    height: auto;
-    margin: 0 auto 20px;
-  }
-  
-  .cta-button {
+.non-logged-in-subtext {
+    font-size: 16px;
+    color: #666666;
+    margin-bottom: 20px;
+}
+
+.cta-button {
     background-color: #4CAF50;
     color: white;
-    padding: 10px 25px;
-    font-size: 16px;
-    font-weight: bold;
+    padding: 12px 20px;
     border: none;
     border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
     cursor: pointer;
-    transition: background-color 0.3s, transform 0.2s;
-    display: inline-block;
-    margin-top: 20px;
-  }
-  
-  .cta-button:hover {
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    width: 80%;
+    max-width: 300px;
+    margin: 20px auto;
+    display: block;
+}
+
+.cta-button:hover {
     background-color: #388E3C;
     transform: scale(1.05);
+}
+
+/* Animations */
+@keyframes slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
   }
   
-  .cta-button:focus {
-    outline: 3px solid #82b1ff;
-    outline-offset: 2px;
+  @keyframes slide-down {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(100%);
+    }
   }
-  

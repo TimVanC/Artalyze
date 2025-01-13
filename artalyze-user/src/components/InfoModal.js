@@ -1,17 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './InfoModal.css';
 import humanExample from '../assets/images/human-example.png';
 import aiExample from '../assets/images/ai-example.png';
 
 const InfoModal = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
+  const [isDismissing, setIsDismissing] = useState(false);
+
+  if (!isOpen && !isDismissing) return null;
+
+  const handleDismiss = () => {
+    setIsDismissing(true);
+    setTimeout(() => {
+      setIsDismissing(false); // Reset state
+      onClose(); // Trigger modal close
+    }, 400); // Match the CSS animation duration
+  };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <span className="close-icon" onClick={onClose}>
-          ✖
-        </span>
+    <div className={`modal-overlay ${isDismissing ? 'transparent' : ''}`}>
+      <div className={`modal-content ${isDismissing ? 'slide-down' : ''}`}>
+        <span className="close-icon" onClick={handleDismiss}>✖</span>
         <h2>How to Play</h2>
         <hr className="section-separator" />
 
@@ -48,7 +56,6 @@ const InfoModal = ({ isOpen, onClose }) => {
           </p>
         </section>
 
-        {/* Footer */}
         <footer className="modal-footer">© {new Date().getFullYear()} Artalyze</footer>
       </div>
     </div>
