@@ -19,6 +19,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
   const [animatedBars, setAnimatedBars] = useState({});
   const [shouldAnimateNumbers, setShouldAnimateNumbers] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
+  const touchStartY = useRef(null);
   const hasAnimatedStats = useRef(false);
 
   useEffect(() => {
@@ -49,14 +50,30 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
     }, 400); // Match the CSS animation duration
   };
 
+  const handleTouchStart = (e) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e) => {
+    const touchEndY = e.touches[0].clientY;
+    if (touchStartY.current && touchEndY - touchStartY.current > 50) {
+      handleDismiss(); // Trigger slide-down animation when swipe is detected
+    }
+  };
+
   const maxValue = Math.max(1, ...Object.values(stats.mistakeDistribution));
 
   return (
-<div className={`stats-overlay ${isDismissing ? 'transparent' : ''}`}>
+    <div
+      className={`stats-overlay ${isDismissing ? 'transparent' : ''}`}
+      onTouchStart={handleTouchStart} // Detect the start of the swipe
+      onTouchMove={handleTouchMove}  // Detect the swipe-down gesture
+    >
       <div className={`stats-overlay-content ${isDismissing ? 'slide-down' : ''}`}>
         <span className="close-icon" onClick={handleDismiss}>
           ✖
         </span>
+
         {isLoggedIn ? (
           <>
             <h2 className="stats-header">Your Stats</h2>

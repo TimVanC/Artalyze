@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import './InfoModal.css';
 import humanExample from '../assets/images/human-example.png';
 import aiExample from '../assets/images/ai-example.png';
 
 const InfoModal = ({ isOpen, onClose }) => {
   const [isDismissing, setIsDismissing] = useState(false);
+  const touchStartY = useRef(null);
 
   if (!isOpen && !isDismissing) return null;
 
@@ -16,10 +17,26 @@ const InfoModal = ({ isOpen, onClose }) => {
     }, 400); // Match the CSS animation duration
   };
 
+  const handleTouchStart = (e) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e) => {
+    const touchEndY = e.touches[0].clientY;
+    if (touchStartY.current && touchEndY - touchStartY.current > 50) {
+      handleDismiss(); // Trigger slide-down animation when swipe is detected
+    }
+  };
+
   return (
-    <div className={`modal-overlay ${isDismissing ? 'transparent' : ''}`}>
+    <div
+      className={`modal-overlay ${isDismissing ? 'transparent' : ''}`}
+      onTouchStart={handleTouchStart} // Start tracking the touch gesture
+      onTouchMove={handleTouchMove}  // Detect swipe-down gesture
+    >
       <div className={`modal-content ${isDismissing ? 'slide-down' : ''}`}>
         <span className="close-icon" onClick={handleDismiss}>✖</span>
+
         <h2>How to Play</h2>
         <hr className="section-separator" />
 
