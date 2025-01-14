@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import './StatsModal.css';
 import { FaShareAlt } from 'react-icons/fa';
 import { handleShare } from '../utils/shareUtils';
+import { getTodayInEST, getYesterdayInEST } from '../utils/dateUtils';
 import CountUp from 'react-countup';
 import logo from '../assets/images/artalyze-logo.png';
 
@@ -16,6 +17,7 @@ const defaultStats = {
 };
 
 const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false }) => {
+  const userId = localStorage.getItem('userId');
   const [animatedBars, setAnimatedBars] = useState({});
   const [shouldAnimateNumbers, setShouldAnimateNumbers] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
@@ -24,27 +26,52 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
 
   // Animate mistake distribution bars when stats are updated
   useEffect(() => {
+    const fetchAndValidateStats = async () => {
+      try {
+        // Fetch user stats from the backend
+        const response = await fetch(`/api/stats/${userId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+        });
+        const updatedStats = await response.json();
+
+        // Update streaks if needed
+        const todayInEST = getTodayInEST();
+        const yesterdayInEST = getYesterdayInEST();
+
+        if (
+          updatedStats.lastPlayedDate &&
+          updatedStats.lastPlayedDate !== yesterdayInEST &&
+          updatedStats.lastPlayedDate !== todayInEST
+        ) {
+          updatedStats.currentStreak = 0;
+          updatedStats.perfectStreak = 0;
+          console.log("Streaks reset due to missed day.");
+        }
+
+        // Animate mistake distribution bars
+        const animated = Object.keys(updatedStats.mistakeDistribution).reduce((acc, key) => {
+          acc[key] = updatedStats.mistakeDistribution[key];
+          return acc;
+        }, {});
+        setAnimatedBars(animated);
+
+        // Trigger animation for numbers
+        if (!hasAnimatedStats.current) {
+          setShouldAnimateNumbers(true);
+          hasAnimatedStats.current = true;
+        } else {
+          setShouldAnimateNumbers(false);
+        }
+      } catch (error) {
+        console.error("Error fetching or validating stats:", error);
+      }
+    };
+
     if (isOpen) {
       console.log(`StatsModal opened. isLoggedIn: ${isLoggedIn}`);
-      const animated = Object.keys(stats.mistakeDistribution).reduce((acc, key) => {
-        acc[key] = stats.mistakeDistribution[key];
-        return acc;
-      }, {});
-      setAnimatedBars(animated);
-
-      if (!hasAnimatedStats.current) {
-        setShouldAnimateNumbers(true);
-        hasAnimatedStats.current = true;
-      } else {
-        setShouldAnimateNumbers(false);
-      }
+      fetchAndValidateStats();
     }
-  }, [isOpen, stats.mistakeDistribution, isLoggedIn]);
-
-  useEffect(() => {
-    console.log('Most Recent Score:', stats.mostRecentScore);
-  }, [stats.mostRecentScore]);
-
+  }, [isOpen]);
 
   const handleStatsShare = () => {
     const shareableText = `

@@ -11,6 +11,16 @@ exports.getUserStats = async (req, res) => {
       return res.status(404).json({ message: 'Statistics not found for this user.' });
     }
 
+    const todayInEST = getTodayInEST();
+    const yesterdayInEST = getYesterdayInEST();
+
+    // Reset streaks if the user missed a day
+    if (stats.lastPlayedDate && stats.lastPlayedDate !== yesterdayInEST && stats.lastPlayedDate !== todayInEST) {
+      stats.currentStreak = 0;
+      stats.perfectStreak = 0;
+      await stats.save(); // Persist changes to the database
+    }
+
     res.status(200).json(stats);
   } catch (error) {
     console.error('Error fetching user stats:', error);
@@ -18,106 +28,64 @@ exports.getUserStats = async (req, res) => {
   }
 };
 
+
 // Update user statistics
 exports.updateUserStats = async (req, res) => {
   try {
-  const { userId } = req.params;
-  const { correctAnswers, totalQuestions } = req.body;
-  
-  console.log('Received Payload:', { correctAnswers, totalQuestions });
-  
-  if (correctAnswers === undefined || totalQuestions === undefined) {
-    console.log('Invalid payload detected. Returning 400 error.');
-    return res.status(400).json({ message: 'Invalid payload: correctAnswers and totalQuestions are required.' });
-  }
-  
-  const todayInEST = getTodayInEST();
-  const yesterdayInEST = getYesterdayInEST();
-  
-  const stats = await Stats.findOne({ userId });
-  
-  if (!stats) {
-    console.error('Stats not found for user:', userId);
-    return res.status(404).json({ message: 'Stats not found for this user.' });
-  }
-  
-  console.log('Fetched stats for user:', stats);
-  
-  const isPerfectGame = correctAnswers === totalQuestions;
-  
-  // Update streaks
-  let currentStreak = stats.currentStreak || 0;
-  let perfectStreak = stats.perfectStreak || 0;
-  
-  if (stats.lastPlayedDate === yesterdayInEST) {
-    currentStreak += 1;
-    perfectStreak = isPerfectGame ? perfectStreak + 1 : 0;
-  } else if (stats.lastPlayedDate !== todayInEST) {
-    currentStreak = 1;
-    perfectStreak = isPerfectGame ? 1 : 0;
-  }
-  
-  console.log('Updated streaks:', { currentStreak, perfectStreak });
-  
-  // Calculate mistake count
-  const mistakeCount = Math.max(totalQuestions - correctAnswers, 0);
-  console.log('Calculated Mistake Count:', mistakeCount);
-  
-  // Ensure mistake count falls within valid range
-  if (mistakeCount > totalQuestions) {
-    console.error('Error: Mistake Count exceeds totalQuestions. Resetting to 0.');
-    mistakeCount = 0;
-  }
-  
-  if (mistakeCount < 0) {
-    console.error('Error: Mistake Count is negative. Resetting to 0.');
-    mistakeCount = 0;
-  }
-  
-  // Initialize or update mistake distribution
-  const updatedMistakeDistribution = { ...stats.mistakeDistribution };
-  updatedMistakeDistribution[mistakeCount] = (updatedMistakeDistribution[mistakeCount] || 0) + 1;
-  
-  console.log('Updated Mistake Distribution:', updatedMistakeDistribution);
-  
-  // Recalculate win percentage
-  const gamesPlayed = stats.gamesPlayed + 1;
-  const perfectPuzzles = stats.perfectPuzzles + (isPerfectGame ? 1 : 0);
-  const winPercentage = Math.round((perfectPuzzles / gamesPlayed) * 100);
-  
-  console.log('Recalculated stats:', { gamesPlayed, perfectPuzzles, winPercentage });
-  
-  // Update max streaks if needed
-  const maxStreak = Math.max(stats.maxStreak || 0, currentStreak);
-  const maxPerfectStreak = Math.max(stats.maxPerfectStreak || 0, perfectStreak);
-  
-  console.log('Updated max streaks:', { maxStreak, maxPerfectStreak });
-  
-  // Save updated stats
-  stats.gamesPlayed = gamesPlayed;
-  stats.winPercentage = winPercentage;
-  stats.currentStreak = currentStreak;
-  stats.maxStreak = maxStreak;
-  stats.perfectStreak = perfectStreak;
-  stats.maxPerfectStreak = maxPerfectStreak;
-  stats.perfectPuzzles = perfectPuzzles;
-  stats.mistakeDistribution = updatedMistakeDistribution;
-  stats.mostRecentScore = mistakeCount; // Update with the latest mistake count
-  stats.lastPlayedDate = todayInEST;
-  
-  console.log('Stats Before Save:', stats);
-  
-  await stats.save();
-  
-  console.log('Stats Saved Successfully:', stats);
-  
-  res.status(200).json(stats);
-  
+    const { userId } = req.params;
+    const { correctAnswers, totalQuestions } = req.body;
+
+    if (correctAnswers === undefined || totalQuestions === undefined) {
+      return res.status(400).json({ message: 'Invalid payload: correctAnswers and totalQuestions are required.' });
+    }
+
+    const todayInEST = getTodayInEST();
+    const yesterdayInEST = getYesterdayInEST();
+
+    const stats = await Stats.findOne({ userId });
+
+    if (!stats) {
+      return res.status(404).json({ message: 'Stats not found for this user.' });
+    }
+
+    const isPerfectGame = correctAnswers === totalQuestions;
+
+    // Reset streaks if the user missed a day
+    if (stats.lastPlayedDate && stats.lastPlayedDate !== yesterdayInEST && stats.lastPlayedDate !== todayInEST) {
+      stats.currentStreak = 0;
+      stats.perfectStreak = 0;
+    }
+
+    // Update streaks if played consecutively
+    if (stats.lastPlayedDate === yesterdayInEST) {
+      stats.currentStreak += 1;
+      stats.perfectStreak = isPerfectGame ? stats.perfectStreak + 1 : 0;
+    } else if (stats.lastPlayedDate !== todayInEST) {
+      stats.currentStreak = 1;
+      stats.perfectStreak = isPerfectGame ? 1 : 0;
+    }
+
+    // Update other stats
+    const mistakeCount = Math.max(totalQuestions - correctAnswers, 0);
+    stats.mostRecentScore = mistakeCount;
+    stats.lastPlayedDate = todayInEST;
+    stats.gamesPlayed += 1;
+    stats.perfectPuzzles += isPerfectGame ? 1 : 0;
+    stats.winPercentage = Math.round((stats.perfectPuzzles / stats.gamesPlayed) * 100);
+    stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
+    stats.maxPerfectStreak = Math.max(stats.maxPerfectStreak, stats.perfectStreak);
+
+    // Update mistake distribution
+    stats.mistakeDistribution[mistakeCount] = (stats.mistakeDistribution[mistakeCount] || 0) + 1;
+
+    await stats.save();
+    res.status(200).json(stats);
   } catch (error) {
-  console.error('Error updating stats:', error);
-  res.status(500).json({ message: 'Failed to update stats.' });
+    console.error('Error updating stats:', error);
+    res.status(500).json({ message: 'Failed to update stats.' });
   }
-  };
+};
+
 
   
   
