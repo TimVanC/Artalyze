@@ -44,7 +44,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
   useEffect(() => {
     console.log('Most Recent Score:', stats.mostRecentScore);
   }, [stats.mostRecentScore]);
-  
+
 
   const handleStatsShare = () => {
     const shareableText = `
@@ -192,29 +192,30 @@ Perfect Games: ${stats.perfectPuzzles}
             </div>
             <hr className="separator" />
             <div className="mistake-distribution">
-  <h3>Mistake Distribution</h3>
-  {Object.keys(stats.mistakeDistribution).map((mistakeCount) => {
-    const value = stats.mistakeDistribution[mistakeCount] || 0;
-    const isHighlighted = parseInt(mistakeCount, 10) === stats.mostRecentScore;
-    const barWidth = Math.max((value / Math.max(...Object.values(stats.mistakeDistribution), 1)) * 100, 5);
+              <h3>Mistake Distribution</h3>
+              {Object.keys(stats.mistakeDistribution).map((mistakeCount) => {
+                const value = stats.mistakeDistribution[mistakeCount] || 0;
+                const isHighlighted = parseInt(mistakeCount, 10) === stats.mostRecentScore;
+                const barWidth = Math.max((value / Math.max(...Object.values(stats.mistakeDistribution), 1)) * 100, 5);
 
-    return (
-      <div className="distribution-bar-container" key={mistakeCount}>
-        <span className="mistake-label">{mistakeCount}</span>
-        <div className="distribution-bar">
-          <div
-            className={`bar-fill ${isHighlighted ? 'highlight' : ''}`}
-            style={{
-              width: `${barWidth}%`,
-            }}
-          >
-            <span className="bar-value">{value}</span>
-          </div>
-        </div>
-      </div>
-    );
-  })}
-</div>
+                return (
+                  <div className="distribution-bar-container" key={mistakeCount}>
+                    <span className="mistake-label">{mistakeCount}</span>
+                    <div className="distribution-bar">
+                      <div
+                        className={`bar-fill ${isHighlighted ? 'highlight' : ''} ${value === 0 ? 'zero-value' : ''}`}
+                        style={{
+                          width: `${barWidth}%`,
+                        }}
+                      >
+                        <span className="bar-value">{value}</span>
+                      </div>
+
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
 
 

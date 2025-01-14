@@ -136,8 +136,8 @@
 
 /* Specific styling for the value of 0 to ensure it's centered */
 .bar-fill.zero-value {
-    justify-content: center; /* Center the value if the count is zero */
-    background-color: #b0b0b0; /* Slightly different gray for zero values */
+    justify-content: center !important; /* Center the value if it's zero */
+    padding-right: 0 !important; /* Remove the right padding for better centering */
 }
 
 .frequency-value {
