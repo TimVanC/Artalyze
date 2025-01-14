@@ -108,234 +108,240 @@ const Game = () => {
     localStorage.setItem('triesRemaining', tries);
   };
 
-  // Function to be called on game completion
-  const handleGameComplete = async () => {
-    console.log("handleGameComplete called");
-    setIsGameComplete(true);
+// Function to be called on game completion
+const handleGameComplete = async () => {
+  console.log("handleGameComplete called");
+  setIsGameComplete(true);
 
-    // Fetch the latest selections from the backend
-    const latestSelections = await fetchSelections();
+  // Fetch the latest selections from the backend
+  const latestSelections = await fetchSelections();
 
-    if (!Array.isArray(latestSelections)) {
-      console.error("Invalid selections data format:", latestSelections);
-      return; // Exit gracefully if data is invalid
+  if (!Array.isArray(latestSelections)) {
+    console.error("Invalid selections data format:", latestSelections);
+    return; // Exit gracefully if data is invalid
+  }
+
+  console.log("Latest selections fetched:", latestSelections);
+
+  // Calculate correct answers with detailed debugging
+  const correctCount = latestSelections.reduce((count, selection, index) => {
+    console.log(`Selection ${index}:`, selection);
+    console.log(`Image Pair ${index}:`, imagePairs[index]);
+    if (
+      selection &&
+      imagePairs[index] &&
+      selection.selected === imagePairs[index].human
+    ) {
+      console.log(`Correct Match at index ${index}`);
+      return count + 1;
     }
+    console.log(`Mismatch at index ${index}`);
+    return count;
+  }, 0);
 
-    console.log("Latest selections fetched:", latestSelections);
+  console.log("Final Correct Answers Count (correctCount):", correctCount);
+  console.log("Total questions (imagePairs.length):", imagePairs.length);
 
-    // Calculate correct answers with detailed debugging
-    const correctCount = latestSelections.reduce((count, selection, index) => {
-      console.log(`Selection ${index}:`, selection);
-      console.log(`Image Pair ${index}:`, imagePairs[index]);
-      if (
-        selection &&
-        imagePairs[index] &&
-        selection.selected === imagePairs[index].human
-      ) {
-        console.log(`Correct Match at index ${index}`);
-        return count + 1;
-      }
-      console.log(`Mismatch at index ${index}`);
-      return count;
-    }, 0);
+  // Proceed with marking the game as played and updating stats
+  try {
+    const payload = {
+      correctAnswers: correctCount,
+      totalQuestions: imagePairs.length,
+    };
 
-    console.log("Final Correct Answers Count (correctCount):", correctCount);
-    console.log("Total questions (imagePairs.length):", imagePairs.length);
+    console.log("Sending payload to update stats:", payload);
 
-    // Proceed with marking the game as played and updating stats
-    try {
-      const payload = {
-        correctAnswers: correctCount,
-        totalQuestions: imagePairs.length,
-      };
+    const statsResponse = await axiosInstance.put(`/stats/${userId}`, payload, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+      },
+    });
 
-      console.log("Sending payload to update stats:", payload);
+    console.log("Stats updated successfully in handleGameComplete:", statsResponse.data);
+    await fetchAndSetStats(userId);
+    console.log("Stats re-fetched after game completion in handleGameComplete:", stats);
+    setTimeout(() => setIsStatsOpen(true), 400);
+  } catch (error) {
+    console.error("Error updating user stats:", error.response?.data || error.message);
+  }
+};
 
-      const statsResponse = await axiosInstance.put(`/stats/${userId}`, payload, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
+
+
+// Initialize game logic
+const initializeGame = async () => {
+  const today = getTodayInEST();
+  const isLoggedIn = isUserLoggedIn();
+
+  if (isLoggedIn && !userId) {
+    console.error('User is logged in but no userId found in localStorage.');
+    setError('User ID is missing. Please log in again.');
+    return;
+  }
+
+  try {
+    if (isLoggedIn) {
+      console.log('Checking if user has played today...');
+      const playStatusResponse = await axiosInstance.get('/game/check-today-status', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
       });
 
-      console.log("Stats updated successfully in handleGameComplete:", statsResponse.data);
-      await fetchAndSetStats(userId);
-      console.log("Stats re-fetched after game completion in handleGameComplete:", stats);
-      setTimeout(() => setIsStatsOpen(true), 400);
-    } catch (error) {
-      console.error("Error updating user stats:", error.response?.data || error.message);
-    }
-  };
+      const { hasPlayedToday, triesRemaining } = playStatusResponse.data;
 
-  // Initialize game logic
-  const initializeGame = async () => {
-    const today = getTodayInEST();
-    const isLoggedIn = isUserLoggedIn();
-
-    if (isLoggedIn && !userId) {
-      console.error('User is logged in but no userId found in localStorage.');
-      setError('User ID is missing. Please log in again.');
-      return;
-    }
-
-    try {
-      if (isLoggedIn) {
-        console.log('Checking if user has played today...');
-        const playStatusResponse = await axiosInstance.get('/game/check-today-status', {
+      if (!hasPlayedToday) {
+        console.log('New day detected. Resetting game state.');
+        const resetResponse = await axiosInstance.put('/stats/tries/reset', {}, {
           headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
         });
 
-        const { hasPlayedToday, triesRemaining } = playStatusResponse.data;
-
-        if (!hasPlayedToday) {
-          console.log('New day detected. Resetting game state.');
-          const resetResponse = await axiosInstance.put('/stats/tries/reset', {}, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-          });
-
-          setTriesLeft(resetResponse.data.triesRemaining || 3);
-          setSelections([]);
-          setImagePairs([]);
-          setIsGameComplete(false);
-          await fetchAndSetStats(userId);
-        } else {
-          setTriesLeft(triesRemaining);
-          setIsGameComplete(true);
-          restoreGameState();
-          setTimeout(() => setIsStatsOpen(true), 400);
-        }
-      } else {
-        const lastPlayed = localStorage.getItem('lastPlayedDate');
-        const storedTries = localStorage.getItem('triesRemaining');
-        const savedSelections = localStorage.getItem('selections');
-
-        if (lastPlayed !== today) {
-          console.log('Guest user: New day detected. Resetting game state.');
-          localStorage.setItem('triesRemaining', 3);
-          localStorage.setItem('lastPlayedDate', today);
-          setTriesLeft(3);
-          setSelections([]);
-          setImagePairs([]);
-          setIsGameComplete(false);
-        } else {
-          if (storedTries) {
-            setTriesLeft(parseInt(storedTries, 10));
-          }
-          if (savedSelections) {
-            setSelections(JSON.parse(savedSelections));
-          }
-        }
-      }
-
-      console.log("Fetching daily puzzle...");
-      const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
-      console.log("Daily puzzle response:", puzzleResponse.data);
-
-      if (puzzleResponse.data?.imagePairs?.length > 0) {
-        console.log("Setting image pairs...");
-        setImagePairs(puzzleResponse.data.imagePairs.map((pair) => ({
-          human: pair.humanImageURL,
-          ai: pair.aiImageURL,
-          images: Math.random() > 0.5
-            ? [pair.humanImageURL, pair.aiImageURL]
-            : [pair.aiImageURL, pair.humanImageURL],
-        })));
-      } else {
-        console.warn("No image pairs available for today.");
+        setTriesLeft(resetResponse.data.triesRemaining || 3);
+        setSelections([]);
         setImagePairs([]);
-      }
-
-      if (isLoggedIn && userId) {
+        setIsGameComplete(false);
         await fetchAndSetStats(userId);
-      }
-    } catch (error) {
-      console.error('Error during game initialization:', error.response?.data || error.message);
-      setError('Failed to initialize the game. Please try again later.');
-    }
-  };
-
-
-
-  // Restore game state function
-  const restoreGameState = () => {
-    const savedPairs = localStorage.getItem('completedPairs');
-    const savedSelections = localStorage.getItem('selections');
-
-    if (savedPairs) {
-      const pairs = JSON.parse(savedPairs);
-      setImagePairs(pairs);
-
-      if (savedSelections) {
-        const selections = JSON.parse(savedSelections);
-        setSelections(selections);
-
-        const firstSelectionIndex = selections.findIndex(
-          (selection) => selection && selection.selected
-        );
-
-        setTimeout(() => {
-          setCurrentIndex(firstSelectionIndex >= 0 ? firstSelectionIndex : 0);
-          if (swiperRef.current) {
-            swiperRef.current.slideToLoop(firstSelectionIndex >= 0 ? firstSelectionIndex : 0, 0);
-          }
-        }, 100);
       } else {
-        setTimeout(() => {
-          setCurrentIndex(0);
-          if (swiperRef.current) {
-            swiperRef.current.slideToLoop(0);
-          }
-        }, 100);
+        setTriesLeft(triesRemaining);
+        restoreGameState();
+        setIsGameComplete(true);
+        setTimeout(() => setIsStatsOpen(true), 400);
+      }
+    } else {
+      const lastPlayed = localStorage.getItem('lastPlayedDate');
+      const storedTries = localStorage.getItem('triesRemaining');
+      const savedSelections = localStorage.getItem('selections');
+
+      if (lastPlayed !== today) {
+        console.log('Guest user: New day detected. Resetting game state.');
+        localStorage.setItem('triesRemaining', 3);
+        localStorage.setItem('lastPlayedDate', today);
+        setTriesLeft(3);
+        setSelections([]);
+        setImagePairs([]);
+        setIsGameComplete(false);
+      } else {
+        if (storedTries) {
+          setTriesLeft(parseInt(storedTries, 10));
+        }
+        if (savedSelections) {
+          setSelections(JSON.parse(savedSelections));
+        }
       }
     }
-  };
 
-  // useEffect for game logic
-  useEffect(() => {
-    if (!isGameComplete) {
-      console.log('Game is not complete. Initializing game state.');
-      initializeGame({
-        isLoggedIn: isUserLoggedIn(),
-        userId,
-        setTriesLeft,
-        setSelections,
-        setImagePairs,
-        setIsGameComplete,
-        saveTriesToLocalStorage,
-        saveSelectionsToLocalStorage,
-        fetchAndSetStats,
-        restoreGameState,
-        setIsStatsOpen,
-        setError,
-      });
+    console.log("Fetching daily puzzle...");
+    const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
+    console.log("Daily puzzle response:", puzzleResponse.data);
+
+    if (puzzleResponse.data?.imagePairs?.length > 0) {
+      console.log("Setting image pairs...");
+      setImagePairs(puzzleResponse.data.imagePairs.map((pair) => ({
+        human: pair.humanImageURL,
+        ai: pair.aiImageURL,
+        images: Math.random() > 0.5
+          ? [pair.humanImageURL, pair.aiImageURL]
+          : [pair.aiImageURL, pair.humanImageURL],
+      })));
+      localStorage.setItem('completedPairs', JSON.stringify(puzzleResponse.data.imagePairs)); // Save the image pairs for persistence
     } else {
-      console.log('Game is complete. Restoring game state.');
-      restoreGameState();
+      console.warn("No image pairs available for today.");
+      setImagePairs([]);
     }
-  }, [userId, isGameComplete]);
 
-  // Updated useEffect for imagePairs
-  useEffect(() => {
-    console.log('Image pairs state updated:', imagePairs);
+    if (isLoggedIn && userId) {
+      await fetchAndSetStats(userId);
+    }
+  } catch (error) {
+    console.error('Error during game initialization:', error.response?.data || error.message);
+    setError('Failed to initialize the game. Please try again later.');
+  }
+};
 
-    if (imagePairs.length > 0) {
-      console.log('Initializing Swiper with current index:', currentIndex);
+
+// Restore game state function
+const restoreGameState = () => {
+  const savedPairs = localStorage.getItem('completedPairs');
+  const savedSelections = localStorage.getItem('selections');
+
+  if (savedPairs) {
+    const pairs = JSON.parse(savedPairs);
+    setImagePairs(
+      pairs.map(pair => ({
+        human: pair.humanImageURL,
+        ai: pair.aiImageURL,
+        images: Math.random() > 0.5
+          ? [pair.humanImageURL, pair.aiImageURL]
+          : [pair.aiImageURL, pair.humanImageURL],
+      }))
+    );
+
+    if (savedSelections) {
+      const selections = JSON.parse(savedSelections);
+      setSelections(selections);
+
+      const firstSelectionIndex = selections.findIndex(
+        (selection) => selection && selection.selected
+      );
+
       setTimeout(() => {
+        setCurrentIndex(firstSelectionIndex >= 0 ? firstSelectionIndex : 0);
         if (swiperRef.current) {
-          swiperRef.current.slideToLoop(currentIndex, 0);
+          swiperRef.current.slideToLoop(firstSelectionIndex >= 0 ? firstSelectionIndex : 0, 0);
         }
-      }, 100); // Ensure Swiper is fully initialized
+      }, 100);
     } else {
-      console.log('No image pairs available to display.');
+      setTimeout(() => {
+        setCurrentIndex(0);
+        if (swiperRef.current) {
+          swiperRef.current.slideToLoop(0);
+        }
+      }, 100);
     }
-  }, [currentIndex, imagePairs]);
+  } else {
+    console.warn("No completed pairs found in localStorage.");
+    setImagePairs([]);
+    setSelections([]);
+  }
+};
 
 
-  // Save selections to localStorage whenever they are updated
-  useEffect(() => {
-    if (selections.length > 0) {
-      localStorage.setItem('selections', JSON.stringify(selections));
-    }
-  }, [selections]);
+// useEffect for game logic
+useEffect(() => {
+  if (!isGameComplete) {
+    console.log('Game is not complete. Initializing game state.');
+    initializeGame();
+  } else {
+    console.log('Game is complete. Restoring game state.');
+    restoreGameState();
+  }
+}, [userId, isGameComplete]);
+
+
+// Updated useEffect for imagePairs
+useEffect(() => {
+  console.log('Image pairs state updated:', imagePairs);
+
+  if (imagePairs.length > 0) {
+    console.log('Initializing Swiper with current index:', currentIndex);
+    setTimeout(() => {
+      if (swiperRef.current) {
+        swiperRef.current.slideToLoop(currentIndex, 0);
+      }
+    }, 100); // Ensure Swiper is fully initialized
+  } else {
+    console.log('No image pairs available to display.');
+  }
+}, [currentIndex, imagePairs]);
+
+
+
+
+// Save selections to localStorage whenever they are updated
+useEffect(() => {
+  if (selections.length > 0) {
+    localStorage.setItem('selections', JSON.stringify(selections));
+  }
+}, [selections]);
+
 
 
   const fetchAndSetStats = async () => {
@@ -571,7 +577,7 @@ const Game = () => {
           <FaCog className="icon" title="Settings" onClick={() => setIsSettingsOpen(true)} />
         </div>
       </div>
-
+  
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
       <StatsModal
         isOpen={isStatsOpen}
@@ -579,13 +585,13 @@ const Game = () => {
         stats={stats} // Ensure stats are passed here
         isLoggedIn={isLoggedIn}
       />
-
+  
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         isLoggedIn={Boolean(localStorage.getItem('authToken'))}
       />
-
+  
       {!isGameComplete && (
         <>
           <h1>Guess the human painting from each pair!</h1>
@@ -602,7 +608,7 @@ const Game = () => {
               ))}
             </div>
           </div>
-
+  
           <div className={`status-bar ${showOverlay ? 'blurred' : ''}`}>
             <div className="tries-left">
               <span>Tries Left:</span>
@@ -611,7 +617,7 @@ const Game = () => {
               ))}
             </div>
           </div>
-
+  
           {imagePairs.length > 0 ? (
             <Swiper
               loop={true}
@@ -645,13 +651,13 @@ const Game = () => {
           ) : (
             <p>Loading images...</p> // Graceful fallback for no imagePairs
           )}
-
+  
           {enlargedImage && (
             <div className="enlarge-modal" onClick={closeEnlargedImage}>
               <img src={enlargedImage} alt="Enlarged view" className="enlarged-image" />
             </div>
           )}
-
+  
           <div className="navigation-buttons">
             {imagePairs.map((_, index) => (
               <button
@@ -666,7 +672,7 @@ const Game = () => {
               </button>
             ))}
           </div>
-
+  
           <button
             className={`submit-button ${isSubmitEnabled ? 'enabled' : 'disabled'}`}
             onClick={handleSubmit}
@@ -676,8 +682,7 @@ const Game = () => {
           </button>
         </>
       )}
-
-
+  
       {showOverlay && (
         <div className="results-overlay">
           <div className="overlay-content">
@@ -692,7 +697,7 @@ const Game = () => {
           </div>
         </div>
       )}
-
+  
       {isGameComplete && (
         <div className="completion-screen">
           <p className="completion-message">{selectedCompletionMessage}</p>
@@ -701,7 +706,7 @@ const Game = () => {
             {imagePairs.map((pair, index) => {
               const selection = selections[index];
               const isCorrect = selection?.selected === pair.human;
-
+  
               return (
                 <div key={index} className="pair-thumbnails-horizontal">
                   {/* Ensure human images are always on the left */}
@@ -735,11 +740,10 @@ const Game = () => {
             >
               <FaShareAlt /> Share
             </button>
-
           </div>
         </div>
       )}
-
+  
       {enlargedImage && (
         <div className="enlarge-modal" onClick={closeEnlargedImage}>
           <img src={enlargedImage} alt="Enlarged view" className="enlarged-image" />
@@ -747,6 +751,7 @@ const Game = () => {
       )}
     </div>
   );
+  
 
 
 };
