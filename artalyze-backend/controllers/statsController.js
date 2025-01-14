@@ -15,10 +15,11 @@ exports.getUserStats = async (req, res) => {
     const todayInEST = getTodayInEST();
     const yesterdayInEST = getYesterdayInEST();
 
-    // Reset streaks if the user missed a day
+    // Reset streaks and mostRecentScore if the user missed a day
     if (stats.lastPlayedDate && stats.lastPlayedDate !== yesterdayInEST && stats.lastPlayedDate !== todayInEST) {
       stats.currentStreak = 0;
       stats.perfectStreak = 0;
+      stats.mostRecentScore = null; // Reset mostRecentScore at midnight
       await stats.save(); // Persist changes to the database
     }
 
@@ -32,7 +33,7 @@ exports.getUserStats = async (req, res) => {
       maxPerfectStreak: stats.maxPerfectStreak || 0,
       perfectPuzzles: stats.perfectPuzzles || 0,
       lastPlayedDate: stats.lastPlayedDate || null,
-      mostRecentScore: stats.mostRecentScore !== undefined ? stats.mostRecentScore : null, // Explicit inclusion
+      mostRecentScore: stats.mostRecentScore, // Explicit inclusion, can be null
       mistakeDistribution: stats.mistakeDistribution || {},
     };
 
@@ -42,8 +43,6 @@ exports.getUserStats = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch user stats.' });
   }
 };
-
-
 
 // Update user statistics
 exports.updateUserStats = async (req, res) => {
