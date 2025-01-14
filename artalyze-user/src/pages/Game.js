@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaInfoCircle, FaChartBar, FaCog, FaShareAlt, FaPalette } from 'react-icons/fa';
 import SwiperCore, { Swiper, SwiperSlide } from 'swiper/react';
 import { getTodayInEST } from '../utils/dateUtils';
+import { calculatePuzzleNumber } from '../utils/puzzleUtils';
 import 'swiper/css';
 import axiosInstance from '../axiosInstance';
 import InfoModal from '../components/InfoModal';
@@ -452,26 +453,40 @@ useEffect(() => {
 
 
   const handleCompletionShare = (selections, imagePairs) => {
+    // Calculate the score based on correct selections
+    const score = selections.filter((isCorrect) => isCorrect).length;
+  
+    // Get the puzzle number dynamically
+    const puzzleNumber = calculatePuzzleNumber();
+  
+    // Build the visual representation of results
+    const resultsVisual = selections
+      .map((isCorrect) => (isCorrect ? '🟢' : '🔴'))
+      .join(' ');
+  
+    // Add placeholder for painting emojis
+    const paintings = '🖼️ '.repeat(imagePairs.length).trim();
+  
+    // Construct the shareable text
     const shareableText = `
-      🎨 Artalyze Results 🎨
-      ${selections
-        .map((isHumanSelection, index) => {
-          const pair = imagePairs[index];
-          return `Pair ${index + 1}: ${isHumanSelection ? 'Correct' : 'Wrong'} (${pair.human})`;
-        })
-        .join('\n')}
-    `;
-
+  Artalyze #${puzzleNumber} ${score}/${imagePairs.length}
+  ${resultsVisual}
+  ${paintings}
+  Try it at: artalyze.app
+  `;
+  
+    // Check if the device supports native sharing
     if (navigator.share) {
       navigator
         .share({
-          title: 'My Artalyze Results',
-          text: shareableText,
+          title: `Artalyze #${puzzleNumber}`,
+          text: shareableText.trim(),
         })
         .catch((error) => console.log('Error sharing:', error));
     } else {
+      // Fallback to clipboard copy if native sharing is unavailable
       navigator.clipboard
-        .writeText(shareableText)
+        .writeText(shareableText.trim())
         .then(() => {
           alert('Results copied to clipboard! You can now paste it anywhere.');
         })
@@ -480,6 +495,9 @@ useEffect(() => {
         });
     }
   };
+  
+  
+  
 
   const handleLongPress = (image) => {
     clearTimeout(longPressTimer.current);

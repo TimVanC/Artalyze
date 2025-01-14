@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './Home.css';
 import logo from '../assets/images/artalyze-logo.png';
 import axiosInstance from '../axiosInstance';
+import { calculatePuzzleNumber } from '../utils/puzzleUtils'; // Import the shared utility
 
 const Home = () => {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ const Home = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
-    setIsAuthenticated(!!token); // Update state based on token presence
+    setIsAuthenticated(!!token);
 
     const fetchPlayStatus = async () => {
       if (token) {
@@ -37,8 +38,8 @@ const Home = () => {
       });
       setDate(formattedDate);
 
-      const startDate = new Date('2024-12-12'); // Adjust start date as needed
-      const puzzleNo = Math.floor((now - startDate) / (1000 * 60 * 60 * 24)) + 1;
+      // Use the utility to get the puzzle number
+      const puzzleNo = calculatePuzzleNumber();
       setPuzzleNumber(puzzleNo);
     };
 
