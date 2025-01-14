@@ -170,28 +170,28 @@ const Game = () => {
   const initializeGame = async () => {
     const today = getTodayInEST();
     const isLoggedIn = isUserLoggedIn();
-  
+
     if (isLoggedIn && !userId) {
       console.error('User is logged in but no userId found in localStorage.');
       setError('User ID is missing. Please log in again.');
       return;
     }
-  
+
     try {
       if (isLoggedIn) {
         console.log('Checking if user has played today...');
         const playStatusResponse = await axiosInstance.get('/game/check-today-status', {
           headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
         });
-  
+
         const { hasPlayedToday, triesRemaining } = playStatusResponse.data;
-  
+
         if (!hasPlayedToday) {
           console.log('New day detected. Resetting game state.');
           const resetResponse = await axiosInstance.put('/stats/tries/reset', {}, {
             headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
           });
-  
+
           setTriesLeft(resetResponse.data.triesRemaining || 3);
           setSelections([]);
           setImagePairs([]);
@@ -207,7 +207,7 @@ const Game = () => {
         const lastPlayed = localStorage.getItem('lastPlayedDate');
         const storedTries = localStorage.getItem('triesRemaining');
         const savedSelections = localStorage.getItem('selections');
-  
+
         if (lastPlayed !== today) {
           console.log('Guest user: New day detected. Resetting game state.');
           localStorage.setItem('triesRemaining', 3);
@@ -225,11 +225,11 @@ const Game = () => {
           }
         }
       }
-  
+
       console.log("Fetching daily puzzle...");
       const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
       console.log("Daily puzzle response:", puzzleResponse.data);
-  
+
       if (puzzleResponse.data?.imagePairs?.length > 0) {
         console.log("Setting image pairs...");
         setImagePairs(puzzleResponse.data.imagePairs.map((pair) => ({
@@ -243,7 +243,7 @@ const Game = () => {
         console.warn("No image pairs available for today.");
         setImagePairs([]);
       }
-  
+
       if (isLoggedIn && userId) {
         await fetchAndSetStats(userId);
       }
@@ -252,8 +252,8 @@ const Game = () => {
       setError('Failed to initialize the game. Please try again later.');
     }
   };
-  
-  
+
+
 
   // Restore game state function
   const restoreGameState = () => {
@@ -313,21 +313,21 @@ const Game = () => {
     }
   }, [userId, isGameComplete]);
 
-// Updated useEffect for imagePairs
-useEffect(() => {
-  console.log('Image pairs state updated:', imagePairs);
+  // Updated useEffect for imagePairs
+  useEffect(() => {
+    console.log('Image pairs state updated:', imagePairs);
 
-  if (imagePairs.length > 0) {
+    if (imagePairs.length > 0) {
       console.log('Initializing Swiper with current index:', currentIndex);
       setTimeout(() => {
-          if (swiperRef.current) {
-              swiperRef.current.slideToLoop(currentIndex, 0);
-          }
+        if (swiperRef.current) {
+          swiperRef.current.slideToLoop(currentIndex, 0);
+        }
       }, 100); // Ensure Swiper is fully initialized
-  } else {
+    } else {
       console.log('No image pairs available to display.');
-  }
-}, [currentIndex, imagePairs]);
+    }
+  }, [currentIndex, imagePairs]);
 
 
   // Save selections to localStorage whenever they are updated
@@ -704,22 +704,23 @@ useEffect(() => {
 
               return (
                 <div key={index} className="pair-thumbnails-horizontal">
-                  {pair.images.map((image, imgIndex) => (
-                    <div
-                      key={imgIndex}
-                      className={`thumbnail-container ${isCorrect && image === pair.human
-                        ? 'correct'
-                        : selection?.selected === image
-                          ? 'incorrect'
-                          : ''
-                        }`}
-                    >
-                      <img
-                        src={image}
-                        alt={`Painting ${imgIndex + 1} for pair ${index + 1}`}
-                      />
-                    </div>
-                  ))}
+                  {/* Ensure human images are always on the left */}
+                  <div
+                    className={`thumbnail-container ${isCorrect ? 'correct' : selection?.selected === pair.human ? 'incorrect' : ''}`}
+                  >
+                    <img
+                      src={pair.human}
+                      alt={`Human Painting for pair ${index + 1}`}
+                    />
+                  </div>
+                  <div
+                    className={`thumbnail-container ${isCorrect ? '' : selection?.selected === pair.ai ? 'incorrect' : ''}`}
+                  >
+                    <img
+                      src={pair.ai}
+                      alt={`AI Painting for pair ${index + 1}`}
+                    />
+                  </div>
                 </div>
               );
             })}

@@ -280,36 +280,44 @@ h1 {
 .pair-thumbnails-horizontal {
   display: flex;
   flex-direction: row;
+  justify-content: space-between; /* Ensure even spacing */
   gap: 10px;
+  margin-bottom: 16px; /* Add some spacing between rows */
 }
 
 .thumbnail-container {
-  width: 100px;
-  height: 100px;
+  width: 100px; /* Fixed width */
+  height: 100px; /* Fixed height */
   border-radius: 5px;
-  margin: 5px;
-  overflow: hidden; /* Ensure images fit within container */
+  margin: 0; /* Reset margins for uniformity */
+  overflow: hidden; /* Crop images to fit the container */
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #f4f4f4; /* Neutral background for contrast */
+  background-color: #f4f4f4; /* Neutral background for unselected images */
+  transition: transform 0.3s ease; /* Add subtle hover animation */
+}
+
+.thumbnail-container:hover {
+  transform: scale(1.05); /* Slightly enlarge on hover */
 }
 
 .thumbnail-container.correct {
-  border: 3px solid #4CAF50; /* Green for correct */
-  box-shadow: 0 0 10px 4px rgba(76, 175, 80, 0.4);
+  border: 3px solid #4CAF50; /* Green border for correct selection */
+  box-shadow: 0 0 10px 4px rgba(76, 175, 80, 0.4); /* Add green glow */
 }
 
 .thumbnail-container.incorrect {
-  border: 3px solid #FF3D3D; /* Red for incorrect */
-  box-shadow: 0 0 10px 4px rgba(255, 61, 61, 0.4);
+  border: 3px solid #FF3D3D; /* Red border for incorrect selection */
+  box-shadow: 0 0 10px 4px rgba(255, 61, 61, 0.4); /* Add red glow */
 }
 
 .thumbnail-container img {
-  width: 100%;
+  width: 100%; /* Stretch image to fit */
   height: 100%;
-  object-fit: cover;
+  object-fit: cover; /* Crop image to fill container */
 }
+
 
 /* Completion Buttons */
 .completion-buttons {

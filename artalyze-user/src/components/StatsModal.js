@@ -22,6 +22,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
   const touchStartY = useRef(null);
   const hasAnimatedStats = useRef(false);
 
+  // Animate mistake distribution bars when stats are updated
   useEffect(() => {
     if (isOpen) {
       console.log(`StatsModal opened. isLoggedIn: ${isLoggedIn}`);
@@ -39,6 +40,37 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
       }
     }
   }, [isOpen, stats.mistakeDistribution, isLoggedIn]);
+
+  const handleStatsShare = () => {
+    const shareableText = `
+🎨 Artalyze Stats 🎨
+Games Played: ${stats.gamesPlayed}
+Win %: ${stats.winPercentage}%
+Current Streak: ${stats.currentStreak}
+Max Streak: ${stats.maxStreak}
+Perfect Streak: ${stats.perfectStreak}
+Max Perfect Streak: ${stats.maxPerfectStreak}
+Perfect Games: ${stats.perfectPuzzles}
+    `;
+
+    if (navigator.share) {
+      navigator
+        .share({
+          title: 'My Artalyze Stats',
+          text: shareableText,
+        })
+        .catch((error) => console.log('Error sharing:', error));
+    } else {
+      navigator.clipboard
+        .writeText(shareableText)
+        .then(() => {
+          alert('Stats copied to clipboard! You can now paste it anywhere.');
+        })
+        .catch((error) => {
+          console.error('Failed to copy:', error);
+        });
+    }
+  };
 
   if (!isOpen && !isDismissing) return null;
 
@@ -65,15 +97,14 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
 
   return (
     <div
-      className={`stats-overlay ${isDismissing ? 'transparent' : ''}`}
-      onTouchStart={handleTouchStart} // Detect the start of the swipe
-      onTouchMove={handleTouchMove}  // Detect the swipe-down gesture
-    >
-      <div className={`stats-overlay-content ${isDismissing ? 'slide-down' : ''}`}>
-        <span className="close-icon" onClick={handleDismiss}>
-          ✖
-        </span>
-
+    className={`stats-overlay ${isDismissing ? 'transparent' : ''}`}
+    onTouchStart={handleTouchStart} // Detect the start of the swipe
+    onTouchMove={handleTouchMove}  // Detect the swipe-down gesture
+  >
+    <div className={`stats-overlay-content ${isDismissing ? 'slide-down' : ''}`}>
+      <span className="close-icon" onClick={handleDismiss}>
+        ✖
+      </span>
         {isLoggedIn ? (
           <>
             <h2 className="stats-header">Your Stats</h2>
@@ -81,7 +112,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.gamesPlayed} duration={1.5} />
+                    <CountUp start={0} end={stats.gamesPlayed} duration={3} />
                   ) : (
                     stats.gamesPlayed
                   )}
@@ -91,7 +122,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.winPercentage} duration={1.5} />
+                    <CountUp start={0} end={stats.winPercentage} duration={3} />
                   ) : (
                     stats.winPercentage
                   )}
@@ -101,7 +132,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.currentStreak} duration={1.5} />
+                    <CountUp start={0} end={stats.currentStreak} duration={3} />
                   ) : (
                     stats.currentStreak
                   )}
@@ -111,7 +142,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.maxStreak} duration={1.5} />
+                    <CountUp start={0} end={stats.maxStreak} duration={3} />
                   ) : (
                     stats.maxStreak
                   )}
@@ -120,11 +151,33 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               </div>
             </div>
             <hr className="separator" />
+            <div className="stats-overview">
+              <div className="stat-item">
+                <div className="stat-value">
+                  {shouldAnimateNumbers ? (
+                    <CountUp start={0} end={stats.perfectStreak} duration={3} />
+                  ) : (
+                    stats.perfectStreak
+                  )}
+                </div>
+                <div>Perfect Streak</div>
+              </div>
+              <div className="stat-item">
+                <div className="stat-value">
+                  {shouldAnimateNumbers ? (
+                    <CountUp start={0} end={stats.maxPerfectStreak} duration={3} />
+                  ) : (
+                    stats.maxPerfectStreak
+                  )}
+                </div>
+                <div>Max Perfect Streak</div>
+              </div>
+            </div>
             <div className="perfect-puzzles">
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.perfectPuzzles} duration={1.5} />
+                    <CountUp start={0} end={stats.perfectPuzzles} duration={3} />
                   ) : (
                     stats.perfectPuzzles
                   )}
@@ -135,36 +188,25 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
             <hr className="separator" />
             <div className="mistake-distribution">
               <h3>Mistake Distribution</h3>
-              {Object.keys(stats.mistakeDistribution).map((mistakeCount) => {
+              {Object.keys(stats.mistakeDistribution || {}).map((mistakeCount) => {
                 const value = animatedBars[mistakeCount] || 0;
+                const isActive = parseInt(mistakeCount, 10) === stats.mostRecentScore;
                 const barWidth = Math.max((value / maxValue) * 100, 5);
 
                 return (
                   <div className="distribution-bar-container" key={mistakeCount}>
                     <span className="mistake-label">{mistakeCount}</span>
-                    <div className="distribution-bar">
+                    <div
+                      className={`distribution-bar ${isActive ? 'active most-recent' : ''}`}
+                    >
                       <div
                         className="bar-fill"
                         style={{
                           width: `${barWidth}%`,
                           minWidth: '5%',
-                          backgroundColor: '#4d73af',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: value === 0 ? 'center' : 'flex-end',
-                          transition: 'width 1s ease-out',
-                          paddingRight: value > 0 ? '5px' : '0',
                         }}
                       >
-                        <span
-                          className="bar-value"
-                          style={{
-                            color: '#ffffff',
-                            marginRight: value > 0 ? '5px' : '0',
-                          }}
-                        >
-                          {value}
-                        </span>
+                        <span className="bar-value">{value}</span>
                       </div>
                     </div>
                   </div>
@@ -172,24 +214,30 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
               })}
             </div>
             <hr className="separator" />
-            <button className="share-button" onClick={() => handleShare(stats)}>
+            <button className="share-button" onClick={handleStatsShare}>
               <FaShareAlt /> Share
             </button>
           </>
         ) : (
-          <>
-            <img src={logo} alt="Artalyze Logo" className="stats-logo" />
-            <h2 className="non-logged-in-message">Track Your Artalyze Stats</h2>
-            <p className="non-logged-in-subtext">
+          <div className="guest-stats-content">
+            <img
+              src={logo}
+              alt="Track your stats illustration"
+              className="guest-stats-image"
+            />
+            <h2>Track Your Artalyze Stats</h2>
+            <p>
               Register to follow your streaks, total completed puzzles, win rate, and more.
             </p>
             <button
               className="cta-button"
-              onClick={() => (window.location.href = '/login')}
+              onClick={() => {
+                window.location.href = '/register';
+              }}
             >
               Create a Free Account
             </button>
-          </>
+          </div>
         )}
       </div>
     </div>
