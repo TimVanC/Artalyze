@@ -222,8 +222,16 @@ Perfect Games: ${stats.perfectPuzzles}
               <h3>Mistake Distribution</h3>
               {Object.keys(stats.mistakeDistribution).map((mistakeCount) => {
                 const value = stats.mistakeDistribution[mistakeCount] || 0;
-                const isHighlighted = parseInt(mistakeCount, 10) === stats.mostRecentScore;
+                const isHighlighted = parseInt(mistakeCount, 10) === stats.mostRecentScore; // Correct comparison for index 0
                 const barWidth = Math.max((value / Math.max(...Object.values(stats.mistakeDistribution), 1)) * 100, 5);
+
+                // Debugging the values
+                console.log({
+                  mistakeCount,
+                  mostRecentScore: stats.mostRecentScore,
+                  isHighlighted,
+                  className: `bar-fill ${isHighlighted ? 'highlight' : ''} ${value === 0 ? 'zero-value' : ''}`
+                });
 
                 return (
                   <div className="distribution-bar-container" key={mistakeCount}>
@@ -237,13 +245,11 @@ Perfect Games: ${stats.perfectPuzzles}
                       >
                         <span className="bar-value">{value}</span>
                       </div>
-
                     </div>
                   </div>
                 );
               })}
             </div>
-
 
 
 

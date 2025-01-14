@@ -1,12 +1,13 @@
 const Stats = require('../models/Stats');
 const { getTodayInEST, getYesterdayInEST } = require('../utils/dateUtils');
 
-// Fetch user statistics
+// Get user statistics
 exports.getUserStats = async (req, res) => {
   try {
     const { userId } = req.params;
 
     const stats = await Stats.findOne({ userId });
+
     if (!stats) {
       return res.status(404).json({ message: 'Statistics not found for this user.' });
     }
@@ -21,12 +22,27 @@ exports.getUserStats = async (req, res) => {
       await stats.save(); // Persist changes to the database
     }
 
-    res.status(200).json(stats);
+    // Ensure `mostRecentScore` is explicitly included
+    const response = {
+      gamesPlayed: stats.gamesPlayed || 0,
+      winPercentage: stats.winPercentage || 0,
+      currentStreak: stats.currentStreak || 0,
+      maxStreak: stats.maxStreak || 0,
+      perfectStreak: stats.perfectStreak || 0,
+      maxPerfectStreak: stats.maxPerfectStreak || 0,
+      perfectPuzzles: stats.perfectPuzzles || 0,
+      lastPlayedDate: stats.lastPlayedDate || null,
+      mostRecentScore: stats.mostRecentScore !== undefined ? stats.mostRecentScore : null, // Explicit inclusion
+      mistakeDistribution: stats.mistakeDistribution || {},
+    };
+
+    res.status(200).json(response);
   } catch (error) {
     console.error('Error fetching user stats:', error);
-    res.status(500).json({ message: 'Server error while fetching statistics.' });
+    res.status(500).json({ message: 'Failed to fetch user stats.' });
   }
 };
+
 
 
 // Update user statistics
@@ -65,8 +81,29 @@ exports.updateUserStats = async (req, res) => {
       stats.perfectStreak = isPerfectGame ? 1 : 0;
     }
 
-    // Update other stats
+    // Calculate the mistake count
     const mistakeCount = Math.max(totalQuestions - correctAnswers, 0);
+
+    // Initialize mistakeDistribution if undefined
+    if (!stats.mistakeDistribution) {
+      stats.mistakeDistribution = {
+        '0': 0,
+        '1': 0,
+        '2': 0,
+        '3': 0,
+        '4': 0,
+        '5': 0,
+      };
+    }
+
+    // Update mistake distribution
+    stats.mistakeDistribution[mistakeCount] =
+      (stats.mistakeDistribution[mistakeCount] || 0) + 1;
+
+    // Mark the nested field as modified
+    stats.markModified('mistakeDistribution');
+
+    // Update other stats
     stats.mostRecentScore = mistakeCount;
     stats.lastPlayedDate = todayInEST;
     stats.gamesPlayed += 1;
@@ -75,8 +112,16 @@ exports.updateUserStats = async (req, res) => {
     stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
     stats.maxPerfectStreak = Math.max(stats.maxPerfectStreak, stats.perfectStreak);
 
-    // Update mistake distribution
-    stats.mistakeDistribution[mistakeCount] = (stats.mistakeDistribution[mistakeCount] || 0) + 1;
+    console.log('Updated stats:', {
+      gamesPlayed: stats.gamesPlayed,
+      winPercentage: stats.winPercentage,
+      currentStreak: stats.currentStreak,
+      maxStreak: stats.maxStreak,
+      perfectStreak: stats.perfectStreak,
+      maxPerfectStreak: stats.maxPerfectStreak,
+      mistakeDistribution: stats.mistakeDistribution,
+      mostRecentScore: stats.mostRecentScore,
+    });
 
     await stats.save();
     res.status(200).json(stats);
@@ -86,9 +131,6 @@ exports.updateUserStats = async (req, res) => {
   }
 };
 
-
-  
-  
 
 // Reset all user statistics
 exports.resetUserStats = async (req, res) => {

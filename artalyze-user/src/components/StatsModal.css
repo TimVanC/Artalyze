@@ -122,11 +122,11 @@
     border-radius: 5px;
     padding-right: 5px; /* Adding some padding to the right for spacing */
     transition: background-color 0.3s ease, width 0.5s ease; /* Smooth transition for highlighting and width */
-}
-
-.bar-fill.highlight {
+  }
+  
+  .bar-fill.highlight {
     background-color: #4d73af !important; /* Highlight blue for the current bar */
-}
+  }
 
 .bar-value {
     color: white; /* Make it stand out on the bar fill */
@@ -140,6 +140,11 @@
     padding-right: 0 !important; /* Remove the right padding for better centering */
 }
 
+.bar-fill.zero-value.highlight {
+    background-color: #4d73af !important; /* Use highlight color for zero-value bar */
+    justify-content: center !important;
+  }
+
 .frequency-value {
     margin-left: 10px;
     font-size: 14px;
@@ -148,6 +153,7 @@
     position: absolute;
     right: 10px;
 }
+
 
 
 
