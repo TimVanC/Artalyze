@@ -114,13 +114,18 @@
 
 .bar-fill {
     height: 100%;
-    background-color: #4d73af; /* Blue color for the bar */
+    background-color: #b0b0b0; /* Darker gray for better contrast */
     position: relative;
     display: flex;
     align-items: center;
     justify-content: flex-end; /* Align value to the end of the bar */
     border-radius: 5px;
     padding-right: 5px; /* Adding some padding to the right for spacing */
+    transition: background-color 0.3s ease, width 0.5s ease; /* Smooth transition for highlighting and width */
+}
+
+.bar-fill.highlight {
+    background-color: #4d73af !important; /* Highlight blue for the current bar */
 }
 
 .bar-value {
@@ -132,6 +137,7 @@
 /* Specific styling for the value of 0 to ensure it's centered */
 .bar-fill.zero-value {
     justify-content: center; /* Center the value if the count is zero */
+    background-color: #b0b0b0; /* Slightly different gray for zero values */
 }
 
 .frequency-value {
@@ -142,6 +148,9 @@
     position: absolute;
     right: 10px;
 }
+
+
+
 
 /* Share Button Styles */
 .share-button {
