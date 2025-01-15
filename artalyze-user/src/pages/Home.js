@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './Home.css';
 import logo from '../assets/images/artalyze-logo.png';
 import axiosInstance from '../axiosInstance';
-import { calculatePuzzleNumber } from '../utils/puzzleUtils'; // Import the shared utility
+import { calculatePuzzleNumber } from '../utils/puzzleUtils';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ const Home = () => {
   const [hasPlayedToday, setHasPlayedToday] = useState(false);
   const [date, setDate] = useState('');
   const [puzzleNumber, setPuzzleNumber] = useState(0);
+  const [loading, setLoading] = useState(true); // Loading state
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -37,14 +38,15 @@ const Home = () => {
         year: 'numeric',
       });
       setDate(formattedDate);
-
-      // Use the utility to get the puzzle number
       const puzzleNo = calculatePuzzleNumber();
       setPuzzleNumber(puzzleNo);
     };
 
     fetchPlayStatus();
     updateDateAndPuzzle();
+
+    // Simulate loading time
+    setTimeout(() => setLoading(false), 750);
   }, []);
 
   const handlePlayClick = () => {
@@ -55,15 +57,19 @@ const Home = () => {
     navigate('/login');
   };
 
-  return (
-    <div className="home-container">
+  return loading ? (
+    <div className="full-page-loading-screen">
+      <img src={logo} alt="Artalyze Logo" className="loading-logo" />
+      <div className="full-page-progress-bar">
+        <div className="full-page-progress-fill"></div>
+      </div>
+    </div>
+  ) : (
+    <div className="home-container fade-in">
       <img src={logo} alt="Artalyze Logo" className="home-logo" />
       <h1 className="home-title">Artalyze</h1>
       <p className="home-description">Can you spot the human masterpiece?</p>
-      <button
-        className="play-button"
-        onClick={handlePlayClick}
-      >
+      <button className="play-button" onClick={handlePlayClick}>
         {hasPlayedToday ? 'See Stats' : 'Play'}
       </button>
       {!isAuthenticated && (
@@ -78,6 +84,8 @@ const Home = () => {
       </div>
     </div>
   );
+
+
 };
 
 export default Home;
