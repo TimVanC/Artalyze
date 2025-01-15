@@ -313,7 +313,8 @@ h1 {
   justify-content: center;
   align-items: center;
   background-color: #f4f4f4; /* Neutral background for unselected images */
-  transition: transform 0.3s ease; /* Add subtle hover animation */
+  transition: transform 0.3s ease;
+  animation: none; /* Add subtle hover animation */
 }
 
 .thumbnail-container:hover {
@@ -474,3 +475,29 @@ h1 {
     transform: scale(0.9);
   }
 }
+
+
+/* Animation for fade-in effect */
+@keyframes pulseEffect {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.thumbnail-container.animate-pulse {
+  animation: pulseEffect 0.6s ease-in-out;
+  animation-delay: var(--animation-delay, 0s); /* Staggered delay */
+}
+
+
+
+

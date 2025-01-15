@@ -72,6 +72,7 @@ const Game = () => {
   const [imagePairs, setImagePairs] = useState([]);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [isDisappearing, setIsDisappearing] = useState(false);
+  const [isStatsModalDismissed, setIsStatsModalDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const swiperRef = useRef(null);
@@ -342,6 +343,19 @@ const Game = () => {
     }
   }, [selections]);
 
+  useEffect(() => {
+    if (isStatsModalDismissed) {
+      document.querySelectorAll('.thumbnail-container.pulse').forEach((el, index) => {
+        console.log(`Applying animation to element ${index + 1}`);
+        el.style.animationDelay = `${index * 0.1}s`; // Optional: Staggered animation delay
+        el.classList.add('animate-pulse');
+      });
+    }
+  }, [isStatsModalDismissed]);
+  
+  
+
+
   const fetchAndSetStats = async () => {
     const userId = localStorage.getItem("userId");
     if (!userId) {
@@ -571,6 +585,11 @@ const Game = () => {
     setCurrentIndex(swiper.realIndex);
   };
 
+  const handleStatsModalClose = () => {
+    setIsStatsOpen(false);
+    setTimeout(() => setIsStatsModalDismissed(true), 300); // Allow modal close animation to finish
+  };
+
   const closeEnlargedImage = () => {
     setEnlargedImage(null);
   };
@@ -588,7 +607,6 @@ const Game = () => {
           </div>
         </div>
       )}
-      
       {/* Top Bar */}
       <div className="top-bar">
         <div className="app-title">Artalyze</div>
@@ -602,10 +620,11 @@ const Game = () => {
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
       <StatsModal
         isOpen={isStatsOpen}
-        onClose={() => setIsStatsOpen(false)}
+        onClose={handleStatsModalClose}
         stats={stats}
         isLoggedIn={isLoggedIn}
       />
+
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -723,35 +742,45 @@ const Game = () => {
 
       {isGameComplete && (
         <div className="completion-screen">
-          <p className="completion-message">{selectedCompletionMessage}</p>
+          <p className="completion-message"><strong>{selectedCompletionMessage}</strong></p>
+          <p className="completion-score">You got {selections.filter(s => s?.selected === imagePairs[selections.indexOf(s)]?.human).length}/{imagePairs.length} correct.</p>
           <p className="image-pair-message">Here are the image pairs and your results:</p>
           <div className="horizontal-thumbnail-grid">
-            {imagePairs.map((pair, index) => {
-              const selection = selections[index];
-              const isCorrect = selection?.selected === pair.human;
+  {imagePairs.map((pair, index) => {
+    const selection = selections[index];
+    const isCorrect = selection?.selected === pair.human;
 
-              return (
-                <div key={index} className="pair-thumbnails-horizontal">
-                  <div
-                    className={`thumbnail-container ${isCorrect ? 'correct' : selection?.selected === pair.human ? 'incorrect' : ''}`}
-                  >
-                    <img
-                      src={pair.human}
-                      alt={`Human Painting for pair ${index + 1}`}
-                    />
-                  </div>
-                  <div
-                    className={`thumbnail-container ${isCorrect ? '' : selection?.selected === pair.ai ? 'incorrect' : ''}`}
-                  >
-                    <img
-                      src={pair.ai}
-                      alt={`AI Painting for pair ${index + 1}`}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+    return (
+      <div key={index} className="pair-thumbnails-horizontal">
+        <div
+          className={`thumbnail-container ${
+            selection?.selected === pair.human
+              ? isCorrect
+                ? 'correct pulse'
+                : 'incorrect pulse'
+              : ''
+          }`}
+        >
+          <img src={pair.human} alt={`Human Painting for pair ${index + 1}`} />
+        </div>
+        <div
+          className={`thumbnail-container ${
+            selection?.selected === pair.ai
+              ? isCorrect
+                ? 'correct pulse'
+                : 'incorrect pulse'
+              : ''
+          }`}
+        >
+          <img src={pair.ai} alt={`AI Painting for pair ${index + 1}`} />
+        </div>
+      </div>
+    );
+  })}
+</div>
+
+
+
           <div className="completion-buttons">
             <button className="stats-button" onClick={() => setIsStatsOpen(true)}>
               <FaChartBar /> See Stats
@@ -773,9 +802,6 @@ const Game = () => {
       )}
     </div>
   );
-
-
-
 
 
 };
