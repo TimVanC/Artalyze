@@ -740,60 +740,63 @@ const Game = () => {
         </div>
       )}
 
-      {isGameComplete && (
-        <div className="completion-screen">
-          <p className="completion-message"><strong>{selectedCompletionMessage}</strong></p>
-          <p className="completion-score">You got {selections.filter(s => s?.selected === imagePairs[selections.indexOf(s)]?.human).length}/{imagePairs.length} correct.</p>
-          <p className="image-pair-message">Here are the image pairs and your results:</p>
-          <div className="horizontal-thumbnail-grid">
-  {imagePairs.map((pair, index) => {
-    const selection = selections[index];
-    const isCorrect = selection?.selected === pair.human;
+{isGameComplete && (
+  <div className="completion-screen">
+    <p className="completion-message"><strong>{selectedCompletionMessage}</strong></p>
+    <div className="completion-score-container">
+      <span className="completion-score-badge">
+        {selections.filter(s => s?.selected === imagePairs[selections.indexOf(s)]?.human).length}/5 correct
+      </span>
+    </div>
+    <p className="image-pair-message">Here are the image pairs and your results:</p>
+    <div className="horizontal-thumbnail-grid">
+      {imagePairs.map((pair, index) => {
+        const selection = selections[index];
+        const isCorrect = selection?.selected === pair.human;
 
-    return (
-      <div key={index} className="pair-thumbnails-horizontal">
-        <div
-          className={`thumbnail-container ${
-            selection?.selected === pair.human
-              ? isCorrect
-                ? 'correct pulse'
-                : 'incorrect pulse'
-              : ''
-          }`}
-        >
-          <img src={pair.human} alt={`Human Painting for pair ${index + 1}`} />
-        </div>
-        <div
-          className={`thumbnail-container ${
-            selection?.selected === pair.ai
-              ? isCorrect
-                ? 'correct pulse'
-                : 'incorrect pulse'
-              : ''
-          }`}
-        >
-          <img src={pair.ai} alt={`AI Painting for pair ${index + 1}`} />
-        </div>
-      </div>
-    );
-  })}
-</div>
-
-
-
-          <div className="completion-buttons">
-            <button className="stats-button" onClick={() => setIsStatsOpen(true)}>
-              <FaChartBar /> See Stats
-            </button>
-            <button
-              className="share-button"
-              onClick={() => handleCompletionShare(selections.map(s => s?.isHumanSelection), imagePairs)}
+        return (
+          <div key={index} className="pair-thumbnails-horizontal">
+            <div
+              className={`thumbnail-container ${
+                selection?.selected === pair.human
+                  ? isCorrect
+                    ? 'correct pulse'
+                    : 'incorrect pulse'
+                  : ''
+              }`}
             >
-              <FaShareAlt /> Share
-            </button>
+              <img src={pair.human} alt={`Human Painting for pair ${index + 1}`} />
+            </div>
+            <div
+              className={`thumbnail-container ${
+                selection?.selected === pair.ai
+                  ? isCorrect
+                    ? 'correct pulse'
+                    : 'incorrect pulse'
+                  : ''
+              }`}
+            >
+              <img src={pair.ai} alt={`AI Painting for pair ${index + 1}`} />
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })}
+    </div>
+
+    <div className="completion-buttons">
+      <button className="stats-button" onClick={() => setIsStatsOpen(true)}>
+        <FaChartBar /> See Stats
+      </button>
+      <button
+        className="share-button"
+        onClick={() => handleCompletionShare(selections.map(s => s?.isHumanSelection), imagePairs)}
+      >
+        <FaShareAlt /> Share
+      </button>
+    </div>
+  </div>
+)}
+
 
       {enlargedImage && (
         <div className="enlarge-modal" onClick={closeEnlargedImage}>

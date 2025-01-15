@@ -270,6 +270,30 @@ h1 {
 }
 
 /* Completion Screen */
+.completion-score-container {
+  text-align: center;
+  margin: 1.5em 0; /* Add spacing around the badge */
+}
+
+.completion-score-badge {
+  display: inline-block;
+  padding: 0.5em 1.5em; /* Compact padding */
+  color: white; /* Text color */
+  background-color: #4d73af; /* Default blue background color */
+  font-size: 1.2em;
+  font-weight: bold;
+  border-radius: 8px; /* Rounded edges */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+}
+
+.completion-score-badge.five-correct {
+  background-color: #4d7f4f; /* Green for 5/5 */
+}
+
+.completion-score-badge.zero-correct {
+  background-color: #b44d5f; /* Red for 0/5 */
+}
+
 .completion-screen {
   margin: 20px;
   text-align: center;
@@ -353,7 +377,7 @@ h1 {
   color: white;
   padding: 12px 30px;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 16px;
   font-weight: bold;
   cursor: pointer;
