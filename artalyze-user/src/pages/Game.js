@@ -116,59 +116,55 @@ const Game = () => {
   const handleGameComplete = async () => {
     console.log("handleGameComplete called");
     setIsGameComplete(true);
-
+  
     // Fetch the latest selections from the backend
     const latestSelections = await fetchSelections();
-
+  
     if (!Array.isArray(latestSelections)) {
       console.error("Invalid selections data format:", latestSelections);
       return; // Exit gracefully if data is invalid
     }
-
+  
     console.log("Latest selections fetched:", latestSelections);
-
+  
     // Calculate correct answers with detailed debugging
     const correctCount = latestSelections.reduce((count, selection, index) => {
-      console.log(`Selection ${index}:`, selection);
-      console.log(`Image Pair ${index}:`, imagePairs[index]);
       if (
         selection &&
         imagePairs[index] &&
         selection.selected === imagePairs[index].human
       ) {
-        console.log(`Correct Match at index ${index}`);
         return count + 1;
       }
-      console.log(`Mismatch at index ${index}`);
       return count;
     }, 0);
-
+  
     console.log("Final Correct Answers Count (correctCount):", correctCount);
-    console.log("Total questions (imagePairs.length):", imagePairs.length);
-
+  
+    // Save correctCount to localStorage
+    localStorage.setItem("correctCount", correctCount);
+  
     // Proceed with marking the game as played and updating stats
     try {
       const payload = {
         correctAnswers: correctCount,
         totalQuestions: imagePairs.length,
       };
-
-      console.log("Sending payload to update stats:", payload);
-
+  
       const statsResponse = await axiosInstance.put(`/stats/${userId}`, payload, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
       });
-
+  
       console.log("Stats updated successfully in handleGameComplete:", statsResponse.data);
       await fetchAndSetStats(userId);
-      console.log("Stats re-fetched after game completion in handleGameComplete:", stats);
       setTimeout(() => setIsStatsOpen(true), 400);
     } catch (error) {
       console.error("Error updating user stats:", error.response?.data || error.message);
     }
   };
+  
 
   // Initialize game logic
   const initializeGame = async () => {
@@ -353,7 +349,12 @@ const Game = () => {
     }
   }, [isStatsModalDismissed]);
   
-  
+  useEffect(() => {
+    const storedCorrectCount = localStorage.getItem("correctCount");
+    if (storedCorrectCount) {
+      setCorrectCount(parseInt(storedCorrectCount, 10));
+    }
+  }, []);  
 
 
   const fetchAndSetStats = async () => {
@@ -744,10 +745,19 @@ const Game = () => {
   <div className="completion-screen">
     <p className="completion-message"><strong>{selectedCompletionMessage}</strong></p>
     <div className="completion-score-container">
-      <span className="completion-score-badge">
-        {selections.filter(s => s?.selected === imagePairs[selections.indexOf(s)]?.human).length}/5 correct
-      </span>
-    </div>
+  <span
+    className={`completion-score-badge ${
+      correctCount === 5
+        ? "five-correct"
+        : correctCount === 0
+        ? "zero-correct"
+        : ""
+    }`}
+  >
+    {correctCount}/5 correct
+  </span>
+</div>
+
     <p className="image-pair-message">Here are the image pairs and your results:</p>
     <div className="horizontal-thumbnail-grid">
       {imagePairs.map((pair, index) => {

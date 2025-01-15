@@ -287,11 +287,11 @@ h1 {
 }
 
 .completion-score-badge.five-correct {
-  background-color: #4d7f4f; /* Green for 5/5 */
+  background-color: #5c9b62; /* Green for 5/5 */
 }
 
 .completion-score-badge.zero-correct {
-  background-color: #b44d5f; /* Red for 0/5 */
+  background-color: #d04e5f; /* Red for 0/5 */
 }
 
 .completion-screen {
@@ -324,7 +324,7 @@ h1 {
   flex-direction: row;
   justify-content: space-between; /* Ensure even spacing */
   gap: 10px;
-  margin-bottom: 16px; /* Add some spacing between rows */
+  margin-bottom: 10px; /* Add some spacing between rows */
 }
 
 .thumbnail-container {
