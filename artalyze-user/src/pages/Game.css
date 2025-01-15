@@ -300,11 +300,12 @@ h1 {
 }
 
 .completion-message {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 1.3rem;
 }
+
 
 .image-pair-message {
   font-size: 1rem;
@@ -321,10 +322,10 @@ h1 {
 
 .pair-thumbnails-horizontal {
   display: flex;
-  flex-direction: row;
-  justify-content: space-between; /* Ensure even spacing */
-  gap: 10px;
-  margin-bottom: 10px; /* Add some spacing between rows */
+  flex-direction: row; /* Keep human and AI images side by side */
+  justify-content: space-between;
+  gap: 10px; /* Space between human and AI images */
+  margin-bottom: 16px; /* Add some spacing between rows */
 }
 
 .thumbnail-container {
@@ -339,6 +340,17 @@ h1 {
   background-color: #f4f4f4; /* Neutral background for unselected images */
   transition: transform 0.3s ease;
   animation: none; /* Add subtle hover animation */
+  position: relative;
+}
+
+.thumbnail-container.ai {
+  border-left: 1px solid rgba(0, 0, 0, 0.1); /* Subtle vertical divider between human and AI */
+}
+
+.thumbnail-container img {
+  width: 100%; /* Stretch image to fit */
+  height: 100%;
+  object-fit: cover; /* Crop image to fill container */
 }
 
 .thumbnail-container:hover {
@@ -355,12 +367,6 @@ h1 {
   box-shadow: 0 0 10px 4px rgba(255, 61, 61, 0.4); /* Add red glow */
 }
 
-.thumbnail-container img {
-  width: 100%; /* Stretch image to fit */
-  height: 100%;
-  object-fit: cover; /* Crop image to fill container */
-}
-
 
 /* Completion Buttons */
 .completion-buttons {
@@ -375,10 +381,10 @@ h1 {
 .share-button {
   background-color: #4CAF50;
   color: white;
-  padding: 12px 30px;
+  padding: 0.5em 1.5em; /* Match the padding of the completion badge */
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
+  border-radius: 8px; /* Rounded edges for both buttons */
+  font-size: 1.2rem; /* Adjust font size */
   font-weight: bold;
   cursor: pointer;
   display: flex;
@@ -388,12 +394,13 @@ h1 {
   width: 200px; /* Fixed width for both buttons */
   height: 50px; /* Fixed height for both buttons */
   margin-top: 0 !important; /* Override any inherited margin-top */
-  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Add subtle shadow for depth */
+  transition: all 0.3s ease; /* Smooth transition for hover */
 }
 
 .stats-button:hover,
 .share-button:hover {
-  transform: scale(1.05);
+  transform: scale(1.05); /* Slight zoom effect on hover */
 }
 
 .stats-button {
@@ -401,15 +408,15 @@ h1 {
 }
 
 .stats-button:hover {
-  background-color: #355a86;
+  background-color: #355a86; /* Darker blue on hover */
 }
 
 .share-button {
-  background-color: #28a745; /* Green for share */
+  background-color: #7bbf70; /* Green for share */
 }
 
 .share-button:hover {
-  background-color: #218838;
+  background-color: #4e8a53; /* Darker green on hover */
 }
 
 /* Accessibility */
@@ -417,6 +424,7 @@ h1 {
   outline: 3px solid #82b1ff; /* Highlight focus for accessibility */
   outline-offset: 2px;
 }
+
 
 /* Image Loading */
 .full-page-loading-screen {

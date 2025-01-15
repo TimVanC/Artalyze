@@ -50,6 +50,15 @@ const defaultStats = {
   mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
 };
 
+const selections = [true, false, true, true, false];
+const imagePairs = [
+  { id: 1, human: true },
+  { id: 2, human: false },
+  { id: 3, human: true },
+  { id: 4, human: true },
+  { id: 5, human: false },
+];
+
 const Game = () => {
   const navigate = useNavigate();
   const statsTimerRef = useRef(null);
@@ -116,17 +125,17 @@ const Game = () => {
   const handleGameComplete = async () => {
     console.log("handleGameComplete called");
     setIsGameComplete(true);
-  
+
     // Fetch the latest selections from the backend
     const latestSelections = await fetchSelections();
-  
+
     if (!Array.isArray(latestSelections)) {
       console.error("Invalid selections data format:", latestSelections);
       return; // Exit gracefully if data is invalid
     }
-  
+
     console.log("Latest selections fetched:", latestSelections);
-  
+
     // Calculate correct answers with detailed debugging
     const correctCount = latestSelections.reduce((count, selection, index) => {
       if (
@@ -138,25 +147,25 @@ const Game = () => {
       }
       return count;
     }, 0);
-  
+
     console.log("Final Correct Answers Count (correctCount):", correctCount);
-  
+
     // Save correctCount to localStorage
     localStorage.setItem("correctCount", correctCount);
-  
+
     // Proceed with marking the game as played and updating stats
     try {
       const payload = {
         correctAnswers: correctCount,
         totalQuestions: imagePairs.length,
       };
-  
+
       const statsResponse = await axiosInstance.put(`/stats/${userId}`, payload, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
       });
-  
+
       console.log("Stats updated successfully in handleGameComplete:", statsResponse.data);
       await fetchAndSetStats(userId);
       setTimeout(() => setIsStatsOpen(true), 400);
@@ -164,7 +173,7 @@ const Game = () => {
       console.error("Error updating user stats:", error.response?.data || error.message);
     }
   };
-  
+
 
   // Initialize game logic
   const initializeGame = async () => {
@@ -348,13 +357,13 @@ const Game = () => {
       });
     }
   }, [isStatsModalDismissed]);
-  
+
   useEffect(() => {
     const storedCorrectCount = localStorage.getItem("correctCount");
     if (storedCorrectCount) {
       setCorrectCount(parseInt(storedCorrectCount, 10));
     }
-  }, []);  
+  }, []);
 
 
   const fetchAndSetStats = async () => {
@@ -608,6 +617,7 @@ const Game = () => {
           </div>
         </div>
       )}
+
       {/* Top Bar */}
       <div className="top-bar">
         <div className="app-title">Artalyze</div>
@@ -619,12 +629,17 @@ const Game = () => {
       </div>
 
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
-      <StatsModal
-        isOpen={isStatsOpen}
-        onClose={handleStatsModalClose}
-        stats={stats}
-        isLoggedIn={isLoggedIn}
-      />
+
+<StatsModal
+  isOpen={isStatsOpen}
+  onClose={handleStatsModalClose}
+  stats={stats}
+  isLoggedIn={isLoggedIn}
+  selections={selections} // Ensure this is correct
+  imagePairs={imagePairs} // Ensure this is correct
+  correctCount={correctCount}
+  
+/>
 
       <SettingsModal
         isOpen={isSettingsOpen}
@@ -741,72 +756,76 @@ const Game = () => {
         </div>
       )}
 
-{isGameComplete && (
-  <div className="completion-screen">
-    <p className="completion-message"><strong>{selectedCompletionMessage}</strong></p>
-    <div className="completion-score-container">
-  <span
-    className={`completion-score-badge ${
-      correctCount === 5
-        ? "five-correct"
-        : correctCount === 0
-        ? "zero-correct"
-        : ""
-    }`}
-  >
-    {correctCount}/5 correct
-  </span>
-</div>
+      {isGameComplete && (
+        <div className="completion-screen">
+          <p className="completion-message">
+            <strong>
+              {correctCount === 5
+                ? "Perfect score!"
+                : correctCount === 0
+                  ? "Better luck next time!"
+                  : `You'll get it next time!`}
+            </strong>
+          </p>
 
-    <p className="image-pair-message">Here are the image pairs and your results:</p>
-    <div className="horizontal-thumbnail-grid">
-      {imagePairs.map((pair, index) => {
-        const selection = selections[index];
-        const isCorrect = selection?.selected === pair.human;
-
-        return (
-          <div key={index} className="pair-thumbnails-horizontal">
-            <div
-              className={`thumbnail-container ${
-                selection?.selected === pair.human
-                  ? isCorrect
-                    ? 'correct pulse'
-                    : 'incorrect pulse'
-                  : ''
-              }`}
+          <div className="completion-score-container">
+            <span
+              className={`completion-score-badge ${correctCount === 5
+                ? "five-correct"
+                : correctCount === 0
+                  ? "zero-correct"
+                  : ""
+                }`}
             >
-              <img src={pair.human} alt={`Human Painting for pair ${index + 1}`} />
-            </div>
-            <div
-              className={`thumbnail-container ${
-                selection?.selected === pair.ai
-                  ? isCorrect
-                    ? 'correct pulse'
-                    : 'incorrect pulse'
-                  : ''
-              }`}
-            >
-              <img src={pair.ai} alt={`AI Painting for pair ${index + 1}`} />
-            </div>
+              {correctCount}/5 correct
+            </span>
           </div>
-        );
-      })}
-    </div>
 
-    <div className="completion-buttons">
-      <button className="stats-button" onClick={() => setIsStatsOpen(true)}>
-        <FaChartBar /> See Stats
-      </button>
-      <button
-        className="share-button"
-        onClick={() => handleCompletionShare(selections.map(s => s?.isHumanSelection), imagePairs)}
-      >
-        <FaShareAlt /> Share
-      </button>
-    </div>
-  </div>
-)}
+          <div className="horizontal-thumbnail-grid">
+            {imagePairs.map((pair, index) => {
+              const selection = selections[index];
+              const isCorrect = selection?.selected === pair.human;
 
+              return (
+                <div key={index} className="pair-thumbnails-horizontal">
+                  <div
+                    className={`thumbnail-container human ${selection?.selected === pair.human
+                      ? isCorrect
+                        ? "correct pulse"
+                        : "incorrect pulse"
+                      : ""
+                      }`}
+                  >
+                    <img src={pair.human} alt={`Human Painting for pair ${index + 1}`} />
+                  </div>
+                  <div
+                    className={`thumbnail-container ai ${selection?.selected === pair.ai
+                      ? isCorrect
+                        ? "correct pulse"
+                        : "incorrect pulse"
+                      : ""
+                      }`}
+                  >
+                    <img src={pair.ai} alt={`AI Painting for pair ${index + 1}`} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="completion-buttons">
+            <button className="stats-button" onClick={() => setIsStatsOpen(true)}>
+              <FaChartBar /> See Stats
+            </button>
+            <button
+              className="share-button"
+              onClick={() => handleCompletionShare(selections.map(s => s?.isHumanSelection), imagePairs)}
+            >
+              <FaShareAlt /> Share
+            </button>
+          </div>
+        </div>
+      )}
 
       {enlargedImage && (
         <div className="enlarge-modal" onClick={closeEnlargedImage}>
@@ -815,6 +834,7 @@ const Game = () => {
       )}
     </div>
   );
+
 
 
 };

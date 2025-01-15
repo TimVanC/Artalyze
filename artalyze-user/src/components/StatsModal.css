@@ -154,12 +154,8 @@
     right: 10px;
 }
 
-
-
-
-
 /* Share Button Styles */
-.share-button {
+.modal-share-button {
     background-color: #4CAF50;
     color: white;
     padding: 10px 25px;
@@ -177,10 +173,58 @@
     font-family: 'Lato', sans-serif;
 }
 
-.share-button:hover {
+.modal-share-button:hover {
     background-color: #388E3C;
     transform: scale(1.05);
 }
+
+.modal-share-button {
+  background-color: #4d73af;
+  color: white;
+  padding: 12px 30px; /* Slightly increased padding */
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 17px; /* Slightly increased font size */
+  transition: background-color 0.3s, transform 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 20px;
+  width: 85%; /* Slightly wider button */
+  justify-content: center;
+  font-family: 'Lato', sans-serif;
+}
+
+.modal-share-button:hover {
+  background-color: #388E3C;
+  transform: scale(1.08); /* Slightly larger hover effect */
+}
+
+/* Add specific styles for a new share button */
+.modal-share-today-button {
+  background-color: #7bbf70; /* Blue for differentiation */
+  color: white;
+  padding: 12px 30px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 17px;
+  transition: background-color 0.3s, transform 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 15px;
+  width: 85%;
+  justify-content: center;
+  font-family: 'Lato', sans-serif;
+}
+
+.modal-share-today-button:hover {
+  background-color: #7bbf70;
+  transform: scale(1.08);
+}
+
 
 /* Non-Logged-In View */
 .stats-logo {

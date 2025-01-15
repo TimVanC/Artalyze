@@ -3,6 +3,7 @@ import './StatsModal.css';
 import { FaShareAlt } from 'react-icons/fa';
 import { handleShare } from '../utils/shareUtils';
 import { getTodayInEST, getYesterdayInEST } from '../utils/dateUtils';
+import { calculatePuzzleNumber } from '../utils/puzzleUtils';
 import CountUp from 'react-countup';
 import logo from '../assets/images/artalyze-logo.png';
 
@@ -16,7 +17,21 @@ const defaultStats = {
   lastPlayedDate: null,
 };
 
-const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false }) => {
+const StatsModal = ({
+  isOpen,
+  onClose,
+  stats = defaultStats,
+  isLoggedIn = false,
+  selections = [],
+  imagePairs = [],
+  correctCount = 0,
+}) => {
+
+    // Debugging logs
+    console.log("StatsModal - Selections:", selections);
+    console.log("StatsModal - Image Pairs:", imagePairs);
+    console.log("StatsModal - Correct Count:", correctCount);
+
   const userId = localStorage.getItem('userId');
   const [animatedBars, setAnimatedBars] = useState({});
   const [shouldAnimateNumbers, setShouldAnimateNumbers] = useState(false);
@@ -73,7 +88,7 @@ const StatsModal = ({ isOpen, onClose, stats = defaultStats, isLoggedIn = false 
     }
   }, [isOpen]);
 
-  const handleStatsShare = () => {
+  const handleHistoricalStatsShare = () => {
     const shareableText = `
 🎨 Artalyze Stats 🎨
 Games Played: ${stats.gamesPlayed}
@@ -103,6 +118,55 @@ Perfect Games: ${stats.perfectPuzzles}
         });
     }
   };
+
+  const handleCompletionShare = () => {
+
+    console.log("Selections:", selections); // Add this log
+    console.log("Image Pairs:", imagePairs); // Add this log
+
+    if (!selections.length || !imagePairs.length) {
+      alert("No data available to share today's puzzle!");
+      return;
+    }
+  
+    const puzzleNumber = calculatePuzzleNumber();
+  
+    const resultsVisual = selections
+    .map((selection, index) => {
+      // Check if the selected image matches the human image
+      const isCorrect = selection?.selected === imagePairs[index]?.human;
+      return isCorrect ? '🟢' : '🔴';
+    })
+    .join(' ');
+  
+  
+    const paintings = '🖼️ '.repeat(imagePairs.length).trim();
+  
+    const shareableText = `
+  Artalyze #${puzzleNumber} ${correctCount}/${imagePairs.length}
+  ${resultsVisual}
+  ${paintings}
+  Try it at: artalyze.app
+    `;
+  
+    if (navigator.share) {
+      navigator
+        .share({
+          title: `Artalyze #${puzzleNumber}`,
+          text: shareableText.trim(),
+        })
+        .catch((error) => console.log('Error sharing:', error));
+    } else {
+      navigator.clipboard
+        .writeText(shareableText.trim())
+        .then(() => {
+          alert('Results copied to clipboard! You can now paste it anywhere.');
+        })
+        .catch((error) => console.error('Failed to copy:', error));
+      }
+  };
+  
+  
 
   if (!isOpen && !isDismissing) return null;
 
@@ -224,16 +288,23 @@ Perfect Games: ${stats.perfectPuzzles}
                 const value = stats.mistakeDistribution[mistakeCount] || 0;
 
                 // Highlight logic: highlight all bars if `mostRecentScore` is null
-                const isHighlighted = stats.mostRecentScore === null || parseInt(mistakeCount, 10) === stats.mostRecentScore;
+                const isHighlighted =
+                  stats.mostRecentScore === null ||
+                  parseInt(mistakeCount, 10) === stats.mostRecentScore;
 
-                const barWidth = Math.max((value / Math.max(...Object.values(stats.mistakeDistribution), 1)) * 100, 5);
+                const barWidth = Math.max(
+                  (value / Math.max(...Object.values(stats.mistakeDistribution), 1)) *
+                  100,
+                  5
+                );
 
                 return (
                   <div className="distribution-bar-container" key={mistakeCount}>
                     <span className="mistake-label">{mistakeCount}</span>
                     <div className="distribution-bar">
                       <div
-                        className={`bar-fill ${isHighlighted ? 'highlight' : ''} ${value === 0 ? 'zero-value' : ''}`}
+                        className={`bar-fill ${isHighlighted ? 'highlight' : ''} ${value === 0 ? 'zero-value' : ''
+                          }`}
                         style={{
                           width: `${barWidth}%`,
                         }}
@@ -245,11 +316,26 @@ Perfect Games: ${stats.perfectPuzzles}
                 );
               })}
             </div>
-            
+
             <hr className="separator" />
-            <button className="share-button" onClick={handleStatsShare}>
-              <FaShareAlt /> Share
+            <button
+              className="modal-share-button"
+              onClick={handleHistoricalStatsShare}
+            >
+              <FaShareAlt /> Share All Stats
             </button>
+            <button
+              className="modal-share-today-button"
+              onClick={() =>
+                handleCompletionShare(
+                  stats.mostRecentSelections || [], // Default to empty array
+                  stats.mostRecentImagePairs || [] // Default to empty array
+                )
+              }
+            >
+              <FaShareAlt /> Share Today's Puzzle
+            </button>
+
           </>
         ) : (
           <div className="guest-stats-content">
@@ -260,7 +346,8 @@ Perfect Games: ${stats.perfectPuzzles}
             />
             <h2>Track Your Artalyze Stats</h2>
             <p>
-              Register to follow your streaks, total completed puzzles, win rate, and more.
+              Register to follow your streaks, total completed puzzles, win rate,
+              and more.
             </p>
             <button
               className="cta-button"
@@ -275,6 +362,7 @@ Perfect Games: ${stats.perfectPuzzles}
       </div>
     </div>
   );
+
 };
 
 export default StatsModal;
