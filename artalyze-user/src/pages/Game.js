@@ -66,6 +66,7 @@ const Game = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selections, setSelections] = useState([]);
+  const [selectedPair, setSelectedPair] = useState(null);
   const [triesLeft, setTriesLeft] = useState(3);
   const [triesRemaining, setTriesRemaining] = useState(3);
   const [hasPlayedToday, setHasPlayedToday] = useState(false);
@@ -73,6 +74,7 @@ const Game = () => {
   const [isGameComplete, setIsGameComplete] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState(null);
+  const [enlargedImageIndex, setEnlargedImageIndex] = useState(0);
   const longPressTimer = useRef(null);
   const [showOverlay, setShowOverlay] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
@@ -600,12 +602,40 @@ const Game = () => {
     setTimeout(() => setIsStatsModalDismissed(true), 300); // Allow modal close animation to finish
   };
 
+  const isSubmitEnabled = selections.length === imagePairs.length;
+
+  const handlePairClick = (pair) => {
+    setSelectedPair(pair);
+  };
+
+
+
+  const closeModal = () => {
+    setSelectedPair(null);
+  };
+
   const closeEnlargedImage = () => {
     setEnlargedImage(null);
   };
 
-  const isSubmitEnabled = selections.length === imagePairs.length;
+  const handleImageEnlarge = (image, index) => {
+    setEnlargedImage(image);
+    setEnlargedImageIndex(index); // Set the index of the enlarged image
+  };
+  
 
+  const goToNextImage = () => {
+    const nextIndex = enlargedImageIndex + 1 < imagePairs.length ? enlargedImageIndex + 1 : 0;
+    setEnlargedImage(imagePairs[nextIndex].images[0]);
+    setEnlargedImageIndex(nextIndex);
+  };
+  
+  const goToPreviousImage = () => {
+    const prevIndex = enlargedImageIndex - 1 >= 0 ? enlargedImageIndex - 1 : imagePairs.length - 1;
+    setEnlargedImage(imagePairs[prevIndex].images[0]);
+    setEnlargedImageIndex(prevIndex);
+  };
+  
   return (
     <div className="game-container">
       {/* Full Page Loading Screen */}
@@ -617,7 +647,7 @@ const Game = () => {
           </div>
         </div>
       )}
-
+  
       {/* Top Bar */}
       <div className="top-bar">
         <div className="app-title">Artalyze</div>
@@ -627,26 +657,25 @@ const Game = () => {
           <FaCog className="icon" title="Settings" onClick={() => setIsSettingsOpen(true)} />
         </div>
       </div>
-
-      <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
-
-<StatsModal
-  isOpen={isStatsOpen}
-  onClose={handleStatsModalClose}
-  stats={stats}
-  isLoggedIn={isLoggedIn}
-  selections={selections} // Ensure this is correct
-  imagePairs={imagePairs} // Ensure this is correct
-  correctCount={correctCount}
   
-/>
-
+      <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
+  
+      <StatsModal
+        isOpen={isStatsOpen}
+        onClose={handleStatsModalClose}
+        stats={stats}
+        isLoggedIn={isLoggedIn}
+        selections={selections}
+        imagePairs={imagePairs}
+        correctCount={correctCount}
+      />
+  
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         isLoggedIn={Boolean(localStorage.getItem('authToken'))}
       />
-
+  
       {!isGameComplete && (
         <>
           <h1>Guess the human painting from each pair!</h1>
@@ -663,7 +692,7 @@ const Game = () => {
               ))}
             </div>
           </div>
-
+  
           <div className={`status-bar ${showOverlay ? 'blurred' : ''}`}>
             <div className="tries-left">
               <span>Tries Left:</span>
@@ -672,7 +701,7 @@ const Game = () => {
               ))}
             </div>
           </div>
-
+  
           {imagePairs.length > 0 ? (
             <Swiper
               loop={true}
@@ -709,13 +738,40 @@ const Game = () => {
           ) : (
             <p>No image pairs available.</p>
           )}
-
+  
           {enlargedImage && (
             <div className="enlarge-modal" onClick={closeEnlargedImage}>
-              <img src={enlargedImage} alt="Enlarged view" className="enlarged-image" />
+              <div className="swiper-container">
+                <Swiper
+                  loop={true}
+                  initialSlide={enlargedImageIndex}
+                  onSlideChange={(swiper) => setEnlargedImageIndex(swiper.realIndex)}
+                  navigation={{
+                    prevEl: '.swiper-button-prev',
+                    nextEl: '.swiper-button-next'
+                  }}
+                  slidesPerView={1} // Show only one image per slide
+                  spaceBetween={10} // Add some space if needed between slides
+                >
+                  {imagePairs.map((pair, index) => (
+                    <SwiperSlide key={index}>
+                      <div className="enlarged-image-container">
+                        {/* Display only one image per slide (human or AI) */}
+                        <img
+                          src={enlargedImageIndex % 2 === 0 ? pair.human : pair.ai}
+                          alt={`Enlarged Painting ${index + 1}`}
+                          className="enlarged-image"
+                        />
+                      </div>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              </div>
+              <div className="swiper-button-prev">&#8592;</div>
+              <div className="swiper-button-next">&#8594;</div>
             </div>
           )}
-
+  
           <div className="navigation-buttons">
             {imagePairs.map((_, index) => (
               <button
@@ -730,7 +786,7 @@ const Game = () => {
               </button>
             ))}
           </div>
-
+  
           <button
             className={`submit-button ${isSubmitEnabled ? 'enabled' : 'disabled'}`}
             onClick={handleSubmit}
@@ -740,7 +796,7 @@ const Game = () => {
           </button>
         </>
       )}
-
+  
       {showOverlay && (
         <div className="results-overlay">
           <div className="overlay-content">
@@ -755,7 +811,7 @@ const Game = () => {
           </div>
         </div>
       )}
-
+  
       {isGameComplete && (
         <div className="completion-screen">
           <p className="completion-message">
@@ -767,7 +823,7 @@ const Game = () => {
                   : `You'll get it next time!`}
             </strong>
           </p>
-
+  
           <div className="completion-score-container">
             <span
               className={`completion-score-badge ${correctCount === 5
@@ -775,17 +831,17 @@ const Game = () => {
                 : correctCount === 0
                   ? "zero-correct"
                   : ""
-                }`}
+              }`}
             >
               {correctCount}/5 correct
             </span>
           </div>
-
+  
           <div className="horizontal-thumbnail-grid">
             {imagePairs.map((pair, index) => {
               const selection = selections[index];
               const isCorrect = selection?.selected === pair.human;
-
+  
               return (
                 <div key={index} className="pair-thumbnails-horizontal">
                   <div
@@ -795,6 +851,7 @@ const Game = () => {
                         : "incorrect pulse"
                       : ""
                       }`}
+                    onClick={() => setEnlargedImage(pair.human)} // Enlarge the human image
                   >
                     <img src={pair.human} alt={`Human Painting for pair ${index + 1}`} />
                   </div>
@@ -805,6 +862,7 @@ const Game = () => {
                         : "incorrect pulse"
                       : ""
                       }`}
+                    onClick={() => setEnlargedImage(pair.ai)} // Enlarge the AI image
                   >
                     <img src={pair.ai} alt={`AI Painting for pair ${index + 1}`} />
                   </div>
@@ -812,7 +870,7 @@ const Game = () => {
               );
             })}
           </div>
-
+  
           <div className="completion-buttons">
             <button className="stats-button" onClick={() => setIsStatsOpen(true)}>
               <FaChartBar /> See Stats
@@ -826,7 +884,7 @@ const Game = () => {
           </div>
         </div>
       )}
-
+  
       {enlargedImage && (
         <div className="enlarge-modal" onClick={closeEnlargedImage}>
           <img src={enlargedImage} alt="Enlarged view" className="enlarged-image" />
@@ -834,8 +892,10 @@ const Game = () => {
       )}
     </div>
   );
-
-
+  
+  
+  
+  
 
 };
 
