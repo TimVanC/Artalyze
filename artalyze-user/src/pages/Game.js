@@ -14,50 +14,9 @@ import axios from 'axios';
 import { handleShare } from '../utils/shareUtils';
 import './Game.css';
 
-const generateArtalyzeShareableResult = (results) => {
-  const scoreLine = results.map(result => result ? '🟢' : '🔴').join(' ');
-  const paintingLine = Array(results.length).fill('🖼️').join(' ');
-  return `${scoreLine}\n${paintingLine}\n🎨 Artalyze Score: ${results.filter(r => r).length}/5`;
-};
-
 const isUserLoggedIn = () => {
   return !!localStorage.getItem('authToken');
 };
-
-const handleStatsShare = (results) => {
-  const shareableText = generateArtalyzeShareableResult(results);
-
-  if (navigator.share) {
-    navigator.share({
-      title: "Artalyze Score",
-      text: shareableText,
-    }).then(() => {
-      console.log('Thanks for sharing!');
-    }).catch(console.error);
-  } else {
-    navigator.clipboard.writeText(shareableText).then(() => {
-      console.log('Score copied to clipboard');
-    }).catch(console.error);
-  }
-};
-
-const defaultStats = {
-  gamesPlayed: 0,
-  winPercentage: 0,
-  currentStreak: 0,
-  maxStreak: 0,
-  perfectPuzzles: 0,
-  mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
-};
-
-const selections = [true, false, true, true, false];
-const imagePairs = [
-  { id: 1, human: true },
-  { id: 2, human: false },
-  { id: 3, human: true },
-  { id: 4, human: true },
-  { id: 5, human: false },
-];
 
 const Game = () => {
   const navigate = useNavigate();
@@ -78,8 +37,6 @@ const Game = () => {
   const longPressTimer = useRef(null);
   const [showOverlay, setShowOverlay] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
-  const [showScoreOverlay, setShowScoreOverlay] = useState(true);
-  const [selectedCompletionMessage, setSelectedCompletionMessage] = useState("");
   const [imagePairs, setImagePairs] = useState([]);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [isDisappearing, setIsDisappearing] = useState(false);
@@ -176,7 +133,6 @@ const Game = () => {
     }
   };
 
-
   // Initialize game logic
   const initializeGame = async () => {
     const today = getTodayInEST();
@@ -268,7 +224,6 @@ const Game = () => {
       setLoading(false); // Stop loading animation
     }
   };
-
 
   // Restore game state function
   const restoreGameState = () => {
@@ -367,6 +322,18 @@ const Game = () => {
     }
   }, []);
 
+  const encouragementMessages = [
+    "Keep it up!",
+    "You're doing great!",
+    "Almost there!",
+    "Keep pushing!",
+    "You're doing awesome!",
+  ];
+
+  const getRandomEncouragement = () => {
+    const randomIndex = Math.floor(Math.random() * encouragementMessages.length);
+    return encouragementMessages[randomIndex];
+  };
 
   const fetchAndSetStats = async () => {
     const userId = localStorage.getItem("userId");
@@ -602,49 +569,20 @@ const Game = () => {
     });
   };
 
-
-
-  const handleSwipe = (swiper) => {
-    setCurrentIndex(swiper.realIndex);
-  };
-
   const handleStatsModalClose = () => {
     setIsStatsOpen(false);
     setTimeout(() => setIsStatsModalDismissed(true), 300); // Allow modal close animation to finish
   };
 
+  const handleOverlayClose = () => {
+    setShowOverlay(false);
+    // Optionally reset any necessary states or handle game progression
+  };
+
   const isSubmitEnabled = selections.length === imagePairs.length;
-
-  const handlePairClick = (pair) => {
-    setSelectedPair(pair);
-  };
-
-
-
-  const closeModal = () => {
-    setSelectedPair(null);
-  };
 
   const closeEnlargedImage = () => {
     setEnlargedImage(null);
-  };
-
-  const handleImageEnlarge = (image, index) => {
-    setEnlargedImage(image);
-    setEnlargedImageIndex(index); // Set the index of the enlarged image
-  };
-
-
-  const goToNextImage = () => {
-    const nextIndex = enlargedImageIndex + 1 < imagePairs.length ? enlargedImageIndex + 1 : 0;
-    setEnlargedImage(imagePairs[nextIndex].images[0]);
-    setEnlargedImageIndex(nextIndex);
-  };
-
-  const goToPreviousImage = () => {
-    const prevIndex = enlargedImageIndex - 1 >= 0 ? enlargedImageIndex - 1 : imagePairs.length - 1;
-    setEnlargedImage(imagePairs[prevIndex].images[0]);
-    setEnlargedImageIndex(prevIndex);
   };
 
   return (
@@ -815,19 +753,30 @@ const Game = () => {
       )}
 
       {showOverlay && (
-        <div className="results-overlay">
-          <div className="overlay-content">
-            <h2>You got {correctCount}/5 correct!</h2>
-            <p>You have {triesLeft === 1 ? '1 try' : `${triesLeft} tries`} left.</p>
+        <div className="mid-turn-overlay">
+          <div className="mid-turn-overlay-content">
+            {correctCount === 4 ? (
+              <>
+                <h2 className="mid-turn-overlay-title">Close! You're 1 away</h2>
+                <p className="mid-turn-overlay-message">You have 1 try left</p>
+              </>
+            ) : correctCount >= 1 && correctCount <= 3 ? (
+              <>
+                <h2 className="mid-turn-overlay-title">{getRandomEncouragement()}</h2>
+                <p className="mid-turn-overlay-message">You have {triesLeft} tries left</p>
+              </>
+            ) : null}
             <button
               onClick={() => setShowOverlay(false)}
-              className="try-again-button"
+              className="mid-turn-overlay-try-again-button"
             >
               Try Again
             </button>
           </div>
         </div>
       )}
+
+
 
       {isGameComplete && (
         <div className="completion-screen">
