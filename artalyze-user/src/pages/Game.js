@@ -593,6 +593,17 @@ const Game = () => {
     }
   };
 
+  const handleImageSelection = (index) => {
+    // Update the selections array to mark the selected pair
+    setSelections(prevSelections => {
+      const updatedSelections = [...prevSelections];
+      updatedSelections[index] = true;  // Mark this pair as selected
+      return updatedSelections;
+    });
+  };
+
+
+
   const handleSwipe = (swiper) => {
     setCurrentIndex(swiper.realIndex);
   };
@@ -622,20 +633,20 @@ const Game = () => {
     setEnlargedImage(image);
     setEnlargedImageIndex(index); // Set the index of the enlarged image
   };
-  
+
 
   const goToNextImage = () => {
     const nextIndex = enlargedImageIndex + 1 < imagePairs.length ? enlargedImageIndex + 1 : 0;
     setEnlargedImage(imagePairs[nextIndex].images[0]);
     setEnlargedImageIndex(nextIndex);
   };
-  
+
   const goToPreviousImage = () => {
     const prevIndex = enlargedImageIndex - 1 >= 0 ? enlargedImageIndex - 1 : imagePairs.length - 1;
     setEnlargedImage(imagePairs[prevIndex].images[0]);
     setEnlargedImageIndex(prevIndex);
   };
-  
+
   return (
     <div className="game-container">
       {/* Full Page Loading Screen */}
@@ -647,7 +658,7 @@ const Game = () => {
           </div>
         </div>
       )}
-  
+
       {/* Top Bar */}
       <div className="top-bar">
         <div className="app-title">Artalyze</div>
@@ -657,9 +668,9 @@ const Game = () => {
           <FaCog className="icon" title="Settings" onClick={() => setIsSettingsOpen(true)} />
         </div>
       </div>
-  
+
       <InfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
-  
+
       <StatsModal
         isOpen={isStatsOpen}
         onClose={handleStatsModalClose}
@@ -669,31 +680,36 @@ const Game = () => {
         imagePairs={imagePairs}
         correctCount={correctCount}
       />
-  
+
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         isLoggedIn={Boolean(localStorage.getItem('authToken'))}
       />
-  
+
       {!isGameComplete && (
         <>
-          <h1>Guess the human painting from each pair!</h1>
-          <div className="progress-bar-container">
-            <div className="progress-bar">
-              {[...Array(5)].map((_, index) => (
-                <div
-                  key={index}
-                  className="progress-bar-segment"
-                  style={{
-                    backgroundColor: index < correctCount ? "#4d73af" : "#e0e0e0",
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-  
+          <h1 className="game-header">Guess the human painting from each pair!</h1>
+
+          {/* 
+<div className="progress-bar-container">
+  <div className="progress-bar">
+    {[...Array(5)].map((_, index) => (
+      <div
+        key={index}
+        className="progress-bar-segment"
+        style={{
+          backgroundColor: selections[index] ? "#4d73af" : "#e0e0e0",  // Fill based on selections
+        }}
+      />
+    ))}
+  </div>
+</div>
+*/}
+
           <div className={`status-bar ${showOverlay ? 'blurred' : ''}`}>
+            <div className="header-separator"></div>  {/* Add space between the header and the tries line */}
+
             <div className="tries-left">
               <span>Tries Left:</span>
               {[...Array(triesLeft)].map((_, i) => (
@@ -701,7 +717,8 @@ const Game = () => {
               ))}
             </div>
           </div>
-  
+
+
           {imagePairs.length > 0 ? (
             <Swiper
               loop={true}
@@ -738,7 +755,7 @@ const Game = () => {
           ) : (
             <p>No image pairs available.</p>
           )}
-  
+
           {enlargedImage && (
             <div className="enlarge-modal" onClick={closeEnlargedImage}>
               <div className="swiper-container">
@@ -771,7 +788,7 @@ const Game = () => {
               <div className="swiper-button-next">&#8594;</div>
             </div>
           )}
-  
+
           <div className="navigation-buttons">
             {imagePairs.map((_, index) => (
               <button
@@ -786,7 +803,7 @@ const Game = () => {
               </button>
             ))}
           </div>
-  
+
           <button
             className={`submit-button ${isSubmitEnabled ? 'enabled' : 'disabled'}`}
             onClick={handleSubmit}
@@ -796,7 +813,7 @@ const Game = () => {
           </button>
         </>
       )}
-  
+
       {showOverlay && (
         <div className="results-overlay">
           <div className="overlay-content">
@@ -811,7 +828,7 @@ const Game = () => {
           </div>
         </div>
       )}
-  
+
       {isGameComplete && (
         <div className="completion-screen">
           <p className="completion-message">
@@ -823,7 +840,7 @@ const Game = () => {
                   : `You'll get it next time!`}
             </strong>
           </p>
-  
+
           <div className="completion-score-container">
             <span
               className={`completion-score-badge ${correctCount === 5
@@ -831,17 +848,17 @@ const Game = () => {
                 : correctCount === 0
                   ? "zero-correct"
                   : ""
-              }`}
+                }`}
             >
               {correctCount}/5 correct
             </span>
           </div>
-  
+
           <div className="horizontal-thumbnail-grid">
             {imagePairs.map((pair, index) => {
               const selection = selections[index];
               const isCorrect = selection?.selected === pair.human;
-  
+
               return (
                 <div key={index} className="pair-thumbnails-horizontal">
                   <div
@@ -870,7 +887,7 @@ const Game = () => {
               );
             })}
           </div>
-  
+
           <div className="completion-buttons">
             <button className="stats-button" onClick={() => setIsStatsOpen(true)}>
               <FaChartBar /> See Stats
@@ -884,7 +901,7 @@ const Game = () => {
           </div>
         </div>
       )}
-  
+
       {enlargedImage && (
         <div className="enlarge-modal" onClick={closeEnlargedImage}>
           <img src={enlargedImage} alt="Enlarged view" className="enlarged-image" />
@@ -892,10 +909,6 @@ const Game = () => {
       )}
     </div>
   );
-  
-  
-  
-  
 
 };
 

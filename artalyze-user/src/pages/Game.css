@@ -86,17 +86,34 @@ h1 {
   margin-bottom: 20px;
 }
 
+.game-header {
+  font-size: 18px;  /* Adjust font size for prominence */
+  font-weight: 600;  /* Make the header bold */
+  text-align: center;
+  color: #333;  /* Set a neutral text color */
+  margin-bottom: 20px;  /* Adds space below the header */
+}
+
+.header-separator {
+  margin-bottom: 20px;  /* Space between the header and the tries left section */
+}
+
 .tries-left {
   display: flex;
   justify-content: center;
   align-items: center;
   font-weight: normal;
   gap: 10px;
+  margin-top: 10px;  /* Adds space between the header and the tries section */
+  font-size: 16px;  /* Adjust font size */
+  color: black;  /* A subtle color for the text */
 }
 
 .palette-icon {
   font-size: 16px;
+  color: black;
 }
+
 
 /* Image Pairs */
 .image-pair-container {
