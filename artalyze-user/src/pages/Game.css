@@ -158,7 +158,7 @@ h1 {
 }
 
 .navigation-buttons .nav-button {
-  background-color: #ccc;
+  background-color: #ccc;  /* Default color */
   color: white;
   width: 45px;
   height: 45px;
@@ -170,21 +170,22 @@ h1 {
   font-size: 16px;
   cursor: pointer;
   margin: 0 8px;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
+/* Subtle green hue for selected buttons */
+.navigation-buttons .nav-button.selected {
+  background-color: #A8D5BA;  /* Soft green hue when selected */
+  color: white;
+}
+
+/* Active button (current index) stays blue */
 .navigation-buttons .nav-button.active {
-  background-color: #4d73af;
+  background-color: #4d73af;  /* Blue color when active */
   color: white;
   font-weight: bold;
 }
-
-.nav-button.active {
-  background-color: #4d73af;
-  color: white;
-  font-weight: bold;
-}
-
+  
 /* Submit Button */
 .submit-button {
   background-color: grey;
@@ -193,19 +194,20 @@ h1 {
   font-size: 18px;
   border: none;
   cursor: pointer;
-  border-radius: 20px;
+  border-radius: 12px;
   margin: 5% 0;
   width: 30%;
 }
 
 .submit-button.enabled {
-  background-color: #000;
+  background-color: #4d73af;
 }
 
 .submit-button.disabled {
   background-color: #ccc;
   cursor: not-allowed;
 }
+
 
 /* Mid-Turn Feedback Overlay */
 .mid-turn-overlay {

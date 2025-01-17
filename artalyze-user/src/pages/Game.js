@@ -731,7 +731,7 @@ const Game = () => {
             {imagePairs.map((_, index) => (
               <button
                 key={index}
-                className={`nav-button ${currentIndex === index ? 'active' : ''}`}
+                className={`nav-button ${currentIndex === index ? 'active' : ''} ${selections[index]?.selected ? 'selected' : ''}`}
                 onClick={() => {
                   setCurrentIndex(index);
                   swiperRef.current.slideToLoop(index);
@@ -741,6 +741,7 @@ const Game = () => {
               </button>
             ))}
           </div>
+
 
           <button
             className={`submit-button ${isSubmitEnabled ? 'enabled' : 'disabled'}`}
