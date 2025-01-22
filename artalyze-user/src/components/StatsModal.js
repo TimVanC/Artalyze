@@ -28,9 +28,9 @@ const StatsModal = ({
 }) => {
 
     // Debugging logs
-    console.log("StatsModal - Selections:", selections);
-    console.log("StatsModal - Image Pairs:", imagePairs);
-    console.log("StatsModal - Correct Count:", correctCount);
+    // console.log("StatsModal - Selections:", selections);
+    // console.log("StatsModal - Image Pairs:", imagePairs);
+    // console.log("StatsModal - Correct Count:", correctCount);
 
   const userId = localStorage.getItem('userId');
   const [animatedBars, setAnimatedBars] = useState({});
