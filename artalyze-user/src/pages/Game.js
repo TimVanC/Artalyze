@@ -378,25 +378,6 @@ const Game = () => {
     }
   };
 
-  const updateUserStats = async (updatedStats) => {
-    const userId = localStorage.getItem("userId");
-    if (!userId) {
-      console.error("User ID not found. Cannot update stats.");
-      return;
-    }
-
-    try {
-      const response = await axiosInstance.put(`/stats/${userId}`, updatedStats, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
-      console.log("Stats updated successfully:", response.data);
-    } catch (error) {
-      console.error("Error updating stats:", error.response?.data || error.message);
-    }
-  };
-
   const saveSelectionsToBackend = async (updatedSelections) => {
     try {
       await axiosInstance.put(
@@ -495,29 +476,6 @@ const Game = () => {
     clearTimeout(longPressTimer.current);
   };
 
-  const handleMidTurnFeedback = () => {
-    setIsDisappearing(false);
-    setTimeout(() => {
-      setIsDisappearing(true);
-    }, 1300); // Example delay for the disappearing animation
-  };
-
-  const handleRegister = async (userData) => {
-    try {
-      const response = await axios.post('/api/auth/register', userData);
-      const { token, user } = response.data;
-
-      // Store userId and token in localStorage
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('userId', user.userId);
-
-      console.log('Registration successful:', user);
-      navigate('/game'); // Redirect to the game or dashboard
-    } catch (error) {
-      console.error('Error during registration:', error.response?.data || error.message);
-    }
-  };
-
   const handleSubmit = () => {
     let correct = 0;
 
@@ -539,44 +497,9 @@ const Game = () => {
     }
   };
 
-  const handleTryAgain = () => {
-    setShowOverlay(false);
-    setShowResults(false);
-    setIsDisappearing(false);
-  };
-
-  const handleAttempt = async () => {
-    if (triesRemaining > 0) {
-      try {
-        const { data } = await axios.put('/stats/tries/decrement', {
-          userId: localStorage.getItem('userId')
-        });
-        setTriesRemaining(data.triesRemaining);
-      } catch (error) {
-        console.error('Error decrementing tries:', error);
-      }
-    } else {
-      alert('No tries remaining for today!');
-    }
-  };
-
-  const handleImageSelection = (index) => {
-    // Update the selections array to mark the selected pair
-    setSelections(prevSelections => {
-      const updatedSelections = [...prevSelections];
-      updatedSelections[index] = true;  // Mark this pair as selected
-      return updatedSelections;
-    });
-  };
-
   const handleStatsModalClose = () => {
     setIsStatsOpen(false);
     setTimeout(() => setIsStatsModalDismissed(true), 300); // Allow modal close animation to finish
-  };
-
-  const handleOverlayClose = () => {
-    setShowOverlay(false);
-    // Optionally reset any necessary states or handle game progression
   };
 
   const isSubmitEnabled = selections.length === imagePairs.length;
