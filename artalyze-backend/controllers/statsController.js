@@ -258,13 +258,14 @@ exports.resetTries = async (req, res) => {
 // Fetch selections
 exports.getSelections = async (req, res) => {
   try {
-    const { userId } = req.user;
+    const { userId } = req.user; // Ensure userId is attached
     const stats = await Stats.findOne({ userId });
-
     if (!stats) {
+      console.log(`No stats found for userId: ${userId}`);
       return res.status(404).json({ message: 'Stats not found for this user.' });
     }
 
+    console.log(`Selections for userId ${userId}:`, stats.selections);
     res.status(200).json({ selections: stats.selections });
   } catch (error) {
     console.error('Error fetching selections:', error);
@@ -272,17 +273,31 @@ exports.getSelections = async (req, res) => {
   }
 };
 
+
 // Save selections
 exports.saveSelections = async (req, res) => {
   try {
     const { userId } = req.user;
     const { selections } = req.body;
 
+    console.log('saveSelections called');
+    console.log('Received userId:', userId);
+    console.log('Received selections:', selections);
+
+    // Validate selections
+    if (!Array.isArray(selections)) {
+      console.error('Invalid selections format:', selections);
+      return res.status(400).json({ message: 'Selections must be an array.' });
+    }
+
+    // Update database
     const stats = await Stats.findOneAndUpdate(
       { userId },
       { $set: { selections } },
-      { new: true, upsert: true }
+      { new: true, upsert: true } // Create document if it doesn't exist
     );
+
+    console.log('Updated stats:', stats);
 
     res.status(200).json({ selections: stats.selections });
   } catch (error) {
@@ -290,3 +305,4 @@ exports.saveSelections = async (req, res) => {
     res.status(500).json({ message: 'Failed to save selections.' });
   }
 };
+

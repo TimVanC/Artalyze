@@ -10,14 +10,14 @@ exports.authenticateToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Attach userId to the request object
+    console.log('Decoded JWT:', decoded); // Log decoded token
+    req.user = { userId: decoded.userId }; // Attach userId
     next();
   } catch (error) {
+    console.error('JWT verification failed:', error);
     res.status(401).json({ message: 'Unauthorized access' });
   }
 };
-
-
 
 // Middleware to check if the user is an admin
 exports.authorizeAdmin = (req, res, next) => {

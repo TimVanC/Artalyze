@@ -10,6 +10,7 @@ import axiosInstance from '../axiosInstance';
 import InfoModal from '../components/InfoModal';
 import StatsModal from '../components/StatsModal';
 import SettingsModal from '../components/SettingsModal';
+import useSelections from '../hooks/useSelections';
 import axios from 'axios';
 import { handleShare } from '../utils/shareUtils';
 import './Game.css';
@@ -24,7 +25,7 @@ const Game = () => {
   const isLoggedIn = isUserLoggedIn();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selections, setSelections] = useState([]);
+  // const [selections, setSelections] = useState([]);
   const [selectedPair, setSelectedPair] = useState(null);
   const [triesLeft, setTriesLeft] = useState(3);
   const [triesRemaining, setTriesRemaining] = useState(3);
@@ -46,6 +47,7 @@ const Game = () => {
   const swiperRef = useRef(null);
 
   const [userId, setUserId] = useState(localStorage.getItem("userId"));
+  const { selections = [], updateSelections, isLoading, error: selectionsError } = useSelections(userId, isLoggedIn);
   const [stats, setStats] = useState({
     gamesPlayed: 0,
     winPercentage: 0,
@@ -55,25 +57,6 @@ const Game = () => {
     mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
     lastPlayedDate: null,
   });
-
-  // Place fetchSelections above handleGameComplete in Game.js
-  const fetchSelections = async () => {
-    const isLoggedIn = Boolean(localStorage.getItem('authToken'));
-
-    if (!isLoggedIn) {
-      console.log("Guest user: Fetching selections from localStorage.");
-      const savedSelections = localStorage.getItem('selections');
-      return savedSelections ? JSON.parse(savedSelections) : []; // Ensure an array is returned
-    }
-
-    try {
-      const { data } = await axiosInstance.get('/stats/selections');
-      return data.selections || []; // Ensure an array is returned
-    } catch (error) {
-      console.error('Error fetching selections:', error.response?.data || error.message);
-      return []; // Fallback to an empty array on error
-    }
-  };
 
   // Helper function to save triesRemaining to localStorage
   const saveTriesToLocalStorage = (tries) => {
@@ -85,18 +68,12 @@ const Game = () => {
     console.log("handleGameComplete called");
     setIsGameComplete(true);
 
-    // Fetch the latest selections from the backend
-    const latestSelections = await fetchSelections();
-
-    if (!Array.isArray(latestSelections)) {
-      console.error("Invalid selections data format:", latestSelections);
-      return; // Exit gracefully if data is invalid
+    if (!Array.isArray(selections) || !Array.isArray(imagePairs)) {
+      console.error("Invalid data: selections or imagePairs are undefined.");
+      return;
     }
 
-    console.log("Latest selections fetched:", latestSelections);
-
-    // Calculate correct answers with detailed debugging
-    const correctCount = latestSelections.reduce((count, selection, index) => {
+    const correctCount = selections.reduce((count, selection, index) => {
       if (
         selection &&
         imagePairs[index] &&
@@ -107,9 +84,7 @@ const Game = () => {
       return count;
     }, 0);
 
-    console.log("Final Correct Answers Count (correctCount):", correctCount);
-
-    // Save correctCount to localStorage
+    console.log("Final Correct Answers Count:", correctCount);
     localStorage.setItem("correctCount", correctCount);
 
     // Proceed with marking the game as played and updating stats
@@ -118,14 +93,11 @@ const Game = () => {
         correctAnswers: correctCount,
         totalQuestions: imagePairs.length,
       };
-
       const statsResponse = await axiosInstance.put(`/stats/${userId}`, payload, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
+        headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });
 
-      console.log("Stats updated successfully in handleGameComplete:", statsResponse.data);
+      console.log("Stats updated successfully:", statsResponse.data);
       await fetchAndSetStats(userId);
       setTimeout(() => setIsStatsOpen(true), 400);
     } catch (error) {
@@ -137,83 +109,73 @@ const Game = () => {
   const initializeGame = async () => {
     const today = getTodayInEST();
     const isLoggedIn = isUserLoggedIn();
-
+  
     if (isLoggedIn && !userId) {
       console.error('User is logged in but no userId found in localStorage.');
       setError('User ID is missing. Please log in again.');
       return;
     }
-
+  
     try {
       setLoading(true); // Start loading animation
-
+  
+      let userSelections = [];
       if (isLoggedIn) {
-        console.log('Checking if user has played today...');
-        const playStatusResponse = await axiosInstance.get('/game/check-today-status', {
+        console.log('Fetching user selections...');
+        const selectionsResponse = await axiosInstance.get('/stats/selections', {
           headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
         });
-
-        const { hasPlayedToday, triesRemaining } = playStatusResponse.data;
-
-        if (!hasPlayedToday) {
-          console.log('New day detected. Resetting game state.');
-          const resetResponse = await axiosInstance.put('/stats/tries/reset', {}, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-          });
-
-          setTriesLeft(resetResponse.data.triesRemaining || 3);
-          setSelections([]);
-          setImagePairs([]);
-          setIsGameComplete(false);
-          await fetchAndSetStats(userId);
-        } else {
-          setTriesLeft(triesRemaining);
-          restoreGameState();
-          setIsGameComplete(true);
-          setTimeout(() => setIsStatsOpen(true), 400);
-        }
+        userSelections = selectionsResponse.data.selections || [];
+        console.log('Fetched selections from backend:', userSelections);
+        updateSelections(userSelections); // Restore selections
       } else {
-        const lastPlayed = localStorage.getItem('lastPlayedDate');
-        const storedTries = localStorage.getItem('triesRemaining');
         const savedSelections = localStorage.getItem('selections');
-
-        if (lastPlayed !== today) {
-          console.log('Guest user: New day detected. Resetting game state.');
-          localStorage.setItem('triesRemaining', 3);
-          localStorage.setItem('lastPlayedDate', today);
-          setTriesLeft(3);
-          setSelections([]);
-          setImagePairs([]);
-          setIsGameComplete(false);
-        } else {
-          if (storedTries) {
-            setTriesLeft(parseInt(storedTries, 10));
-          }
-          if (savedSelections) {
-            setSelections(JSON.parse(savedSelections));
-          }
-        }
+        userSelections = savedSelections ? JSON.parse(savedSelections) : [];
+        updateSelections(userSelections);
+        console.log('Restored guest selections from localStorage:', userSelections);
       }
-
-      console.log("Fetching daily puzzle...");
-      const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
-      console.log("Daily puzzle response:", puzzleResponse.data);
-
-      if (puzzleResponse.data?.imagePairs?.length > 0) {
-        console.log("Setting image pairs...");
-        setImagePairs(puzzleResponse.data.imagePairs.map((pair) => ({
-          human: pair.humanImageURL,
-          ai: pair.aiImageURL,
-          images: Math.random() > 0.5
-            ? [pair.humanImageURL, pair.aiImageURL]
-            : [pair.aiImageURL, pair.humanImageURL],
-        })));
-        localStorage.setItem('completedPairs', JSON.stringify(puzzleResponse.data.imagePairs)); // Save image pairs for persistence
+  
+      console.log('Checking if user has played today...');
+      const playStatusResponse = await axiosInstance.get('/game/check-today-status', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+      });
+  
+      const { hasPlayedToday, triesRemaining } = playStatusResponse.data;
+  
+      if (!hasPlayedToday) {
+        console.log('New day detected.');
+        if (userSelections.length === 0) {
+          console.log('Resetting game state for a new puzzle.');
+          updateSelections([]); // Only reset selections if no progress
+          setTriesLeft(3); // Reset tries for a new puzzle
+        } else {
+          console.log('Retaining existing selections for today.');
+          setTriesLeft(triesRemaining || 3);
+        }
       } else {
-        console.warn("No image pairs available for today.");
+        console.log('User has already played today.');
+        setTriesLeft(triesRemaining);
+      }
+  
+      console.log('Fetching daily puzzle...');
+      const puzzleResponse = await axiosInstance.get('/game/daily-puzzle');
+      console.log('Daily puzzle response:', puzzleResponse.data);
+  
+      if (puzzleResponse.data?.imagePairs?.length > 0) {
+        setImagePairs(
+          puzzleResponse.data.imagePairs.map((pair) => ({
+            human: pair.humanImageURL,
+            ai: pair.aiImageURL,
+            images: Math.random() > 0.5
+              ? [pair.humanImageURL, pair.aiImageURL]
+              : [pair.aiImageURL, pair.humanImageURL],
+          }))
+        );
+      } else {
+        console.warn('No image pairs available for today.');
         setImagePairs([]);
       }
-
+  
       if (isLoggedIn && userId) {
         await fetchAndSetStats(userId);
       }
@@ -224,6 +186,8 @@ const Game = () => {
       setLoading(false); // Stop loading animation
     }
   };
+  
+
 
   // Restore game state function
   const restoreGameState = () => {
@@ -244,42 +208,38 @@ const Game = () => {
 
       if (savedSelections) {
         const selections = JSON.parse(savedSelections);
-        setSelections(selections);
-
-        const firstSelectionIndex = selections.findIndex(
-          (selection) => selection && selection.selected
-        );
-
-        setTimeout(() => {
-          setCurrentIndex(firstSelectionIndex >= 0 ? firstSelectionIndex : 0);
-          if (swiperRef.current) {
-            swiperRef.current.slideToLoop(firstSelectionIndex >= 0 ? firstSelectionIndex : 0, 0);
-          }
-        }, 100);
+        updateSelections(selections);
       } else {
-        setTimeout(() => {
-          setCurrentIndex(0);
-          if (swiperRef.current) {
-            swiperRef.current.slideToLoop(0);
-          }
-        }, 100);
+        updateSelections([]); // Ensure selections is an empty array if missing
       }
     } else {
       console.warn("No completed pairs found in localStorage.");
       setImagePairs([]);
-      setSelections([]);
+      updateSelections([]); // Set defaults
     }
   };
 
   // useEffect for game logic
   useEffect(() => {
     if (!isGameComplete) {
-      console.log('Game is not complete. Initializing game state.');
+      // console.log('Game is not complete. Initializing game state.');
       initializeGame();
     } else {
       console.log('Game is complete. Restoring game state.');
       restoreGameState();
     }
+
+    // Fetch the daily puzzle
+    const fetchDailyPuzzle = async () => {
+      try {
+        const { data } = await axiosInstance.get('/game/daily-puzzle');
+        setImagePairs(data.imagePairs);
+      } catch (err) {
+        console.error('Error fetching daily puzzle:', err);
+      }
+    };
+
+    fetchDailyPuzzle(); // Integrate the fetch logic here
   }, [userId, isGameComplete]);
 
   // Updated useEffect for imagePairs
@@ -294,15 +254,19 @@ const Game = () => {
         }
       }, 100); // Ensure Swiper is fully initialized
     } else {
-      console.log('No image pairs available to display.');
+      // console.log('No image pairs available to display.');
     }
   }, [currentIndex, imagePairs]);
 
-  // Save selections to localStorage whenever they are updated
   useEffect(() => {
-    if (selections.length > 0) {
+    if (!isLoggedIn && selections.length > 0) {
       localStorage.setItem('selections', JSON.stringify(selections));
     }
+  }, [selections, isLoggedIn]);
+
+  // just for debugging
+  useEffect(() => {
+    console.log('Selections state updated:', selections);
   }, [selections]);
 
   useEffect(() => {
@@ -348,10 +312,10 @@ const Game = () => {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
       });
-      console.log("Fetched user stats from API in fetchAndSetStats:", statsResponse.data);
+      // console.log("Fetched user stats from API in fetchAndSetStats:", statsResponse.data);
 
       // Log mistake distribution specifically
-      console.log("Fetched Mistake Distribution:", statsResponse.data.mistakeDistribution);
+      // console.log("Fetched Mistake Distribution:", statsResponse.data.mistakeDistribution);
 
       // Update the stats state
       setStats(statsResponse.data);
@@ -397,21 +361,17 @@ const Game = () => {
   };
 
   const handleSelection = (selectedImage, isHumanSelection) => {
-    // Update selections
+    console.log('Image clicked:', selectedImage, 'Is human:', isHumanSelection);
+
     const updatedSelections = [...selections];
     updatedSelections[currentIndex] = {
       selected: selectedImage,
-      isHumanSelection: isHumanSelection,
+      isHumanSelection,
     };
 
-    setSelections(updatedSelections);
+    console.log('Updated selections:', updatedSelections);
 
-    // Persist selections
-    if (isUserLoggedIn()) {
-      saveSelectionsToBackend(updatedSelections); // Save to backend
-    } else {
-      saveSelectionsToLocalStorage(updatedSelections); // Save to localStorage
-    }
+    updateSelections(updatedSelections); // Persist selections
 
     // Automatically move to the next image pair
     if (swiperRef.current) {
@@ -420,6 +380,8 @@ const Game = () => {
       swiperRef.current.slideToLoop(nextIndex); // Advance the Swiper slide
     }
   };
+
+
 
   const handleCompletionShare = (selections, imagePairs) => {
     // Calculate the score based on correct selections
@@ -579,43 +541,44 @@ const Game = () => {
             </div>
           </div>
 
-
-          {imagePairs.length > 0 ? (
+          {imagePairs && imagePairs.length > 0 ? (
             <Swiper
               loop={true}
               onSlideChange={(swiper) => setCurrentIndex(swiper.realIndex)}
               onSwiper={(swiper) => {
                 swiperRef.current = swiper;
                 swiper.slideToLoop(0);
-                console.log("Swiper Initialized to Index:", currentIndex);
               }}
             >
               {imagePairs.map((pair, index) => (
                 <SwiperSlide key={index}>
                   <div className="image-pair-container">
-                    {pair.images.map((image, idx) => (
-                      <div
-                        key={idx}
-                        className={`image-container ${selections[index]?.selected === image ? 'selected' : ''}`}
-                        onClick={() => handleSelection(image, image === pair.human)}
-                        onMouseDown={() => handleLongPress(image)}
-                        onMouseUp={handleRelease}
-                        onTouchStart={() => handleLongPress(image)}
-                        onTouchEnd={handleRelease}
-                      >
-                        <img
-                          src={image}
-                          alt={`Painting ${idx + 1}`}
-                        />
-                      </div>
-                    ))}
+                    {pair.images && pair.images.length > 0 ? (
+                      pair.images.map((image, idx) => (
+                        <div
+                          key={idx}
+                          className={`image-container ${selections[index]?.selected === image ? 'selected' : ''
+                            }`}
+                          onClick={() => handleSelection(image, image === pair.human)}
+                        >
+                          <img src={image} alt={`Painting ${idx + 1}`} />
+                        </div>
+                      ))
+                    ) : (
+                      <p>No images available for this pair.</p>
+                    )}
                   </div>
                 </SwiperSlide>
               ))}
             </Swiper>
           ) : (
-            <p>No image pairs available.</p>
+            <p>Loading...</p>
           )}
+
+
+
+
+
 
           {enlargedImage && (
             <div className="enlarge-modal" onClick={closeEnlargedImage}>
@@ -625,30 +588,34 @@ const Game = () => {
                   initialSlide={enlargedImageIndex}
                   onSlideChange={(swiper) => setEnlargedImageIndex(swiper.realIndex)}
                   navigation={{
-                    prevEl: '.swiper-button-prev',
-                    nextEl: '.swiper-button-next'
+                    prevEl: ".swiper-button-prev",
+                    nextEl: ".swiper-button-next",
                   }}
                   slidesPerView={1} // Show only one image per slide
                   spaceBetween={10} // Add some space if needed between slides
                 >
-                  {imagePairs.map((pair, index) => (
-                    <SwiperSlide key={index}>
-                      <div className="enlarged-image-container">
-                        {/* Display only one image per slide (human or AI) */}
-                        <img
-                          src={enlargedImageIndex % 2 === 0 ? pair.human : pair.ai}
-                          alt={`Enlarged Painting ${index + 1}`}
-                          className="enlarged-image"
-                        />
-                      </div>
-                    </SwiperSlide>
-                  ))}
+                  {imagePairs &&
+                    imagePairs.map((pair, index) => (
+                      <SwiperSlide key={index}>
+                        <div className="enlarged-image-container">
+                          {/* Display only one image per slide (human or AI) */}
+                          <img
+                            src={
+                              enlargedImageIndex % 2 === 0 ? pair.human : pair.ai
+                            }
+                            alt={`Enlarged Painting ${index + 1}`}
+                            className="enlarged-image"
+                          />
+                        </div>
+                      </SwiperSlide>
+                    ))}
                 </Swiper>
               </div>
               <div className="swiper-button-prev">&#8592;</div>
               <div className="swiper-button-next">&#8594;</div>
             </div>
           )}
+
 
           <div className="navigation-buttons">
             {imagePairs.map((_, index) => (
@@ -767,12 +734,18 @@ const Game = () => {
             </button>
             <button
               className="share-button"
-              onClick={() => handleCompletionShare(selections.map(s => s?.isHumanSelection), imagePairs)}
+              onClick={() =>
+                handleCompletionShare(
+                  selections.map((s) => s?.isHumanSelection),
+                  imagePairs
+                )
+              }
             >
               <FaShareAlt /> Share
             </button>
           </div>
         </div>
+
       )}
 
       {enlargedImage && (
