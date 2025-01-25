@@ -18,6 +18,7 @@ const useSelections = (userId, isLoggedIn) => {
         setSelections(data.selections || []); // Restore selections
       } catch (err) {
         console.error('Error fetching selections:', err);
+        setError('Failed to fetch selections. Please try again later.');
         setSelections([]); // Fallback to empty selections
       } finally {
         setIsLoading(false);
@@ -35,14 +36,16 @@ const useSelections = (userId, isLoggedIn) => {
   }, [userId, isLoggedIn]);
   
   
+  
   // Update selections locally and sync with the backend
   const updateSelections = (updatedSelections) => {
+    // Prevent unnecessary updates
     if (JSON.stringify(updatedSelections) === JSON.stringify(selections)) {
       console.log("Selections are already up-to-date. Skipping update.");
       return; // Avoid redundant updates
     }
   
-    setSelections(updatedSelections);
+    setSelections(updatedSelections); // Update local state
   
     // Sync with backend or localStorage
     if (isLoggedIn) {
@@ -58,6 +61,7 @@ const useSelections = (userId, isLoggedIn) => {
       localStorage.setItem("selections", JSON.stringify(updatedSelections));
     }
   };
+  
   
   
   

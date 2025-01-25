@@ -148,17 +148,14 @@ const Game = () => {
         setTriesLeft(0); // Prevent further play
         setIsGameComplete(true); // Lock user into completion screen
         return; // Exit early since the game has already been completed
-      } else {
-        console.log("New day detected.");
-        if (userSelections.length === 0) {
-          console.log("Resetting game state for a new puzzle.");
-          updateSelections([]); // Reset selections for new game
-          setTriesLeft(3); // Reset tries
-        } else {
-          console.log("Retaining existing selections for today.");
-          setTriesLeft(triesRemaining || 3); // Preserve remaining tries
-        }
       }
+  
+      console.log("New day detected.");
+      if (userSelections.length === 0) {
+        console.log("Starting new puzzle. Resetting selections.");
+        updateSelections([]); // Reset selections for new game
+      }
+      setTriesLeft(triesRemaining || 3); // Initialize tries for the day
   
       console.log("Fetching daily puzzle...");
       const puzzleResponse = await axiosInstance.get("/game/daily-puzzle");
@@ -190,6 +187,7 @@ const Game = () => {
       setLoading(false); // Stop loading animation
     }
   };
+  
   
 
   // Restore game state function
@@ -231,6 +229,7 @@ useEffect(() => {
     console.log("Game already completed. Restoring game state...");
     restoreGameState();
 
+    // Restore selections only if they are empty
     if (imagePairs.length > 0 && selections.length === 0) {
       console.log("Restoring selections for completed game...");
       if (isLoggedIn) {
@@ -243,7 +242,8 @@ useEffect(() => {
       }
     }
   }
-}, [userId, isGameComplete, imagePairs.length, selections.length]);
+}, [userId, isGameComplete, imagePairs.length]);
+
 
 // Persist `isGameComplete` state across refreshes
 useEffect(() => {
@@ -419,24 +419,27 @@ useEffect(() => {
 
   const handleSelection = (selectedImage, isHumanSelection) => {
     console.log('Image clicked:', selectedImage, 'Is human:', isHumanSelection);
-
+  
     const updatedSelections = [...selections];
     updatedSelections[currentIndex] = {
       selected: selectedImage,
       isHumanSelection,
     };
-
+  
     console.log('Updated selections:', updatedSelections);
-
+  
     updateSelections(updatedSelections); // Persist selections
-
-    // Automatically move to the next image pair
-    if (swiperRef.current) {
-      const nextIndex = currentIndex + 1 < imagePairs.length ? currentIndex + 1 : 0;
-      setCurrentIndex(nextIndex);
-      swiperRef.current.slideToLoop(nextIndex); // Advance the Swiper slide
-    }
+  
+    // Delay slide navigation to ensure smoother transitions
+    setTimeout(() => {
+      if (swiperRef.current) {
+        const nextIndex = currentIndex + 1 < imagePairs.length ? currentIndex + 1 : 0;
+        setCurrentIndex(nextIndex);
+        swiperRef.current.slideToLoop(nextIndex);
+      }
+    }, 200); // Slight delay to ensure UX smoothness
   };
+  
 
 
 
