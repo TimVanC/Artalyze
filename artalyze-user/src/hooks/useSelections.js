@@ -36,34 +36,29 @@ const useSelections = (userId, isLoggedIn) => {
   
   
   // Update selections locally and sync with the backend
-  const updateSelections = async (updatedSelections) => {
+  const updateSelections = (updatedSelections) => {
     if (JSON.stringify(updatedSelections) === JSON.stringify(selections)) {
-      console.log("Selections are already up-to-date, skipping update.");
-      return; // Prevent infinite loop
+      console.log("Selections are already up-to-date. Skipping update.");
+      return; // Avoid redundant updates
     }
   
-    setSelections(updatedSelections); // Update local state
+    setSelections(updatedSelections);
   
-    try {
-      if (isLoggedIn) {
-        console.log("Sending selections to backend:", updatedSelections);
-        await axiosInstance.put(
-          `/stats/selections`,
-          { selections: updatedSelections },
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-            },
-          }
-        );
-      } else {
-        localStorage.setItem("selections", JSON.stringify(updatedSelections));
-      }
-    } catch (err) {
-      console.error("Error saving selections:", err);
-      setError("Failed to save selections.");
+    // Sync with backend or localStorage
+    if (isLoggedIn) {
+      axiosInstance
+        .put("/stats/selections", { selections: updatedSelections }, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+        })
+        .then(() => console.log("Selections updated successfully in backend."))
+        .catch((err) => console.error("Error updating selections:", err));
+    } else {
+      localStorage.setItem("selections", JSON.stringify(updatedSelections));
     }
   };
+  
   
   
 

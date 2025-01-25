@@ -222,51 +222,55 @@ const Game = () => {
     }
   };
 
-// useEffect for game logic
+// Game logic: Initialize or restore game state based on completion status
 useEffect(() => {
   if (!isGameComplete) {
+    console.log("Initializing game...");
     initializeGame();
-  } else if (isGameComplete) {
+  } else {
+    console.log("Game already completed. Restoring game state...");
     restoreGameState();
 
     if (imagePairs.length > 0 && selections.length === 0) {
-      console.log('Restoring selections for completed game...');
+      console.log("Restoring selections for completed game...");
       if (isLoggedIn) {
         restoreSelectionsFromBackend(); // Fetch selections from backend if logged in
       } else {
-        const savedSelections = localStorage.getItem('selections');
+        const savedSelections = localStorage.getItem("selections");
         if (savedSelections) {
           updateSelections(JSON.parse(savedSelections)); // Restore from localStorage
         }
       }
     }
   }
-}, [userId, isGameComplete, selections.length, imagePairs.length]);
+}, [userId, isGameComplete, imagePairs.length, selections.length]);
 
-// Persist `isGameComplete` across refreshes
+// Persist `isGameComplete` state across refreshes
 useEffect(() => {
   if (isGameComplete) {
-    localStorage.setItem('isGameComplete', 'true');
+    console.log("Persisting game completion state to localStorage...");
+    localStorage.setItem("isGameComplete", "true");
   } else {
-    localStorage.removeItem('isGameComplete');
+    localStorage.removeItem("isGameComplete");
   }
 }, [isGameComplete]);
 
-// Restore `isGameComplete` from localStorage
+// Restore `isGameComplete` from localStorage on initial render
 useEffect(() => {
-  const storedIsGameComplete = localStorage.getItem('isGameComplete') === 'true';
+  const storedIsGameComplete = localStorage.getItem("isGameComplete") === "true";
   if (storedIsGameComplete) {
-    console.log('Restoring game completion state from localStorage.');
+    console.log("Restoring game completion state from localStorage.");
     setIsGameComplete(true);
   }
 }, []);
 
-// Monitor imagePairs updates
+// Monitor updates to imagePairs
 useEffect(() => {
-  console.log('Image pairs state updated:', imagePairs);
+  console.log("Image pairs state updated:", imagePairs);
   if (imagePairs.length > 0) {
     setTimeout(() => {
       if (swiperRef.current) {
+        console.log("Updating Swiper to current index:", currentIndex);
         swiperRef.current.slideToLoop(currentIndex, 0);
       }
     }, 100);
@@ -276,67 +280,69 @@ useEffect(() => {
 // Persist selections for guest users
 useEffect(() => {
   if (!isLoggedIn && selections.length > 0) {
-    localStorage.setItem('selections', JSON.stringify(selections));
+    console.log("Persisting selections to localStorage for guest user.");
+    localStorage.setItem("selections", JSON.stringify(selections));
   }
 }, [selections, isLoggedIn]);
 
-// Debugging: Log selections state updates
+// Log selections state updates for debugging
 useEffect(() => {
-  console.log('Selections state updated:', selections);
+  console.log("Selections state updated:", selections);
 }, [selections]);
 
-// Fetch and display stats when game is complete
+// Fetch and display stats for the completion screen
 useEffect(() => {
   const fetchStatsForCompletion = async () => {
     if (isLoggedIn && userId && isGameComplete) {
       try {
-        console.log('Fetching stats for completion screen...');
-        await fetchAndSetStats(userId); // Ensure stats are fetched and updated
+        console.log("Fetching stats for completion screen...");
+        await fetchAndSetStats(userId);
       } catch (err) {
-        console.error('Error fetching stats for completion:', err);
+        console.error("Error fetching stats for completion:", err);
       }
     }
   };
 
   fetchStatsForCompletion();
-}, [userId, isGameComplete]);
+}, [isLoggedIn, userId, isGameComplete]);
 
-// Apply animations to thumbnails when stats modal is dismissed
+// Apply animations to thumbnails when the stats modal is dismissed
 useEffect(() => {
   if (isStatsModalDismissed) {
-    document.querySelectorAll('.thumbnail-container.pulse').forEach((el, index) => {
+    document.querySelectorAll(".thumbnail-container.pulse").forEach((el, index) => {
       console.log(`Applying animation to element ${index + 1}`);
-      el.style.animationDelay = `${index * 0.1}s`; // Optional: Staggered animation delay
-      el.classList.add('animate-pulse');
+      el.style.animationDelay = `${index * 0.1}s`;
+      el.classList.add("animate-pulse");
     });
   }
 }, [isStatsModalDismissed]);
 
-// Restore correctCount from localStorage
-useEffect(() => {
-  const storedCorrectCount = localStorage.getItem('correctCount');
-  if (storedCorrectCount) {
-    setCorrectCount(parseInt(storedCorrectCount, 10));
-  }
-}, []);
+  // Restore correctCount from localStorage
+  useEffect(() => {
+    const storedCorrectCount = localStorage.getItem("correctCount");
+    if (storedCorrectCount) {
+      setCorrectCount(parseInt(storedCorrectCount, 10));
+    }
+  }, []);
 
-// Debugging: Log triesRemaining state updates
-useEffect(() => {
-  console.log('Tries remaining:', triesRemaining);
-}, [triesRemaining]);
+  // Debugging: Log triesRemaining state updates
+  useEffect(() => {
+    console.log('Tries remaining:', triesRemaining);
+  }, [triesRemaining]);
 
-// Debugging: Log game completion status updates
-useEffect(() => {
-  console.log('Game completion status updated:', isGameComplete);
-}, [isGameComplete]);
+  // Debugging: Log game completion status updates
+  useEffect(() => {
+    console.log('Game completion status updated:', isGameComplete);
+  }, [isGameComplete]);
 
-// Lock to completion screen after game completion
-useEffect(() => {
-  if (isGameComplete) {
-    console.log('Game completed. Redirecting to completion screen.');
-    // Any logic to redirect or lock the user to the completion screen
-  }
-}, [isGameComplete]);
+  // Lock to completion screen after game completion
+  useEffect(() => {
+    if (isGameComplete) {
+      console.log('Game completed. Redirecting to completion screen.');
+      // Any logic to redirect or lock the user to the completion screen
+    }
+  }, [isGameComplete]);
+
 
   const encouragementMessages = [
     "Keep it up!",
@@ -352,14 +358,22 @@ useEffect(() => {
   };
 
   const fetchAndSetStats = async (userId) => {
+    if (!userId) {
+      console.error("No userId found. Please log in again.");
+      return;
+    }
+  
     try {
       const statsResponse = await axiosInstance.get(`/stats/${userId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
       });
-      console.log("Stats fetched successfully:", statsResponse.data);
-      setStats(statsResponse.data); // Assuming `setStats` updates the stats state
+  
+      console.log("Fetched user stats:", statsResponse.data);
+      setStats(statsResponse.data); // Update stats state
     } catch (error) {
-      console.error("Error fetching stats:", error.response?.data || error.message);
+      console.error("Error fetching user stats:", error.response?.data || error.message);
     }
   };
   
