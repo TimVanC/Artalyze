@@ -162,16 +162,18 @@ const Game = () => {
       console.log("Daily puzzle response:", puzzleResponse.data);
   
       if (puzzleResponse.data?.imagePairs?.length > 0) {
-        setImagePairs(
-          puzzleResponse.data.imagePairs.map((pair) => ({
-            human: pair.humanImageURL,
-            ai: pair.aiImageURL,
-            images:
-              Math.random() > 0.5
-                ? [pair.humanImageURL, pair.aiImageURL]
-                : [pair.aiImageURL, pair.humanImageURL],
-          }))
-        );
+        const pairs = puzzleResponse.data.imagePairs.map((pair) => ({
+          human: pair.humanImageURL,
+          ai: pair.aiImageURL,
+          images:
+            Math.random() > 0.5
+              ? [pair.humanImageURL, pair.aiImageURL]
+              : [pair.aiImageURL, pair.humanImageURL],
+        }));
+  
+        setImagePairs(pairs);
+        localStorage.setItem("completedPairs", JSON.stringify(puzzleResponse.data.imagePairs)); // Persist to localStorage
+        console.log("Saved imagePairs to localStorage:", pairs);
       } else {
         console.warn("No image pairs available for today.");
         setImagePairs([]);
@@ -188,13 +190,12 @@ const Game = () => {
     }
   };
   
-  
 
   // Restore game state function
   const restoreGameState = () => {
     const savedPairs = localStorage.getItem('completedPairs');
     const savedSelections = localStorage.getItem('selections');
-
+  
     if (savedPairs) {
       const pairs = JSON.parse(savedPairs);
       setImagePairs(
@@ -206,24 +207,40 @@ const Game = () => {
             : [pair.aiImageURL, pair.humanImageURL],
         }))
       );
-
+  
       if (savedSelections) {
         const selections = JSON.parse(savedSelections);
         updateSelections(selections);
+  
+        const firstSelectionIndex = selections.findIndex(
+          (selection) => selection && selection.selected
+        );
+  
+        setTimeout(() => {
+          setCurrentIndex(firstSelectionIndex >= 0 ? firstSelectionIndex : 0);
+          if (swiperRef.current) {
+            swiperRef.current.slideToLoop(firstSelectionIndex >= 0 ? firstSelectionIndex : 0, 0);
+          }
+        }, 100);
       } else {
-        updateSelections([]); // Ensure selections is an empty array if missing
+        setTimeout(() => {
+          setCurrentIndex(0);
+          if (swiperRef.current) {
+            swiperRef.current.slideToLoop(0);
+          }
+        }, 100);
       }
     } else {
       console.warn("No completed pairs found in localStorage.");
       setImagePairs([]);
-      updateSelections([]); // Set defaults
+      updateSelections([]);
     }
   };
 
 // Game logic: Initialize or restore game state based on completion status
 useEffect(() => {
   if (!isGameComplete) {
-    console.log("Initializing game...");
+    // console.log("Initializing game...");
     initializeGame();
   } else {
     console.log("Game already completed. Restoring game state...");
@@ -270,7 +287,7 @@ useEffect(() => {
   if (imagePairs.length > 0) {
     setTimeout(() => {
       if (swiperRef.current) {
-        console.log("Updating Swiper to current index:", currentIndex);
+        // console.log("Updating Swiper to current index:", currentIndex);
         swiperRef.current.slideToLoop(currentIndex, 0);
       }
     }, 100);
@@ -327,7 +344,7 @@ useEffect(() => {
 
   // Debugging: Log triesRemaining state updates
   useEffect(() => {
-    console.log('Tries remaining:', triesRemaining);
+    // console.log('Tries remaining:', triesRemaining);
   }, [triesRemaining]);
 
   // Debugging: Log game completion status updates
@@ -428,17 +445,17 @@ useEffect(() => {
   
     console.log('Updated selections:', updatedSelections);
   
-    updateSelections(updatedSelections); // Persist selections
+    updateSelections(updatedSelections); // Use updateSelections to persist
   
-    // Delay slide navigation to ensure smoother transitions
     setTimeout(() => {
       if (swiperRef.current) {
         const nextIndex = currentIndex + 1 < imagePairs.length ? currentIndex + 1 : 0;
         setCurrentIndex(nextIndex);
         swiperRef.current.slideToLoop(nextIndex);
       }
-    }, 200); // Slight delay to ensure UX smoothness
+    }, 200);
   };
+  
   
 
 
