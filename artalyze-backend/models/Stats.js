@@ -47,7 +47,6 @@ const statsSchema = new mongoose.Schema(
         '5': 0,
       },
     },
-    
     mostRecentScore: {
       type: Number,
       default: null,
@@ -61,6 +60,10 @@ const statsSchema = new mongoose.Schema(
       default: 3,
     },
     selections: {
+      type: Array,
+      default: [],
+    },
+    completedSelections: { // Added field for completed selections
       type: Array,
       default: [],
     },
