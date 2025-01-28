@@ -331,6 +331,19 @@ const Game = () => {
     }
   }, [currentIndex, imagePairs]);
 
+  // Apply animations to thumbnails when the stats modal is dismissed
+useEffect(() => {
+  if (isStatsModalDismissed) {
+    const elements = document.querySelectorAll(".thumbnail-container.pulse");
+    elements.forEach((el, index) => {
+      console.log(`Applying animation to element ${index + 1}`);
+      el.style.animationDelay = `${index * 0.1}s`;
+      el.classList.add("animate-pulse");
+    });
+    setIsStatsModalDismissed(false); // Reset state after applying animations
+  }
+}, [isStatsModalDismissed]);
+
   // Persist selections for guest users
   useEffect(() => {
     if (!isLoggedIn && selections.length > 0) {
@@ -644,7 +657,7 @@ const Game = () => {
 
   const handleStatsModalClose = () => {
     setIsStatsOpen(false);
-    setTimeout(() => setIsStatsModalDismissed(true), 300); // Allow modal close animation to finish
+    setTimeout(() => setIsStatsModalDismissed(true), 300); // Trigger animation after modal close animation
   };
 
   const isSubmitEnabled = selections.length === imagePairs.length;
