@@ -32,75 +32,87 @@ exports.getUserStats = async (req, res) => {
   }
 };
 
-
 exports.updateUserStats = async (req, res) => {
   try {
     const { userId } = req.params;
     const { correctAnswers, totalQuestions, completedSelections } = req.body;
+    const todayInEST = getTodayInEST();
 
-    console.log(`Updating stats for userId: ${userId}`);
-    console.log("Received payload:", { correctAnswers, totalQuestions, completedSelections });
+    console.log(`Updating stats for user: ${userId}`);
+    console.log(`Received data:`, req.body);
 
-    if (
-      correctAnswers === undefined ||
-      totalQuestions === undefined ||
-      !Array.isArray(completedSelections)
-    ) {
-      console.error("Invalid payload. Missing required fields or incorrect format.");
-      return res.status(400).json({
-        message: "Invalid payload: correctAnswers, totalQuestions, and completedSelections are required.",
+    let stats = await Stats.findOne({ userId });
+
+    if (!stats) {
+      console.log("No stats found for user. Initializing new stats.");
+      stats = new Stats({
+        userId,
+        gamesPlayed: 0,
+        winPercentage: 0,
+        currentStreak: 0,
+        maxStreak: 0,
+        perfectStreak: 0,
+        maxPerfectStreak: 0,
+        perfectPuzzles: 0,
+        mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
       });
     }
 
-    const stats = await Stats.findOne({ userId });
-
-    if (!stats) {
-      console.error(`Stats not found for userId: ${userId}`);
-      return res.status(404).json({ message: "Stats not found for this user." });
-    }
-
-    console.log("Stats before update:", stats);
-
-    // Update the stats object
+    // Update stats
     stats.gamesPlayed += 1;
-    stats.winPercentage = Math.round(
-      ((stats.gamesPlayed - stats.mistakeDistribution[0]) / stats.gamesPlayed) * 100
-    );
 
-    // Mistake distribution
-    const mistakes = totalQuestions - correctAnswers;
+    const mistakes = Math.max(totalQuestions - correctAnswers, 0); // Calculate mistakes
+    stats.mostRecentScore = mistakes; // Track most recent mistake count
     stats.mistakeDistribution[mistakes] = (stats.mistakeDistribution[mistakes] || 0) + 1;
+    stats.markModified("mistakeDistribution"); // Ensure nested fields are marked as modified
+
+    console.log(`Updated mistake distribution:`, stats.mistakeDistribution);
 
     // Update streaks
-    const today = getTodayInEST();
-    if (stats.lastPlayedDate !== today) {
-      stats.currentStreak = correctAnswers === totalQuestions ? stats.currentStreak + 1 : 0;
-      if (correctAnswers === totalQuestions) {
-        stats.perfectStreak += 1;
-        stats.maxPerfectStreak = Math.max(stats.maxPerfectStreak, stats.perfectStreak);
-      }
+    const isPerfectGame = correctAnswers === totalQuestions;
+
+    if (stats.lastPlayedDate === getYesterdayInEST()) {
+      stats.currentStreak += 1;
+      stats.perfectStreak = isPerfectGame ? stats.perfectStreak + 1 : 0;
+    } else if (stats.lastPlayedDate !== todayInEST) {
+      stats.currentStreak = 1;
+      stats.perfectStreak = isPerfectGame ? 1 : 0;
     }
 
-    // Update lastPlayedDate
-    stats.lastPlayedDate = today;
+    stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
+    stats.maxPerfectStreak = Math.max(stats.maxPerfectStreak, stats.perfectStreak);
 
-    // Save completedSelections
-    stats.completedSelections = completedSelections;
+    // Update perfect puzzles count
+    if (isPerfectGame) {
+      stats.perfectPuzzles += 1;
+    }
 
-    console.log("Stats before save:", stats);
+    // Calculate win percentage
+    stats.winPercentage = Math.round((stats.perfectPuzzles / stats.gamesPlayed) * 100);
 
-    // Save the stats back to the database
-    const savedStats = await stats.save();
-    console.log("Saved stats in database:", savedStats);
+    // Update last played date
+    stats.lastPlayedDate = todayInEST;
 
-    res.status(200).json(savedStats);
+    console.log("Final updated stats:", {
+      gamesPlayed: stats.gamesPlayed,
+      winPercentage: stats.winPercentage,
+      currentStreak: stats.currentStreak,
+      maxStreak: stats.maxStreak,
+      perfectStreak: stats.perfectStreak,
+      maxPerfectStreak: stats.maxPerfectStreak,
+      perfectPuzzles: stats.perfectPuzzles,
+      mistakeDistribution: stats.mistakeDistribution,
+      mostRecentScore: stats.mostRecentScore,
+    });
+
+    await stats.save();
+    console.log("Stats successfully saved to database.");
+    res.status(200).json(stats);
   } catch (error) {
     console.error("Error updating user stats:", error);
     res.status(500).json({ message: "Failed to update stats." });
   }
 };
-
-
 
 // Reset all user statistics
 exports.resetUserStats = async (req, res) => {
@@ -240,7 +252,6 @@ exports.getCompletedSelections = async (req, res) => {
   }
 };
 
-
 // Save completedSelections
 exports.saveCompletedSelections = async (req, res) => {
   try {
@@ -272,11 +283,6 @@ exports.saveCompletedSelections = async (req, res) => {
     res.status(500).json({ message: "Failed to save completedSelections." });
   }
 };
-
-
-
-
-
 
 // Fetch triesRemaining
 exports.getTriesRemaining = async (req, res) => {

@@ -75,11 +75,7 @@ const handleGameComplete = async () => {
   }
 
   const correctCount = selections.reduce((count, selection, index) => {
-    if (
-      selection &&
-      imagePairs[index] &&
-      selection.selected === imagePairs[index].human
-    ) {
+    if (selection && imagePairs[index] && selection.selected === imagePairs[index].human) {
       return count + 1;
     }
     return count;
@@ -87,17 +83,19 @@ const handleGameComplete = async () => {
 
   console.log("Final Correct Answers Count:", correctCount);
   setCorrectCount(correctCount);
-  localStorage.setItem("correctCount", correctCount); // <-- Ensure it's saved
+  localStorage.setItem("correctCount", correctCount); // Ensure it's saved correctly
 
   setCompletedSelections(selections);
   console.log("CompletedSelections state after setCompletedSelections:", selections);
 
   try {
     if (isUserLoggedIn()) {
+      const mistakes = imagePairs.length - correctCount; // Calculate mistakes
       const payload = {
         correctAnswers: correctCount,
         totalQuestions: imagePairs.length,
         completedSelections: selections,
+        mostRecentScore: mistakes, // Track mistakes for mistake distribution
       };
 
       console.log("Payload being sent to backend:", payload);
@@ -107,6 +105,7 @@ const handleGameComplete = async () => {
       });
 
       console.log("Stats updated successfully in backend:", statsResponse.data);
+      setStats(statsResponse.data); // Ensure frontend reflects latest stats
 
       await fetchAndSetStats(userId);
     } else {
@@ -116,7 +115,7 @@ const handleGameComplete = async () => {
   } catch (error) {
     console.error("Error updating user stats:", error.response?.data || error.message);
   } finally {
-    updateSelections([]);
+    updateSelections([]); // Clear selections after game completion
     localStorage.removeItem("selections");
     console.log("Cleared selections for the next game.");
   }
