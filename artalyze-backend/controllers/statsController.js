@@ -6,127 +6,81 @@ exports.getUserStats = async (req, res) => {
   try {
     const { userId } = req.params;
 
+    console.log(`Fetching stats for userId: ${userId}`);
+
+    if (!userId) {
+      console.error("Error: userId is missing in request params.");
+      return res.status(400).json({ message: "User ID is required." });
+    }
+
     const stats = await Stats.findOne({ userId });
 
     if (!stats) {
-      return res.status(404).json({ message: 'Statistics not found for this user.' });
+      console.warn(`Stats not found for userId: ${userId}`);
+      return res.status(404).json({ message: "Statistics not found for this user." });
     }
 
-    const todayInEST = getTodayInEST();
-    const yesterdayInEST = getYesterdayInEST();
+    console.log("Stats fetched from database:", stats);
 
-    // Reset streaks and mostRecentScore if the user missed a day
-    if (stats.lastPlayedDate && stats.lastPlayedDate !== yesterdayInEST && stats.lastPlayedDate !== todayInEST) {
-      stats.currentStreak = 0;
-      stats.perfectStreak = 0;
-      stats.mostRecentScore = null; // Reset mostRecentScore at midnight
-      await stats.save(); // Persist changes to the database
-    }
-
-    // Ensure `mostRecentScore` is explicitly included
-    const response = {
-      gamesPlayed: stats.gamesPlayed || 0,
-      winPercentage: stats.winPercentage || 0,
-      currentStreak: stats.currentStreak || 0,
-      maxStreak: stats.maxStreak || 0,
-      perfectStreak: stats.perfectStreak || 0,
-      maxPerfectStreak: stats.maxPerfectStreak || 0,
-      perfectPuzzles: stats.perfectPuzzles || 0,
-      lastPlayedDate: stats.lastPlayedDate || null,
-      mostRecentScore: stats.mostRecentScore, // Explicit inclusion, can be null
-      mistakeDistribution: stats.mistakeDistribution || {},
-    };
-
-    res.status(200).json(response);
+    res.status(200).json({
+      ...stats.toObject(),
+      completedSelections: stats.completedSelections || [],
+    });
   } catch (error) {
-    console.error('Error fetching user stats:', error);
-    res.status(500).json({ message: 'Failed to fetch user stats.' });
+    console.error("Error fetching user stats:", error);
+    res.status(500).json({ message: "Failed to fetch user stats." });
   }
 };
 
-// Update user statistics
+
 exports.updateUserStats = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { correctAnswers, totalQuestions } = req.body;
+    const { correctAnswers, totalQuestions, completedSelections } = req.body;
 
-    if (correctAnswers === undefined || totalQuestions === undefined) {
-      return res.status(400).json({ message: 'Invalid payload: correctAnswers and totalQuestions are required.' });
+    console.log(`Updating stats for userId: ${userId}`);
+    console.log("Received payload:", { correctAnswers, totalQuestions, completedSelections });
+
+    if (
+      correctAnswers === undefined ||
+      totalQuestions === undefined ||
+      !Array.isArray(completedSelections)
+    ) {
+      console.error("Invalid payload. Missing required fields or incorrect format.");
+      return res.status(400).json({
+        message: "Invalid payload: correctAnswers, totalQuestions, and completedSelections are required.",
+      });
     }
 
-    const todayInEST = getTodayInEST();
-    const yesterdayInEST = getYesterdayInEST();
-
-    const stats = await Stats.findOne({ userId });
+    let stats = await Stats.findOne({ userId });
 
     if (!stats) {
-      return res.status(404).json({ message: 'Stats not found for this user.' });
+      console.error(`Stats not found for userId: ${userId}`);
+      return res.status(404).json({ message: "Stats not found for this user." });
     }
 
-    const isPerfectGame = correctAnswers === totalQuestions;
+    console.log("Stats before update:", stats);
 
-    // Reset streaks if the user missed a day
-    if (stats.lastPlayedDate && stats.lastPlayedDate !== yesterdayInEST && stats.lastPlayedDate !== todayInEST) {
-      stats.currentStreak = 0;
-      stats.perfectStreak = 0;
-    }
-
-    // Update streaks if played consecutively
-    if (stats.lastPlayedDate === yesterdayInEST) {
-      stats.currentStreak += 1;
-      stats.perfectStreak = isPerfectGame ? stats.perfectStreak + 1 : 0;
-    } else if (stats.lastPlayedDate !== todayInEST) {
-      stats.currentStreak = 1;
-      stats.perfectStreak = isPerfectGame ? 1 : 0;
-    }
-
-    // Calculate the mistake count
-    const mistakeCount = Math.max(totalQuestions - correctAnswers, 0);
-
-    // Initialize mistakeDistribution if undefined
-    if (!stats.mistakeDistribution) {
-      stats.mistakeDistribution = {
-        '0': 0,
-        '1': 0,
-        '2': 0,
-        '3': 0,
-        '4': 0,
-        '5': 0,
-      };
-    }
-
-    // Update mistake distribution
-    stats.mistakeDistribution[mistakeCount] =
-      (stats.mistakeDistribution[mistakeCount] || 0) + 1;
-
-    // Mark the nested field as modified
-    stats.markModified('mistakeDistribution');
-
-    // Update other stats
-    stats.mostRecentScore = mistakeCount;
-    stats.lastPlayedDate = todayInEST;
+    // Update stats only if values are valid
+    stats.completedSelections = completedSelections;
+    stats.lastPlayedDate = getTodayInEST();
     stats.gamesPlayed += 1;
-    stats.perfectPuzzles += isPerfectGame ? 1 : 0;
-    stats.winPercentage = Math.round((stats.perfectPuzzles / stats.gamesPlayed) * 100);
-    stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
-    stats.maxPerfectStreak = Math.max(stats.maxPerfectStreak, stats.perfectStreak);
+    stats.mostRecentScore = correctAnswers;
 
-    console.log('Updated stats:', {
-      gamesPlayed: stats.gamesPlayed,
-      winPercentage: stats.winPercentage,
-      currentStreak: stats.currentStreak,
-      maxStreak: stats.maxStreak,
-      perfectStreak: stats.perfectStreak,
-      maxPerfectStreak: stats.maxPerfectStreak,
-      mistakeDistribution: stats.mistakeDistribution,
-      mostRecentScore: stats.mostRecentScore,
-    });
+    if (totalQuestions > 0) {
+      stats.winPercentage = ((correctAnswers / totalQuestions) * 100).toFixed(2);
+    }
 
-    await stats.save();
-    res.status(200).json(stats);
+    console.log("Stats before save:", stats);
+
+    // Save the stats back to the database
+    const savedStats = await stats.save();
+    console.log("Saved stats in database:", savedStats);
+
+    res.status(200).json(savedStats);
   } catch (error) {
-    console.error('Error updating stats:', error);
-    res.status(500).json({ message: 'Failed to update stats.' });
+    console.error("Error updating user stats:", error);
+    res.status(500).json({ message: "Failed to update stats." });
   }
 };
 
@@ -191,70 +145,6 @@ exports.deleteUserStats = async (req, res) => {
   }
 };
 
-// Fetch triesRemaining
-exports.getTriesRemaining = async (req, res) => {
-  try {
-    const { userId } = req.user;
-    const stats = await Stats.findOne({ userId });
-
-    if (!stats) {
-      return res.status(404).json({ message: 'Stats not found for this user.' });
-    }
-
-    res.status(200).json({ triesRemaining: stats.triesRemaining });
-  } catch (error) {
-    console.error('Error fetching triesRemaining:', error);
-    res.status(500).json({ message: 'Failed to fetch triesRemaining.' });
-  }
-};
-
-
-// Decrement triesRemaining
-exports.decrementTries = async (req, res) => {
-  try {
-    const { userId } = req.user;
-
-    const stats = await Stats.findOneAndUpdate(
-      { userId },
-      { $inc: { triesRemaining: -1 } },
-      { new: true }
-    );
-
-    if (!stats) {
-      return res.status(404).json({ message: 'Stats not found for this user.' });
-    }
-
-    res.status(200).json({ triesRemaining: stats.triesRemaining });
-  } catch (error) {
-    console.error('Error decrementing triesRemaining:', error);
-    res.status(500).json({ message: 'Failed to decrement triesRemaining.' });
-  }
-};
-
-
-// Reset triesRemaining at midnight
-exports.resetTries = async (req, res) => {
-  try {
-    const { userId } = req.user;
-
-    const stats = await Stats.findOneAndUpdate(
-      { userId },
-      { $set: { triesRemaining: 3 } },
-      { new: true }
-    );
-
-    if (!stats) {
-      return res.status(404).json({ message: 'Stats not found for user.' });
-    }
-
-    res.status(200).json({ triesRemaining: stats.triesRemaining });
-  } catch (error) {
-    console.error('Error resetting triesRemaining:', error);
-    res.status(500).json({ message: 'Failed to reset triesRemaining.' });
-  }
-};
-
-
 // Fetch selections
 exports.getSelections = async (req, res) => {
   try {
@@ -272,7 +162,6 @@ exports.getSelections = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch selections.' });
   }
 };
-
 
 // Save selections
 exports.saveSelections = async (req, res) => {
@@ -303,6 +192,138 @@ exports.saveSelections = async (req, res) => {
   } catch (error) {
     console.error('Error saving selections:', error);
     res.status(500).json({ message: 'Failed to save selections.' });
+  }
+};
+
+// Fetch completedSelections
+exports.getCompletedSelections = async (req, res) => {
+  try {
+    const { userId } = req.user;
+
+    if (!userId) {
+      console.error("Error: userId is missing in request.");
+      return res.status(400).json({ message: "User ID is required." });
+    }
+
+    const stats = await Stats.findOne({ userId });
+
+    if (!stats) {
+      console.warn(`No stats found for userId: ${userId}`);
+      return res.status(404).json({ message: "Stats not found for this user." });
+    }
+
+    console.log(`CompletedSelections for userId ${userId}:`, stats.completedSelections || []);
+
+    res.status(200).json({
+      completedSelections: stats.completedSelections || [],
+    });
+  } catch (error) {
+    console.error("Error fetching completedSelections:", error);
+    res.status(500).json({ message: "Failed to fetch completedSelections." });
+  }
+};
+
+
+// Save completedSelections
+exports.saveCompletedSelections = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    const { completedSelections } = req.body;
+
+    console.log("saveCompletedSelections called");
+    console.log("Received userId:", userId);
+    console.log("Received completedSelections:", completedSelections);
+
+    if (!userId) {
+      console.error("Error: userId is missing in request.");
+      return res.status(400).json({ message: "User ID is required." });
+    }
+
+    if (!Array.isArray(completedSelections)) {
+      console.error("Invalid completedSelections format:", completedSelections);
+      return res.status(400).json({ message: "completedSelections must be an array." });
+    }
+
+    const stats = await Stats.findOneAndUpdate(
+      { userId },
+      { $set: { completedSelections } },
+      { new: true, upsert: true }
+    );
+
+    if (!stats) {
+      console.error(`Error updating stats for userId: ${userId}`);
+      return res.status(500).json({ message: "Failed to update completedSelections." });
+    }
+
+    console.log("Updated stats with completedSelections:", stats);
+
+    res.status(200).json({ completedSelections: stats.completedSelections || [] });
+  } catch (error) {
+    console.error("Error saving completedSelections:", error);
+    res.status(500).json({ message: "Failed to save completedSelections." });
+  }
+};
+
+
+
+// Fetch triesRemaining
+exports.getTriesRemaining = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    const stats = await Stats.findOne({ userId });
+
+    if (!stats) {
+      return res.status(404).json({ message: 'Stats not found for this user.' });
+    }
+
+    res.status(200).json({ triesRemaining: stats.triesRemaining });
+  } catch (error) {
+    console.error('Error fetching triesRemaining:', error);
+    res.status(500).json({ message: 'Failed to fetch triesRemaining.' });
+  }
+};
+
+// Decrement triesRemaining
+exports.decrementTries = async (req, res) => {
+  try {
+    const { userId } = req.user;
+
+    const stats = await Stats.findOneAndUpdate(
+      { userId },
+      { $inc: { triesRemaining: -1 } },
+      { new: true }
+    );
+
+    if (!stats) {
+      return res.status(404).json({ message: 'Stats not found for this user.' });
+    }
+
+    res.status(200).json({ triesRemaining: stats.triesRemaining });
+  } catch (error) {
+    console.error('Error decrementing triesRemaining:', error);
+    res.status(500).json({ message: 'Failed to decrement triesRemaining.' });
+  }
+};
+
+// Reset triesRemaining at midnight
+exports.resetTries = async (req, res) => {
+  try {
+    const { userId } = req.user;
+
+    const stats = await Stats.findOneAndUpdate(
+      { userId },
+      { $set: { triesRemaining: 3 } },
+      { new: true }
+    );
+
+    if (!stats) {
+      return res.status(404).json({ message: 'Stats not found for user.' });
+    }
+
+    res.status(200).json({ triesRemaining: stats.triesRemaining });
+  } catch (error) {
+    console.error('Error resetting triesRemaining:', error);
+    res.status(500).json({ message: 'Failed to reset triesRemaining.' });
   }
 };
 

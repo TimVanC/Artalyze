@@ -63,7 +63,7 @@ const statsSchema = new mongoose.Schema(
       type: Array,
       default: [],
     },
-    completedSelections: { // Added field for completed selections
+    completedSelections: {
       type: Array,
       default: [],
     },
