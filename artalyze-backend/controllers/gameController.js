@@ -76,7 +76,6 @@ exports.checkIfPlayedToday = async (req, res) => {
   }
 };
 
-
 // Mark the user as played today
 exports.markAsPlayedToday = async (req, res) => {
   console.log('markAsPlayedToday called');

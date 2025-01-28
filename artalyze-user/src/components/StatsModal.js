@@ -20,19 +20,15 @@ const defaultStats = {
 const StatsModal = ({
   isOpen,
   onClose,
-  stats = defaultStats,
+  stats: initialStats = defaultStats, // Rename the prop to initialStats
   isLoggedIn = false,
   selections = [],
   imagePairs = [],
   correctCount = 0,
+  isGameComplete = false, // Accept isGameComplete as a prop
 }) => {
-
-  // Debugging logs
-  // console.log("StatsModal - Selections:", selections);
-  // console.log("StatsModal - Image Pairs:", imagePairs);
-  // console.log("StatsModal - Correct Count:", correctCount);
-
   const userId = localStorage.getItem('userId');
+  const [stats, setStats] = useState(initialStats); // Use stats for local state
   const [animatedBars, setAnimatedBars] = useState({});
   const [shouldAnimateNumbers, setShouldAnimateNumbers] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
@@ -40,12 +36,19 @@ const StatsModal = ({
   const hasAnimatedStats = useRef(false);
   const totalQuestions = imagePairs.length;
 
-  // Animate mistake distribution bars when stats are updated
+  // Fetch stats and update state
   useEffect(() => {
     const fetchAndValidateStats = async () => {
       try {
-        // Fetch user stats from the backend
-        const response = await fetch(`/api/stats/${stats.userId}`, {
+        const userIdFromStorage = localStorage.getItem("userId");
+        const resolvedUserId = userId || userIdFromStorage;
+
+        if (!resolvedUserId) {
+          console.warn("User ID is missing. Cannot fetch stats.");
+          return;
+        }
+
+        const response = await fetch(`/api/stats/${resolvedUserId}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
         });
 
@@ -56,45 +59,20 @@ const StatsModal = ({
         const updatedStats = await response.json();
         console.log("Fetched stats from backend:", updatedStats);
 
-        // Reset streaks if the user missed a day
-        const todayInEST = getTodayInEST();
-        const yesterdayInEST = getYesterdayInEST();
-
-        if (
-          updatedStats.lastPlayedDate &&
-          updatedStats.lastPlayedDate !== yesterdayInEST &&
-          updatedStats.lastPlayedDate !== todayInEST
-        ) {
-          updatedStats.currentStreak = 0;
-          updatedStats.perfectStreak = 0;
-          console.log("Streaks reset due to missed day.");
-        }
-
-        // Animate mistake distribution bars
-        const animated = Object.keys(updatedStats.mistakeDistribution).reduce((acc, key) => {
-          acc[key] = updatedStats.mistakeDistribution[key] || 0;
-          return acc;
-        }, {});
-        setAnimatedBars(animated);
-        console.log("Updated animated bars:", animated);
-
-        // Trigger animation for numbers
-        if (!hasAnimatedStats.current) {
-          setShouldAnimateNumbers(true);
-          hasAnimatedStats.current = true;
-        } else {
-          setShouldAnimateNumbers(false);
-        }
+        setStats(updatedStats); // Update the local state
+        setAnimatedBars(updatedStats.mistakeDistribution || {});
+        setShouldAnimateNumbers(true);
       } catch (error) {
         console.error("Error fetching or validating stats:", error);
       }
     };
 
-    if (isOpen) {
+    if (isOpen && isLoggedIn) {
       console.log(`StatsModal opened.`);
       fetchAndValidateStats();
     }
-  }, [isOpen]);
+  }, [isOpen, isLoggedIn, userId]);
+
 
   const handleHistoricalStatsShare = () => {
     const shareableText = `
@@ -292,17 +270,16 @@ Perfect Games: ${stats.perfectPuzzles}
             <hr className="separator" />
             <div className="mistake-distribution">
               <h3>Mistake Distribution</h3>
-              {Object.keys(stats.mistakeDistribution || {}).map((mistakeCount) => {
+              {Object.keys(stats.mistakeDistribution).map((mistakeCount) => {
                 const value = stats.mistakeDistribution[mistakeCount] || 0;
 
-                // Highlight logic:
-                // If the user hasn't played yet (mostRecentScore is null), highlight all bars
-                // If the user has played, highlight only the bar corresponding to their mistakes
+                // Highlight logic: highlight all bars if the game isn't complete
                 const isHighlighted =
-                  stats.mostRecentScore === null || parseInt(mistakeCount, 10) === stats.mostRecentScore;
+                  !isGameComplete ||
+                  parseInt(mistakeCount, 10) === stats.mostRecentScore;
 
                 const barWidth = Math.max(
-                  (value / Math.max(...Object.values(stats.mistakeDistribution || {}), 1)) * 100,
+                  (value / Math.max(...Object.values(stats.mistakeDistribution), 1)) * 100,
                   5
                 );
 
@@ -311,8 +288,7 @@ Perfect Games: ${stats.perfectPuzzles}
                     <span className="mistake-label">{mistakeCount}</span>
                     <div className="distribution-bar">
                       <div
-                        className={`bar-fill ${isHighlighted ? "highlight" : ""} ${value === 0 ? "zero-value" : ""
-                          }`}
+                        className={`bar-fill ${isHighlighted ? 'highlight' : ''} ${value === 0 ? 'zero-value' : ''}`}
                         style={{
                           width: `${barWidth}%`,
                         }}
@@ -324,7 +300,6 @@ Perfect Games: ${stats.perfectPuzzles}
                 );
               })}
             </div>
-
             <hr className="separator" />
             <button
               className="modal-share-button"
