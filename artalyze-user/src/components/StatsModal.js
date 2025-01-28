@@ -27,10 +27,10 @@ const StatsModal = ({
   correctCount = 0,
 }) => {
 
-    // Debugging logs
-    // console.log("StatsModal - Selections:", selections);
-    // console.log("StatsModal - Image Pairs:", imagePairs);
-    // console.log("StatsModal - Correct Count:", correctCount);
+  // Debugging logs
+  // console.log("StatsModal - Selections:", selections);
+  // console.log("StatsModal - Image Pairs:", imagePairs);
+  // console.log("StatsModal - Correct Count:", correctCount);
 
   const userId = localStorage.getItem('userId');
   const [animatedBars, setAnimatedBars] = useState({});
@@ -38,18 +38,25 @@ const StatsModal = ({
   const [isDismissing, setIsDismissing] = useState(false);
   const touchStartY = useRef(null);
   const hasAnimatedStats = useRef(false);
+  const totalQuestions = imagePairs.length;
 
   // Animate mistake distribution bars when stats are updated
   useEffect(() => {
     const fetchAndValidateStats = async () => {
       try {
         // Fetch user stats from the backend
-        const response = await fetch(`/api/stats/${userId}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+        const response = await fetch(`/api/stats/${stats.userId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
         });
-        const updatedStats = await response.json();
 
-        // Update streaks if needed
+        if (!response.ok) {
+          throw new Error(`Failed to fetch stats: ${response.statusText}`);
+        }
+
+        const updatedStats = await response.json();
+        console.log("Fetched stats from backend:", updatedStats);
+
+        // Reset streaks if the user missed a day
         const todayInEST = getTodayInEST();
         const yesterdayInEST = getYesterdayInEST();
 
@@ -65,10 +72,11 @@ const StatsModal = ({
 
         // Animate mistake distribution bars
         const animated = Object.keys(updatedStats.mistakeDistribution).reduce((acc, key) => {
-          acc[key] = updatedStats.mistakeDistribution[key];
+          acc[key] = updatedStats.mistakeDistribution[key] || 0;
           return acc;
         }, {});
         setAnimatedBars(animated);
+        console.log("Updated animated bars:", animated);
 
         // Trigger animation for numbers
         if (!hasAnimatedStats.current) {
@@ -83,7 +91,7 @@ const StatsModal = ({
     };
 
     if (isOpen) {
-      console.log(`StatsModal opened. isLoggedIn: ${isLoggedIn}`);
+      console.log(`StatsModal opened.`);
       fetchAndValidateStats();
     }
   }, [isOpen]);
@@ -128,27 +136,27 @@ Perfect Games: ${stats.perfectPuzzles}
       alert("No data available to share today's puzzle!");
       return;
     }
-  
+
     const puzzleNumber = calculatePuzzleNumber();
-  
+
     const resultsVisual = selections
-    .map((selection, index) => {
-      // Check if the selected image matches the human image
-      const isCorrect = selection?.selected === imagePairs[index]?.human;
-      return isCorrect ? '🟢' : '🔴';
-    })
-    .join(' ');
-  
-  
+      .map((selection, index) => {
+        // Check if the selected image matches the human image
+        const isCorrect = selection?.selected === imagePairs[index]?.human;
+        return isCorrect ? '🟢' : '🔴';
+      })
+      .join(' ');
+
+
     const paintings = '🖼️ '.repeat(imagePairs.length).trim();
-  
+
     const shareableText = `
   Artalyze #${puzzleNumber} ${correctCount}/${imagePairs.length}
   ${resultsVisual}
   ${paintings}
   Try it at: artalyze.app
     `;
-  
+
     if (navigator.share) {
       navigator
         .share({
@@ -163,10 +171,10 @@ Perfect Games: ${stats.perfectPuzzles}
           alert('Results copied to clipboard! You can now paste it anywhere.');
         })
         .catch((error) => console.error('Failed to copy:', error));
-      }
+    }
   };
-  
-  
+
+
 
   if (!isOpen && !isDismissing) return null;
 
@@ -193,11 +201,11 @@ Perfect Games: ${stats.perfectPuzzles}
 
   return (
     <div
-      className={`stats-overlay ${isDismissing ? 'transparent' : ''}`}
+      className={`stats-overlay ${isDismissing ? "transparent" : ""}`}
       onTouchStart={handleTouchStart} // Detect the start of the swipe
-      onTouchMove={handleTouchMove}  // Detect the swipe-down gesture
+      onTouchMove={handleTouchMove} // Detect the swipe-down gesture
     >
-      <div className={`stats-overlay-content ${isDismissing ? 'slide-down' : ''}`}>
+      <div className={`stats-overlay-content ${isDismissing ? "slide-down" : ""}`}>
         <span className="close-icon" onClick={handleDismiss}>
           ✖
         </span>
@@ -208,9 +216,9 @@ Perfect Games: ${stats.perfectPuzzles}
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.gamesPlayed} duration={3} />
+                    <CountUp start={0} end={stats.gamesPlayed || 0} duration={3} />
                   ) : (
-                    stats.gamesPlayed
+                    stats.gamesPlayed || 0
                   )}
                 </div>
                 <div>Completed</div>
@@ -218,9 +226,9 @@ Perfect Games: ${stats.perfectPuzzles}
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.winPercentage} duration={3} />
+                    <CountUp start={0} end={stats.winPercentage || 0} duration={3} />
                   ) : (
-                    stats.winPercentage
+                    stats.winPercentage || 0
                   )}
                 </div>
                 <div>Win %</div>
@@ -228,9 +236,9 @@ Perfect Games: ${stats.perfectPuzzles}
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.currentStreak} duration={3} />
+                    <CountUp start={0} end={stats.currentStreak || 0} duration={3} />
                   ) : (
-                    stats.currentStreak
+                    stats.currentStreak || 0
                   )}
                 </div>
                 <div>Current Streak</div>
@@ -238,9 +246,9 @@ Perfect Games: ${stats.perfectPuzzles}
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.maxStreak} duration={3} />
+                    <CountUp start={0} end={stats.maxStreak || 0} duration={3} />
                   ) : (
-                    stats.maxStreak
+                    stats.maxStreak || 0
                   )}
                 </div>
                 <div>Max Streak</div>
@@ -251,9 +259,9 @@ Perfect Games: ${stats.perfectPuzzles}
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.perfectStreak} duration={3} />
+                    <CountUp start={0} end={stats.perfectStreak || 0} duration={3} />
                   ) : (
-                    stats.perfectStreak
+                    stats.perfectStreak || 0
                   )}
                 </div>
                 <div>Perfect Streak</div>
@@ -261,9 +269,9 @@ Perfect Games: ${stats.perfectPuzzles}
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.maxPerfectStreak} duration={3} />
+                    <CountUp start={0} end={stats.maxPerfectStreak || 0} duration={3} />
                   ) : (
-                    stats.maxPerfectStreak
+                    stats.maxPerfectStreak || 0
                   )}
                 </div>
                 <div>Max Perfect Streak</div>
@@ -273,9 +281,9 @@ Perfect Games: ${stats.perfectPuzzles}
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
-                    <CountUp start={0} end={stats.perfectPuzzles} duration={3} />
+                    <CountUp start={0} end={stats.perfectPuzzles || 0} duration={3} />
                   ) : (
-                    stats.perfectPuzzles
+                    stats.perfectPuzzles || 0
                   )}
                 </div>
                 <div>Perfect Puzzles</div>
@@ -284,17 +292,17 @@ Perfect Games: ${stats.perfectPuzzles}
             <hr className="separator" />
             <div className="mistake-distribution">
               <h3>Mistake Distribution</h3>
-              {Object.keys(stats.mistakeDistribution).map((mistakeCount) => {
+              {Object.keys(stats.mistakeDistribution || {}).map((mistakeCount) => {
                 const value = stats.mistakeDistribution[mistakeCount] || 0;
 
-                // Highlight logic: highlight all bars if `mostRecentScore` is null
+                // Highlight logic:
+                // If the user hasn't played yet (mostRecentScore is null), highlight all bars
+                // If the user has played, highlight only the bar corresponding to their mistakes
                 const isHighlighted =
-                  stats.mostRecentScore === null ||
-                  parseInt(mistakeCount, 10) === stats.mostRecentScore;
+                  stats.mostRecentScore === null || parseInt(mistakeCount, 10) === stats.mostRecentScore;
 
                 const barWidth = Math.max(
-                  (value / Math.max(...Object.values(stats.mistakeDistribution), 1)) *
-                  100,
+                  (value / Math.max(...Object.values(stats.mistakeDistribution || {}), 1)) * 100,
                   5
                 );
 
@@ -303,7 +311,7 @@ Perfect Games: ${stats.perfectPuzzles}
                     <span className="mistake-label">{mistakeCount}</span>
                     <div className="distribution-bar">
                       <div
-                        className={`bar-fill ${isHighlighted ? 'highlight' : ''} ${value === 0 ? 'zero-value' : ''
+                        className={`bar-fill ${isHighlighted ? "highlight" : ""} ${value === 0 ? "zero-value" : ""
                           }`}
                         style={{
                           width: `${barWidth}%`,
@@ -335,7 +343,6 @@ Perfect Games: ${stats.perfectPuzzles}
             >
               <FaShareAlt /> Share Today's Puzzle
             </button>
-
           </>
         ) : (
           <div className="guest-stats-content">
@@ -352,7 +359,7 @@ Perfect Games: ${stats.perfectPuzzles}
             <button
               className="cta-button"
               onClick={() => {
-                window.location.href = '/register';
+                window.location.href = "/register";
               }}
             >
               Create a Free Account
@@ -362,6 +369,7 @@ Perfect Games: ${stats.perfectPuzzles}
       </div>
     </div>
   );
+
 
 };
 

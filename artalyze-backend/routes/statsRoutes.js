@@ -35,7 +35,7 @@ router.put('/selections', saveSelections);
 router.get('/completed-selections', getCompletedSelections);
 
 // Route to save completedSelections
-router.put('/completed-selections', saveCompletedSelections);
+router.put('/completed-selections/:userId', saveCompletedSelections);
 
 // Route to fetch user statistics
 router.get('/:userId', getUserStats);

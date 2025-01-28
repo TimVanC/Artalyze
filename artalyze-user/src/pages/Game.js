@@ -67,13 +67,6 @@ const Game = () => {
 // Handle game completion
 const handleGameComplete = async () => {
   console.log("handleGameComplete called");
-
-  // Check if the game is already completed to prevent redundant updates
-  if (isGameComplete) {
-    console.warn("Game is already marked as completed. Skipping stats update.");
-    return;
-  }
-
   setIsGameComplete(true);
 
   if (!Array.isArray(selections) || !Array.isArray(imagePairs)) {
@@ -93,7 +86,11 @@ const handleGameComplete = async () => {
   }, 0);
 
   console.log("Final Correct Answers Count:", correctCount);
+  setCorrectCount(correctCount);
+  localStorage.setItem("correctCount", correctCount); // <-- Ensure it's saved
+
   setCompletedSelections(selections);
+  console.log("CompletedSelections state after setCompletedSelections:", selections);
 
   try {
     if (isUserLoggedIn()) {
@@ -111,15 +108,13 @@ const handleGameComplete = async () => {
 
       console.log("Stats updated successfully in backend:", statsResponse.data);
 
-      // Re-fetch updated stats for consistency
-      const updatedStats = await fetchAndSetStats(userId);
-      console.log("Updated stats fetched after completion:", updatedStats);
+      await fetchAndSetStats(userId);
     } else {
       localStorage.setItem("completedSelections", JSON.stringify(selections));
       console.log("Saved completedSelections to localStorage:", selections);
     }
   } catch (error) {
-    console.error("Error updating stats:", error.response?.data || error.message);
+    console.error("Error updating user stats:", error.response?.data || error.message);
   } finally {
     updateSelections([]);
     localStorage.removeItem("selections");
@@ -128,86 +123,94 @@ const handleGameComplete = async () => {
 };
 
 
-
 // Initialize game logic
 const initializeGame = async () => {
   const today = getTodayInEST();
   const isLoggedIn = isUserLoggedIn();
 
   if (isLoggedIn && !userId) {
-      console.error("User is logged in but no userId found in localStorage.");
-      setError("User ID is missing. Please log in again.");
-      return;
+    console.error("User is logged in but no userId found in localStorage.");
+    setError("User ID is missing. Please log in again.");
+    return;
   }
 
   try {
-      setLoading(true);
+    setLoading(true);
 
-      let userSelections = [];
-      let userCompletedSelections = [];
+    let userSelections = [];
+    let userCompletedSelections = [];
 
+    if (isLoggedIn) {
+      console.log("Fetching user selections and completed selections...");
+      const selectionsResponse = await axiosInstance.get("/stats/selections");
+      userSelections = selectionsResponse.data.selections || [];
+      userCompletedSelections = selectionsResponse.data.completedSelections || [];
+      console.log("Fetched selections from backend:", userSelections);
+      console.log("Fetched completed selections from backend:", userCompletedSelections);
+
+      updateSelections(userSelections);
+    } else {
+      console.log("Handling guest user selections...");
+      const savedSelections = localStorage.getItem("selections");
+      const savedCompletedSelections = localStorage.getItem("completedSelections");
+      userSelections = savedSelections ? JSON.parse(savedSelections) : [];
+      userCompletedSelections = savedCompletedSelections ? JSON.parse(savedCompletedSelections) : [];
+      updateSelections(userSelections);
+    }
+
+    console.log("Checking if the user has played today...");
+    const playStatusResponse = await axiosInstance.get("/game/check-today-status");
+    const { hasPlayedToday, triesRemaining } = playStatusResponse.data;
+
+    if (!hasPlayedToday) {
+      console.log("User has not played today. Resetting completedSelections...");
+
+      // Reset `completedSelections` locally
+      setCompletedSelections([]);
       if (isLoggedIn) {
-          console.log("Fetching user selections...");
-          const selectionsResponse = await axiosInstance.get("/stats/selections", {
-              headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
-          });
-          userSelections = selectionsResponse.data.selections || [];
-          userCompletedSelections = selectionsResponse.data.completedSelections || [];
-          console.log("Fetched selections from backend:", userSelections);
-          console.log("Fetched completed selections from backend:", userCompletedSelections);
-
-          updateSelections(userSelections);
-          setCompletedSelections(userCompletedSelections);
+        console.log("Clearing completedSelections in backend...");
+        // Optionally clear completedSelections in the backend
+        await axiosInstance.put(`/stats/completed-selections/${userId}`, { completedSelections: [] });
       } else {
-          const savedSelections = localStorage.getItem("selections");
-          const savedCompletedSelections = localStorage.getItem("completedSelections");
-          userSelections = savedSelections ? JSON.parse(savedSelections) : [];
-          updateSelections(userSelections);
-          setCompletedSelections(savedCompletedSelections ? JSON.parse(savedCompletedSelections) : []);
+        console.log("Clearing completedSelections in localStorage...");
+        localStorage.setItem("completedSelections", JSON.stringify([]));
       }
+    } else {
+      console.log("User has already played today.");
+      setIsGameComplete(true);
+      setTriesLeft(0);
+      setCompletedSelections(userCompletedSelections); // Restore completedSelections
+      return;
+    }
 
-      const playStatusResponse = await axiosInstance.get("/game/check-today-status", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
-      });
+    console.log("New day detected. Initializing game...");
+    setTriesLeft(triesRemaining || 3);
 
-      const { hasPlayedToday, triesRemaining } = playStatusResponse.data;
+    const puzzleResponse = await axiosInstance.get("/game/daily-puzzle");
+    if (puzzleResponse.data?.imagePairs?.length > 0) {
+      const pairs = puzzleResponse.data.imagePairs.map((pair) => ({
+        human: pair.humanImageURL,
+        ai: pair.aiImageURL,
+        images:
+          Math.random() > 0.5
+            ? [pair.humanImageURL, pair.aiImageURL]
+            : [pair.aiImageURL, pair.humanImageURL],
+      }));
 
-      if (hasPlayedToday) {
-          console.log("User has already played today.");
-          setTriesLeft(0);
-          setIsGameComplete(true);
-          return;
-      }
-
-      console.log("New day detected.");
-      setTriesLeft(triesRemaining || 3);
-
-      const puzzleResponse = await axiosInstance.get("/game/daily-puzzle");
-      if (puzzleResponse.data?.imagePairs?.length > 0) {
-          const pairs = puzzleResponse.data.imagePairs.map((pair) => ({
-              human: pair.humanImageURL,
-              ai: pair.aiImageURL,
-              images:
-                  Math.random() > 0.5
-                      ? [pair.humanImageURL, pair.aiImageURL]
-                      : [pair.aiImageURL, pair.humanImageURL],
-          }));
-
-          setImagePairs(pairs);
-          localStorage.setItem("completedPairs", JSON.stringify(puzzleResponse.data.imagePairs));
-      } else {
-          console.warn("No image pairs available for today.");
-          setImagePairs([]);
-      }
+      setImagePairs(pairs);
+      localStorage.setItem("completedPairs", JSON.stringify(puzzleResponse.data.imagePairs));
+    } else {
+      console.warn("No image pairs available for today.");
+      setImagePairs([]);
+    }
   } catch (error) {
-      console.error("Error initializing game:", error.response?.data || error.message);
-      setError("Failed to initialize the game. Please try again later.");
+    console.error("Error initializing game:", error.response?.data || error.message);
+    setError("Failed to initialize the game. Please try again later.");
   } finally {
-      setLoading(false);
+    setLoading(false);
   }
 };
 
-  
 
 // Restore game state function
 const restoreGameState = () => {
@@ -347,16 +350,21 @@ useEffect(() => {
   }
 }, [completedSelections, isLoggedIn, isGameComplete]);
 
-// Persist completedSelections for guest users and sync with backend
+// Reset completedSelections when a new day starts
 useEffect(() => {
-  if (!isLoggedIn && completedSelections.length > 0) {
-    console.log("Persisting completedSelections to localStorage for guest user.");
-    localStorage.setItem("completedSelections", JSON.stringify(completedSelections));
-  } else if (isLoggedIn && isGameComplete) {
-    console.log("Syncing completedSelections with backend...");
-    saveCompletedSelectionsToBackend(completedSelections);
+  if (!isGameComplete) {
+    console.log("Checking if user has played today...");
+    axiosInstance.get("/game/check-today-status")
+      .then(response => {
+        if (!response.data.hasPlayedToday) {
+          console.log("New day detected. Resetting completedSelections.");
+          setCompletedSelections([]);
+          localStorage.removeItem("completedSelections");
+        }
+      })
+      .catch(error => console.error("Error checking play status:", error));
   }
-}, [completedSelections, isLoggedIn, isGameComplete]);
+}, [isGameComplete]);
 
 // Prevent re-fetching completedSelections endlessly
 useEffect(() => {
@@ -372,7 +380,6 @@ useEffect(() => {
     });
   }
 }, [isGameComplete, isLoggedIn, completedSelections.length]);
-
 
 // Log selections state updates for debugging
 useEffect(() => {
@@ -404,17 +411,6 @@ useEffect(() => {
   fetchStatsForCompletion();
 }, [isLoggedIn, userId, isGameComplete]);
 
-// Apply animations to thumbnails when the stats modal is dismissed
-useEffect(() => {
-  if (isStatsModalDismissed) {
-    document.querySelectorAll(".thumbnail-container.pulse").forEach((el, index) => {
-      console.log(`Applying animation to element ${index + 1}`);
-      el.style.animationDelay = `${index * 0.1}s`;
-      el.classList.add("animate-pulse");
-    });
-  }
-}, [isStatsModalDismissed]);
-
 // Restore correctCount from localStorage
 useEffect(() => {
   const storedCorrectCount = localStorage.getItem("correctCount");
@@ -437,12 +433,8 @@ useEffect(() => {
 useEffect(() => {
   if (isGameComplete) {
     console.log("Game completed. Redirecting to completion screen.");
-    // Any logic to redirect or lock the user to the completion screen
   }
 }, [isGameComplete]);
-
-
-
 
   const encouragementMessages = [
     "Keep it up!",
@@ -478,36 +470,27 @@ useEffect(() => {
   };
 
   const saveCompletedSelectionsToBackend = async (completedSelections) => {
+    const userId = localStorage.getItem("userId");
+  
     if (!userId || !Array.isArray(completedSelections) || completedSelections.length === 0) {
       console.error("Invalid parameters: Cannot save completedSelections. Missing userId or completedSelections is empty.");
       return;
     }
   
     try {
-      console.log("Saving completedSelections to backend...");
+      const payload = { completedSelections };
+      console.log("Saving completedSelections to backend with payload:", payload);
   
-      // Ensure correct answers count is determined before sending payload
-      const correctAnswers = completedSelections.filter(sel => sel.isHumanSelection === true).length;
-      const totalQuestions = completedSelections.length;
-  
-      const payload = {
-        correctAnswers,
-        totalQuestions,
-        completedSelections,
-      };
-  
-      console.log("Payload being sent to backend:", payload);
-  
-      const response = await axiosInstance.put(`/stats/${userId}`, payload, {
+      const response = await axiosInstance.put(`/stats/completed-selections/${userId}`, payload, {
         headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
       });
   
-      console.log("CompletedSelections successfully saved to backend:", response.data.completedSelections);
+      console.log("CompletedSelections successfully saved to backend:", response.data);
     } catch (error) {
-      console.error("Error saving completedSelections:", error.response?.data || error.message);
+      console.error("Error saving completedSelections to backend:", error.response?.data || error.message);
     }
-  };  
-
+  };
+  
   const fetchCompletedSelectionsFromBackend = async () => {
     try {
       console.log("Fetching completed selections from backend...");

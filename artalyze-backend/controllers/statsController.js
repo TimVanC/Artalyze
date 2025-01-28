@@ -39,52 +39,63 @@ exports.updateUserStats = async (req, res) => {
     const { correctAnswers, totalQuestions, completedSelections } = req.body;
 
     console.log(`Updating stats for userId: ${userId}`);
-    console.log("Payload received:", { correctAnswers, totalQuestions, completedSelections });
+    console.log("Received payload:", { correctAnswers, totalQuestions, completedSelections });
 
-    if (!Array.isArray(completedSelections)) {
-      return res.status(400).json({ message: "completedSelections must be an array." });
+    if (
+      correctAnswers === undefined ||
+      totalQuestions === undefined ||
+      !Array.isArray(completedSelections)
+    ) {
+      console.error("Invalid payload. Missing required fields or incorrect format.");
+      return res.status(400).json({
+        message: "Invalid payload: correctAnswers, totalQuestions, and completedSelections are required.",
+      });
     }
 
     const stats = await Stats.findOne({ userId });
 
     if (!stats) {
+      console.error(`Stats not found for userId: ${userId}`);
       return res.status(404).json({ message: "Stats not found for this user." });
     }
 
-    // Prevent duplicate updates if the stats have already been updated today
-    const todayInEST = getTodayInEST();
-    if (stats.lastPlayedDate === todayInEST) {
-      console.log("Stats already updated for today. Skipping update.");
-      return res.status(200).json(stats);
-    }
+    console.log("Stats before update:", stats);
 
-    // Proceed with stats update
+    // Update the stats object
     stats.gamesPlayed += 1;
-    stats.mostRecentScore = correctAnswers;
-    stats.lastPlayedDate = todayInEST;
+    stats.winPercentage = Math.round(
+      ((stats.gamesPlayed - stats.mistakeDistribution[0]) / stats.gamesPlayed) * 100
+    );
 
-    stats.winPercentage = ((stats.winPercentage * (stats.gamesPlayed - 1) + (correctAnswers === totalQuestions ? 1 : 0)) / stats.gamesPlayed).toFixed(2);
-
-    // Update streaks and other stats
-    if (correctAnswers === totalQuestions) {
-      stats.currentStreak += 1;
-      stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
-      stats.perfectPuzzles += 1;
-    } else {
-      stats.currentStreak = 0;
-    }
-
+    // Mistake distribution
     const mistakes = totalQuestions - correctAnswers;
     stats.mistakeDistribution[mistakes] = (stats.mistakeDistribution[mistakes] || 0) + 1;
 
+    // Update streaks
+    const today = getTodayInEST();
+    if (stats.lastPlayedDate !== today) {
+      stats.currentStreak = correctAnswers === totalQuestions ? stats.currentStreak + 1 : 0;
+      if (correctAnswers === totalQuestions) {
+        stats.perfectStreak += 1;
+        stats.maxPerfectStreak = Math.max(stats.maxPerfectStreak, stats.perfectStreak);
+      }
+    }
+
+    // Update lastPlayedDate
+    stats.lastPlayedDate = today;
+
+    // Save completedSelections
     stats.completedSelections = completedSelections;
 
-    const updatedStats = await stats.save();
-    console.log("Stats updated successfully:", updatedStats);
+    console.log("Stats before save:", stats);
 
-    res.status(200).json(updatedStats);
+    // Save the stats back to the database
+    const savedStats = await stats.save();
+    console.log("Saved stats in database:", savedStats);
+
+    res.status(200).json(savedStats);
   } catch (error) {
-    console.error("Error updating stats:", error);
+    console.error("Error updating user stats:", error);
     res.status(500).json({ message: "Failed to update stats." });
   }
 };
@@ -233,42 +244,37 @@ exports.getCompletedSelections = async (req, res) => {
 // Save completedSelections
 exports.saveCompletedSelections = async (req, res) => {
   try {
-    const { userId } = req.user;
+    const { userId } = req.params;
     const { completedSelections } = req.body;
 
-    console.log("saveCompletedSelections called");
-    console.log("Received userId:", userId);
-    console.log("Received completedSelections:", completedSelections);
-
-    if (!userId) {
-      console.error("Error: userId is missing in request.");
-      return res.status(400).json({ message: "User ID is required." });
+    // Validate userId and completedSelections
+    if (!userId || !Array.isArray(completedSelections)) {
+      console.error("Invalid parameters for saving completedSelections:", { userId, completedSelections });
+      return res.status(400).json({ message: "Invalid parameters. Cannot save completedSelections." });
     }
 
-    if (!Array.isArray(completedSelections)) {
-      console.error("Invalid completedSelections format:", completedSelections);
-      return res.status(400).json({ message: "completedSelections must be an array." });
-    }
-
-    const stats = await Stats.findOneAndUpdate(
-      { userId },
-      { $set: { completedSelections } },
-      { new: true, upsert: true }
-    );
+    const stats = await Stats.findOne({ userId });
 
     if (!stats) {
-      console.error(`Error updating stats for userId: ${userId}`);
-      return res.status(500).json({ message: "Failed to update completedSelections." });
+      console.error(`Stats not found for userId: ${userId}`);
+      return res.status(404).json({ message: "Stats not found for this user." });
     }
 
-    console.log("Updated stats with completedSelections:", stats);
+    // Update and save completedSelections
+    stats.completedSelections = completedSelections;
+    const updatedStats = await stats.save();
 
-    res.status(200).json({ completedSelections: stats.completedSelections || [] });
+    console.log("CompletedSelections saved successfully in backend:", updatedStats.completedSelections);
+
+    res.status(200).json(updatedStats);
   } catch (error) {
     console.error("Error saving completedSelections:", error);
     res.status(500).json({ message: "Failed to save completedSelections." });
   }
 };
+
+
+
 
 
 
