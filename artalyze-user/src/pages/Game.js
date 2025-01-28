@@ -118,9 +118,14 @@ const Game = () => {
       updateSelections([]); // Clear selections after game completion
       localStorage.removeItem("selections");
       console.log("Cleared selections for the next game.");
+
+      // Automatically open the StatsModal 0.5 seconds after game completion
+      setTimeout(() => {
+        setIsStatsOpen(true); // Trigger StatsModal pop-up
+        console.log("StatsModal opened automatically after game completion.");
+      }, 500);
     }
   };
-
 
   // Initialize game logic
   const initializeGame = async () => {
@@ -210,7 +215,6 @@ const Game = () => {
     }
   };
 
-
   // Restore game state function
   const restoreGameState = () => {
     console.log("Restoring game state...");
@@ -255,9 +259,6 @@ const Game = () => {
       setCompletedSelections([]);
     }
   };
-
-
-
 
   // Game logic: Initialize or restore game state based on completion status
   useEffect(() => {
@@ -505,8 +506,6 @@ const Game = () => {
     }
   };
 
-
-
   const decrementTries = async () => {
     try {
       if (isUserLoggedIn()) {
@@ -537,9 +536,6 @@ const Game = () => {
       console.error("Error restoring selections:", error);
     }
   };
-
-
-
 
   const saveSelectionsToLocalStorage = (selections) => {
     localStorage.setItem('selections', JSON.stringify(selections));
@@ -692,8 +688,6 @@ const Game = () => {
         isGameComplete={isGameComplete}
       />
 
-
-
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -766,12 +760,6 @@ const Game = () => {
             <p>Loading...</p>
           )}
 
-
-
-
-
-
-
           {enlargedImage && (
             <div className="enlarge-modal" onClick={closeEnlargedImage}>
               <div className="swiper-container">
@@ -808,7 +796,6 @@ const Game = () => {
             </div>
           )}
 
-
           <div className="navigation-buttons">
             {imagePairs.map((_, index) => (
               <button
@@ -823,7 +810,6 @@ const Game = () => {
               </button>
             ))}
           </div>
-
 
           <button
             className={`submit-button ${isSubmitEnabled ? 'enabled' : 'disabled'}`}
@@ -858,8 +844,6 @@ const Game = () => {
           </div>
         </div>
       )}
-
-
 
       {isGameComplete && (
         <div className="completion-screen">
@@ -918,7 +902,6 @@ const Game = () => {
             })}
           </div>
 
-
           <div className="completion-buttons">
             <button className="stats-button" onClick={() => setIsStatsOpen(true)}>
               <FaChartBar /> See Stats
@@ -937,9 +920,6 @@ const Game = () => {
           </div>
         </div>
       )}
-
-
-
 
       {enlargedImage && (
         <div className="enlarge-modal" onClick={closeEnlargedImage}>
