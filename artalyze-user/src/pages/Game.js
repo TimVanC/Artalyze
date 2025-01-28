@@ -67,6 +67,13 @@ const Game = () => {
 // Handle game completion
 const handleGameComplete = async () => {
   console.log("handleGameComplete called");
+
+  // Check if the game is already completed to prevent redundant updates
+  if (isGameComplete) {
+    console.warn("Game is already marked as completed. Skipping stats update.");
+    return;
+  }
+
   setIsGameComplete(true);
 
   if (!Array.isArray(selections) || !Array.isArray(imagePairs)) {
@@ -86,10 +93,7 @@ const handleGameComplete = async () => {
   }, 0);
 
   console.log("Final Correct Answers Count:", correctCount);
-  console.log("Selections to copy into completedSelections:", selections);
-
   setCompletedSelections(selections);
-  console.log("CompletedSelections state after setCompletedSelections:", selections);
 
   try {
     if (isUserLoggedIn()) {
@@ -107,19 +111,22 @@ const handleGameComplete = async () => {
 
       console.log("Stats updated successfully in backend:", statsResponse.data);
 
-      await fetchAndSetStats(userId);
+      // Re-fetch updated stats for consistency
+      const updatedStats = await fetchAndSetStats(userId);
+      console.log("Updated stats fetched after completion:", updatedStats);
     } else {
       localStorage.setItem("completedSelections", JSON.stringify(selections));
       console.log("Saved completedSelections to localStorage:", selections);
     }
   } catch (error) {
-    console.error("Error updating user stats:", error.response?.data || error.message);
+    console.error("Error updating stats:", error.response?.data || error.message);
   } finally {
     updateSelections([]);
     localStorage.removeItem("selections");
     console.log("Cleared selections for the next game.");
   }
 };
+
 
 
 // Initialize game logic
