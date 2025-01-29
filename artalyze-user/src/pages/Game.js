@@ -83,19 +83,19 @@ const Game = () => {
 
     console.log("Final Correct Answers Count:", correctCount);
     setCorrectCount(correctCount);
-    localStorage.setItem("correctCount", correctCount); // Ensure it's saved correctly
+    localStorage.setItem("correctCount", correctCount);
 
     setCompletedSelections(selections);
     console.log("CompletedSelections state after setCompletedSelections:", selections);
 
     try {
       if (isUserLoggedIn()) {
-        const mistakes = imagePairs.length - correctCount; // Calculate mistakes
+        const mistakes = imagePairs.length - correctCount;
         const payload = {
           correctAnswers: correctCount,
           totalQuestions: imagePairs.length,
           completedSelections: selections,
-          mostRecentScore: mistakes, // Track mistakes for mistake distribution
+          mostRecentScore: mistakes,
         };
 
         console.log("Payload being sent to backend:", payload);
@@ -105,9 +105,14 @@ const Game = () => {
         });
 
         console.log("Stats updated successfully in backend:", statsResponse.data);
-        setStats(statsResponse.data); // Ensure frontend reflects latest stats
 
-        await fetchAndSetStats(userId);
+        // **Trigger a re-render by updating the state with new stats**
+        setStats((prevStats) => ({
+          ...prevStats,
+          ...statsResponse.data, // Merge updated stats from backend
+        }));
+
+        await fetchAndSetStats(userId); // Ensure latest stats are retrieved
       } else {
         localStorage.setItem("completedSelections", JSON.stringify(selections));
         console.log("Saved completedSelections to localStorage:", selections);
@@ -119,9 +124,8 @@ const Game = () => {
       localStorage.removeItem("selections");
       console.log("Cleared selections for the next game.");
 
-      // Automatically open the StatsModal 0.5 seconds after game completion
       setTimeout(() => {
-        setIsStatsOpen(true); // Trigger StatsModal pop-up
+        setIsStatsOpen(true); // Open StatsModal after game completion
         console.log("StatsModal opened automatically after game completion.");
       }, 500);
     }
@@ -131,27 +135,27 @@ const Game = () => {
   const initializeGame = async () => {
     const today = getTodayInEST();
     const isLoggedIn = isUserLoggedIn();
-  
+
     if (isLoggedIn && !userId) {
       console.error("User is logged in but no userId found in localStorage.");
       setError("User ID is missing. Please log in again.");
       return;
     }
-  
+
     try {
       setLoading(true);
-  
+
       let userSelections = [];
       let userCompletedSelections = [];
       let lastSelectionMadeDate = null;
-  
+
       if (isLoggedIn) {
         console.log("Fetching user selections and completed selections...");
         const selectionsResponse = await axiosInstance.get("/stats/selections");
         userSelections = selectionsResponse.data.selections || [];
         userCompletedSelections = selectionsResponse.data.completedSelections || [];
         lastSelectionMadeDate = selectionsResponse.data.lastSelectionMadeDate;
-  
+
         console.log("Fetched selections from backend:", userSelections);
         console.log("Fetched completed selections from backend:", userCompletedSelections);
       } else {
@@ -159,11 +163,11 @@ const Game = () => {
         const savedSelections = localStorage.getItem("selections");
         const savedCompletedSelections = localStorage.getItem("completedSelections");
         lastSelectionMadeDate = localStorage.getItem("lastSelectionMadeDate");
-  
+
         userSelections = savedSelections ? JSON.parse(savedSelections) : [];
         userCompletedSelections = savedCompletedSelections ? JSON.parse(savedCompletedSelections) : [];
       }
-  
+
       // Check if selections should be cleared based on date
       if (lastSelectionMadeDate !== today) {
         console.log("Last selection made on a previous day.");
@@ -179,14 +183,14 @@ const Game = () => {
           }
         }
       }
-  
+
       updateSelections(userSelections); // Restore selections
       setCompletedSelections(userCompletedSelections); // Restore completed selections
-  
+
       console.log("Checking if the user has played today...");
       const playStatusResponse = await axiosInstance.get("/game/check-today-status");
       const { hasPlayedToday, triesRemaining } = playStatusResponse.data;
-  
+
       if (!hasPlayedToday) {
         console.log("User has not played today. Resetting completedSelections...");
         setCompletedSelections([]);
@@ -204,10 +208,10 @@ const Game = () => {
         setCompletedSelections(userCompletedSelections);
         return;
       }
-  
+
       console.log("New day detected. Initializing game...");
       setTriesLeft(triesRemaining || 3);
-  
+
       const puzzleResponse = await axiosInstance.get("/game/daily-puzzle");
       if (puzzleResponse.data?.imagePairs?.length > 0) {
         const pairs = puzzleResponse.data.imagePairs.map((pair) => ({
@@ -218,7 +222,7 @@ const Game = () => {
               ? [pair.humanImageURL, pair.aiImageURL]
               : [pair.aiImageURL, pair.humanImageURL],
         }));
-  
+
         setImagePairs(pairs);
         localStorage.setItem("completedPairs", JSON.stringify(puzzleResponse.data.imagePairs));
       } else {
@@ -350,17 +354,17 @@ const Game = () => {
   }, [currentIndex, imagePairs]);
 
   // Apply animations to thumbnails when the stats modal is dismissed
-useEffect(() => {
-  if (isStatsModalDismissed) {
-    const elements = document.querySelectorAll(".thumbnail-container.pulse");
-    elements.forEach((el, index) => {
-      console.log(`Applying animation to element ${index + 1}`);
-      el.style.animationDelay = `${index * 0.1}s`;
-      el.classList.add("animate-pulse");
-    });
-    setIsStatsModalDismissed(false); // Reset state after applying animations
-  }
-}, [isStatsModalDismissed]);
+  useEffect(() => {
+    if (isStatsModalDismissed) {
+      const elements = document.querySelectorAll(".thumbnail-container.pulse");
+      elements.forEach((el, index) => {
+        console.log(`Applying animation to element ${index + 1}`);
+        el.style.animationDelay = `${index * 0.1}s`;
+        el.classList.add("animate-pulse");
+      });
+      setIsStatsModalDismissed(false); // Reset state after applying animations
+    }
+  }, [isStatsModalDismissed]);
 
   // Persist selections for guest users
   useEffect(() => {
@@ -494,11 +498,17 @@ useEffect(() => {
       });
 
       console.log("Fetched user stats:", statsResponse.data);
-      setStats(statsResponse.data); // Update stats state
+
+      // **Trigger re-render by updating the state with new stats**
+      setStats((prevStats) => ({
+        ...prevStats,
+        ...statsResponse.data, // Merge new stats from backend
+      }));
     } catch (error) {
       console.error("Error fetching user stats:", error.response?.data || error.message);
     }
   };
+
 
   const saveCompletedSelectionsToBackend = async (completedSelections) => {
     const userId = localStorage.getItem("userId");
@@ -597,20 +607,34 @@ useEffect(() => {
     }, 200);
   };
 
-  const handleCompletionShare = (selections, imagePairs) => {
-    // Calculate the score based on correct selections
-    const score = selections.filter((isCorrect) => isCorrect).length;
+  const handleCompletionShare = () => {
+    // Ensure completedSelections and imagePairs are available
+    if (!completedSelections.length || !imagePairs.length) {
+      alert("No data available to share today's puzzle!");
+      return;
+    }
+
+    // Calculate the score based on completed selections
+    const score = completedSelections.reduce((count, selection, index) => {
+      if (selection?.selected === imagePairs[index]?.human) {
+        return count + 1;
+      }
+      return count;
+    }, 0);
 
     // Get the puzzle number dynamically
     const puzzleNumber = calculatePuzzleNumber();
 
     // Build the visual representation of results
-    const resultsVisual = selections
-      .map((isCorrect) => (isCorrect ? '🟢' : '🔴'))
-      .join(' ');
+    const resultsVisual = completedSelections
+      .map((selection, index) => {
+        const isCorrect = selection?.selected === imagePairs[index]?.human;
+        return isCorrect ? "🟢" : "🔴";
+      })
+      .join(" ");
 
     // Add placeholder for painting emojis
-    const paintings = '🖼️ '.repeat(imagePairs.length).trim();
+    const paintings = "🖼️ ".repeat(imagePairs.length).trim();
 
     // Construct the shareable text
     const shareableText = `
@@ -618,25 +642,25 @@ useEffect(() => {
   ${resultsVisual}
   ${paintings}
   Try it at: artalyze.app
-  `;
+    `.trim();
 
     // Check if the device supports native sharing
     if (navigator.share) {
       navigator
         .share({
           title: `Artalyze #${puzzleNumber}`,
-          text: shareableText.trim(),
+          text: shareableText,
         })
-        .catch((error) => console.log('Error sharing:', error));
+        .catch((error) => console.log("Error sharing:", error));
     } else {
       // Fallback to clipboard copy if native sharing is unavailable
       navigator.clipboard
-        .writeText(shareableText.trim())
+        .writeText(shareableText)
         .then(() => {
-          alert('Results copied to clipboard! You can now paste it anywhere.');
+          alert("Results copied to clipboard! You can now paste it anywhere.");
         })
         .catch((error) => {
-          console.error('Failed to copy:', error);
+          console.error("Failed to copy:", error);
         });
     }
   };
@@ -717,7 +741,10 @@ useEffect(() => {
         imagePairs={imagePairs}
         correctCount={correctCount}
         isGameComplete={isGameComplete}
+        completedSelections={completedSelections}
       />
+
+
 
       <SettingsModal
         isOpen={isSettingsOpen}

@@ -20,15 +20,15 @@ const defaultStats = {
 const StatsModal = ({
   isOpen,
   onClose,
-  stats: initialStats = defaultStats, // Rename the prop to initialStats
+  stats: initialStats = defaultStats,
   isLoggedIn = false,
   selections = [],
   imagePairs = [],
   correctCount = 0,
-  isGameComplete = false, // Accept isGameComplete as a prop
+  isGameComplete = false,
 }) => {
   const userId = localStorage.getItem('userId');
-  const [stats, setStats] = useState(initialStats); // Use stats for local state
+  const [stats, setStats] = useState(initialStats);
   const [animatedBars, setAnimatedBars] = useState({});
   const [shouldAnimateNumbers, setShouldAnimateNumbers] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
@@ -36,7 +36,7 @@ const StatsModal = ({
   const hasAnimatedStats = useRef(false);
   const totalQuestions = imagePairs.length;
 
-  // Fetch stats and update state
+  // Fetch stats when modal opens
   useEffect(() => {
     const fetchAndValidateStats = async () => {
       try {
@@ -48,6 +48,7 @@ const StatsModal = ({
           return;
         }
 
+        console.log("Fetching stats when StatsModal opens...");
         const response = await fetch(`/api/stats/${resolvedUserId}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
         });
@@ -68,11 +69,9 @@ const StatsModal = ({
     };
 
     if (isOpen && isLoggedIn) {
-      console.log(`StatsModal opened.`);
       fetchAndValidateStats();
     }
   }, [isOpen, isLoggedIn, userId]);
-
 
   const handleHistoricalStatsShare = () => {
     const shareableText = `
@@ -106,9 +105,8 @@ Perfect Games: ${stats.perfectPuzzles}
   };
 
   const handleCompletionShare = () => {
-
-    console.log("Selections:", selections); // Add this log
-    console.log("Image Pairs:", imagePairs); // Add this log
+    console.log("Selections:", selections);
+    console.log("Image Pairs:", imagePairs);
 
     if (!selections.length || !imagePairs.length) {
       alert("No data available to share today's puzzle!");
@@ -119,12 +117,10 @@ Perfect Games: ${stats.perfectPuzzles}
 
     const resultsVisual = selections
       .map((selection, index) => {
-        // Check if the selected image matches the human image
         const isCorrect = selection?.selected === imagePairs[index]?.human;
         return isCorrect ? '🟢' : '🔴';
       })
       .join(' ');
-
 
     const paintings = '🖼️ '.repeat(imagePairs.length).trim();
 
@@ -152,16 +148,14 @@ Perfect Games: ${stats.perfectPuzzles}
     }
   };
 
-
-
   if (!isOpen && !isDismissing) return null;
 
   const handleDismiss = () => {
     setIsDismissing(true);
     setTimeout(() => {
-      setIsDismissing(false); // Reset state
-      onClose(); // Trigger modal close
-    }, 400); // Match the CSS animation duration
+      setIsDismissing(false);
+      onClose();
+    }, 400);
   };
 
   const handleTouchStart = (e) => {
@@ -171,11 +165,13 @@ Perfect Games: ${stats.perfectPuzzles}
   const handleTouchMove = (e) => {
     const touchEndY = e.touches[0].clientY;
     if (touchStartY.current && touchEndY - touchStartY.current > 50) {
-      handleDismiss(); // Trigger slide-down animation when swipe is detected
+      handleDismiss();
     }
   };
 
-  const maxValue = Math.max(1, ...Object.values(stats.mistakeDistribution));
+  // Ensure mistakeDistribution always has valid data
+  const maxValue = Math.max(1, ...Object.values(stats.mistakeDistribution || {}));
+
 
   return (
     <div
@@ -311,8 +307,8 @@ Perfect Games: ${stats.perfectPuzzles}
               className="modal-share-today-button"
               onClick={() =>
                 handleCompletionShare(
-                  stats.mostRecentSelections || [], // Default to empty array
-                  stats.mostRecentImagePairs || [] // Default to empty array
+                  stats.mostRecentSelections || [],
+                  stats.mostRecentImagePairs || []
                 )
               }
             >
