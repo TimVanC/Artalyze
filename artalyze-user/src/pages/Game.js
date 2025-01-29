@@ -58,7 +58,7 @@ const Game = () => {
     mistakeDistribution: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
     lastPlayedDate: null,
   });
-  
+
 
   // Helper function to save triesRemaining to localStorage
   const saveTriesToLocalStorage = (tries) => {
@@ -670,7 +670,7 @@ const Game = () => {
     clearTimeout(longPressTimer.current);
     longPressTimer.current = setTimeout(() => {
       setEnlargedImage(image);
-    }, 500); // Adjust time as needed
+    }, 500); // Long press threshold
   };
 
   const handleRelease = () => {
@@ -801,9 +801,12 @@ const Game = () => {
                       pair.images.map((image, idx) => (
                         <div
                           key={idx}
-                          className={`image-container ${selections[index]?.selected === image ? "selected" : ""
-                            }`}
+                          className={`image-container ${selections[index]?.selected === image ? "selected" : ""}`}
                           onClick={() => handleSelection(image, image === pair.human)}
+                          onTouchStart={() => handleLongPress(image)} // Start long press
+                          onTouchEnd={handleRelease} // Release long press
+                          onMouseDown={() => handleLongPress(image)} // For desktop users
+                          onMouseUp={handleRelease} // Release long press on desktop
                         >
                           <img src={image} alt={`Painting ${idx + 1}`} />
                         </div>
@@ -814,7 +817,6 @@ const Game = () => {
                   </div>
                 </SwiperSlide>
               ))}
-
             </Swiper>
           ) : (
             <p>Loading...</p>
@@ -940,21 +942,17 @@ const Game = () => {
                 <div key={index} className="pair-thumbnails-horizontal">
                   <div
                     className={`thumbnail-container human ${selection?.selected === pair.human
-                      ? isCorrect
-                        ? "correct pulse"
-                        : "incorrect pulse"
-                      : ""
-                      }`}
+                      ? isCorrect ? "correct pulse" : "incorrect pulse"
+                      : ""}`}
+                    onClick={() => setEnlargedImage(pair.human)} // Tap to enlarge
                   >
                     <img src={pair.human} alt={`Human Painting for pair ${index + 1}`} />
                   </div>
                   <div
                     className={`thumbnail-container ai ${selection?.selected === pair.ai
-                      ? isCorrect
-                        ? "correct pulse"
-                        : "incorrect pulse"
-                      : ""
-                      }`}
+                      ? isCorrect ? "correct pulse" : "incorrect pulse"
+                      : ""}`}
+                    onClick={() => setEnlargedImage(pair.ai)} // Tap to enlarge
                   >
                     <img src={pair.ai} alt={`AI Painting for pair ${index + 1}`} />
                   </div>
@@ -962,6 +960,7 @@ const Game = () => {
               );
             })}
           </div>
+
 
           <div className="completion-buttons">
             <button className="stats-button" onClick={() => setIsStatsOpen(true)}>
@@ -984,7 +983,9 @@ const Game = () => {
 
       {enlargedImage && (
         <div className="enlarge-modal" onClick={closeEnlargedImage}>
-          <img src={enlargedImage} alt="Enlarged view" className="enlarged-image" />
+          <div className="enlarged-image-container">
+            <img src={enlargedImage} alt="Enlarged view" className="enlarged-image" onClick={(e) => e.stopPropagation()} />
+          </div>
         </div>
       )}
     </div>
