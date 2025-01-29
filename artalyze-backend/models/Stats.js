@@ -55,6 +55,10 @@ const statsSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    lastSelectionMadeDate: {
+      type: String,
+      default: null, // Tracks the last date selections were made
+    },
     triesRemaining: {
       type: Number,
       default: 3,

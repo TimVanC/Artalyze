@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axiosInstance from '../axiosInstance';
+import { getTodayInEST } from '../utils/dateUtils';
 
 const useSelections = (userId, isLoggedIn) => {
   const [selections, setSelections] = useState([]);
@@ -15,7 +16,15 @@ const useSelections = (userId, isLoggedIn) => {
           headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
         });
         console.log('Fetched selections from backend:', data.selections);
-        setSelections(data.selections || []); // Restore selections
+
+        const today = getTodayInEST();
+        if (data.lastSelectionMadeDate !== today) {
+          console.log("Last selection made on a previous day. Clearing outdated selections.");
+          setSelections([]);
+          await axiosInstance.put("/stats/selections", { selections: [], lastSelectionMadeDate: today });
+        } else {
+          setSelections(data.selections || []);
+        }
       } catch (err) {
         console.error('Error fetching selections:', err);
         setError('Failed to fetch selections. Please try again later.');
@@ -24,33 +33,42 @@ const useSelections = (userId, isLoggedIn) => {
         setIsLoading(false);
       }
     };
-  
+
     if (isLoggedIn) {
       fetchSelections();
     } else {
       const savedSelections = localStorage.getItem('selections');
-      console.log('Selections from localStorage:', savedSelections);
-      setSelections(savedSelections ? JSON.parse(savedSelections) : []);
+      const lastSelectionMadeDate = localStorage.getItem('lastSelectionMadeDate');
+      const today = getTodayInEST();
+
+      if (lastSelectionMadeDate !== today) {
+        console.log("Last selection made on a previous day. Clearing outdated selections.");
+        localStorage.setItem('selections', JSON.stringify([]));
+        localStorage.setItem('lastSelectionMadeDate', today);
+        setSelections([]);
+      } else {
+        setSelections(savedSelections ? JSON.parse(savedSelections) : []);
+      }
       setIsLoading(false);
     }
   }, [userId, isLoggedIn]);
-  
-  
-  
+
   // Update selections locally and sync with the backend
   const updateSelections = (updatedSelections) => {
-    // Prevent unnecessary updates
+    const today = getTodayInEST();
     if (JSON.stringify(updatedSelections) === JSON.stringify(selections)) {
       console.log("Selections are already up-to-date. Skipping update.");
-      return; // Avoid redundant updates
+      return;
     }
-  
-    setSelections(updatedSelections); // Update local state
-  
-    // Sync with backend or localStorage
+
+    setSelections(updatedSelections);
+
     if (isLoggedIn) {
       axiosInstance
-        .put("/stats/selections", { selections: updatedSelections }, {
+        .put("/stats/selections", {
+          selections: updatedSelections,
+          lastSelectionMadeDate: today,
+        }, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
@@ -59,12 +77,9 @@ const useSelections = (userId, isLoggedIn) => {
         .catch((err) => console.error("Error updating selections:", err));
     } else {
       localStorage.setItem("selections", JSON.stringify(updatedSelections));
+      localStorage.setItem("lastSelectionMadeDate", today);
     }
   };
-  
-  
-  
-  
 
   return { selections, updateSelections, isLoading, error };
 };

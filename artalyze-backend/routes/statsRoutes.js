@@ -26,16 +26,17 @@ router.put('/tries/decrement', decrementTries);
 router.put('/tries/reset', resetTries);
 
 // Route to fetch user selections
-router.get('/selections', getSelections);
+router.get('/selections', getSelections); 
 
 // Route to save user selections
-router.put('/selections', saveSelections);
+router.put('/selections', saveSelections); 
 
 // Route to fetch completedSelections
-router.get('/completed-selections', getCompletedSelections);
+router.get('/completed-selections', getCompletedSelections); 
 
 // Route to save completedSelections
 router.put('/completed-selections/:userId', saveCompletedSelections);
+
 
 // Route to fetch user statistics
 router.get('/:userId', getUserStats);

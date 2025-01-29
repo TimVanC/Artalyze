@@ -131,49 +131,67 @@ const Game = () => {
   const initializeGame = async () => {
     const today = getTodayInEST();
     const isLoggedIn = isUserLoggedIn();
-
+  
     if (isLoggedIn && !userId) {
       console.error("User is logged in but no userId found in localStorage.");
       setError("User ID is missing. Please log in again.");
       return;
     }
-
+  
     try {
       setLoading(true);
-
+  
       let userSelections = [];
       let userCompletedSelections = [];
-
+      let lastSelectionMadeDate = null;
+  
       if (isLoggedIn) {
         console.log("Fetching user selections and completed selections...");
         const selectionsResponse = await axiosInstance.get("/stats/selections");
         userSelections = selectionsResponse.data.selections || [];
         userCompletedSelections = selectionsResponse.data.completedSelections || [];
+        lastSelectionMadeDate = selectionsResponse.data.lastSelectionMadeDate;
+  
         console.log("Fetched selections from backend:", userSelections);
         console.log("Fetched completed selections from backend:", userCompletedSelections);
-
-        updateSelections(userSelections);
       } else {
         console.log("Handling guest user selections...");
         const savedSelections = localStorage.getItem("selections");
         const savedCompletedSelections = localStorage.getItem("completedSelections");
+        lastSelectionMadeDate = localStorage.getItem("lastSelectionMadeDate");
+  
         userSelections = savedSelections ? JSON.parse(savedSelections) : [];
         userCompletedSelections = savedCompletedSelections ? JSON.parse(savedCompletedSelections) : [];
-        updateSelections(userSelections);
       }
-
+  
+      // Check if selections should be cleared based on date
+      if (lastSelectionMadeDate !== today) {
+        console.log("Last selection made on a previous day.");
+        if (userSelections.length === 0) {
+          console.log("No valid selections found. Clearing outdated selections.");
+          userSelections = [];
+          userCompletedSelections = [];
+          if (isLoggedIn) {
+            await axiosInstance.put("/stats/selections", { selections: [], lastSelectionMadeDate: today });
+          } else {
+            localStorage.setItem("selections", JSON.stringify([]));
+            localStorage.setItem("lastSelectionMadeDate", today);
+          }
+        }
+      }
+  
+      updateSelections(userSelections); // Restore selections
+      setCompletedSelections(userCompletedSelections); // Restore completed selections
+  
       console.log("Checking if the user has played today...");
       const playStatusResponse = await axiosInstance.get("/game/check-today-status");
       const { hasPlayedToday, triesRemaining } = playStatusResponse.data;
-
+  
       if (!hasPlayedToday) {
         console.log("User has not played today. Resetting completedSelections...");
-
-        // Reset `completedSelections` locally
         setCompletedSelections([]);
         if (isLoggedIn) {
           console.log("Clearing completedSelections in backend...");
-          // Optionally clear completedSelections in the backend
           await axiosInstance.put(`/stats/completed-selections/${userId}`, { completedSelections: [] });
         } else {
           console.log("Clearing completedSelections in localStorage...");
@@ -183,13 +201,13 @@ const Game = () => {
         console.log("User has already played today.");
         setIsGameComplete(true);
         setTriesLeft(0);
-        setCompletedSelections(userCompletedSelections); // Restore completedSelections
+        setCompletedSelections(userCompletedSelections);
         return;
       }
-
+  
       console.log("New day detected. Initializing game...");
       setTriesLeft(triesRemaining || 3);
-
+  
       const puzzleResponse = await axiosInstance.get("/game/daily-puzzle");
       if (puzzleResponse.data?.imagePairs?.length > 0) {
         const pairs = puzzleResponse.data.imagePairs.map((pair) => ({
@@ -200,7 +218,7 @@ const Game = () => {
               ? [pair.humanImageURL, pair.aiImageURL]
               : [pair.aiImageURL, pair.humanImageURL],
         }));
-
+  
         setImagePairs(pairs);
         localStorage.setItem("completedPairs", JSON.stringify(puzzleResponse.data.imagePairs));
       } else {

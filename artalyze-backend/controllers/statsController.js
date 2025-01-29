@@ -177,17 +177,23 @@ exports.deleteUserStats = async (req, res) => {
 // Fetch selections
 exports.getSelections = async (req, res) => {
   try {
-    const { userId } = req.user; // Ensure userId is attached
+    const { userId } = req.user;
+    const todayInEST = getTodayInEST();
     const stats = await Stats.findOne({ userId });
+
     if (!stats) {
-      console.log(`No stats found for userId: ${userId}`);
       return res.status(404).json({ message: 'Stats not found for this user.' });
     }
 
-    console.log(`Selections for userId ${userId}:`, stats.selections);
+    if (stats.lastSelectionMadeDate !== todayInEST) {
+      // Clear outdated selections
+      stats.selections = [];
+      stats.lastSelectionMadeDate = todayInEST;
+      await stats.save();
+    }
+
     res.status(200).json({ selections: stats.selections });
   } catch (error) {
-    console.error('Error fetching selections:', error);
     res.status(500).json({ message: 'Failed to fetch selections.' });
   }
 };
@@ -197,29 +203,25 @@ exports.saveSelections = async (req, res) => {
   try {
     const { userId } = req.user;
     const { selections } = req.body;
+    const todayInEST = getTodayInEST();
 
-    console.log('saveSelections called');
-    console.log('Received userId:', userId);
-    console.log('Received selections:', selections);
-
-    // Validate selections
     if (!Array.isArray(selections)) {
-      console.error('Invalid selections format:', selections);
       return res.status(400).json({ message: 'Selections must be an array.' });
     }
 
-    // Update database
     const stats = await Stats.findOneAndUpdate(
       { userId },
-      { $set: { selections } },
-      { new: true, upsert: true } // Create document if it doesn't exist
+      { 
+        $set: { 
+          selections,
+          lastSelectionMadeDate: todayInEST, // Update LSMD
+        }
+      },
+      { new: true, upsert: true }
     );
-
-    console.log('Updated stats:', stats);
 
     res.status(200).json({ selections: stats.selections });
   } catch (error) {
-    console.error('Error saving selections:', error);
     res.status(500).json({ message: 'Failed to save selections.' });
   }
 };
