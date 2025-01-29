@@ -43,6 +43,7 @@ const Game = () => {
   const [isDisappearing, setIsDisappearing] = useState(false);
   const [isStatsModalDismissed, setIsStatsModalDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showMobileWarning, setShowMobileWarning] = useState(false);
   const [error, setError] = useState('');
   const swiperRef = useRef(null);
 
@@ -340,6 +341,14 @@ const Game = () => {
       setIsGameComplete(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (window.innerWidth >= 1025) { 
+      setShowMobileWarning(true);
+    }
+  }, []);
+  
+
 
   // Monitor updates to imagePairs
   useEffect(() => {
@@ -666,6 +675,15 @@ const Game = () => {
     }
   };
 
+  const handlePlayClick = () => {
+    if (window.innerWidth > 768) { // Targeting laptop/desktop screens
+      setShowMobileWarning(true);
+      setTimeout(() => {
+        setShowMobileWarning(false);
+      }, 2000); // Show for 2 seconds
+    }
+  };
+
   const handleLongPress = (image) => {
     clearTimeout(longPressTimer.current);
     longPressTimer.current = setTimeout(() => {
@@ -711,6 +729,18 @@ const Game = () => {
 
   return (
     <div className="game-container">
+      {/* Mobile Warning Overlay */}
+      {showMobileWarning && (
+        <div className="mobile-warning-overlay">
+          <div className="mobile-warning-content">
+            <h2><strong>Warning</strong></h2>
+            <p>This game is optimized for mobile devices. For the best experience, play on a phone or tablet.</p>
+            <button className="mobile-warning-dismiss" onClick={() => setShowMobileWarning(false)}>Close</button>
+          </div>
+        </div>
+      )}
+
+
       {/* Full Page Loading Screen */}
       {loading && (
         <div className="full-page-loading-screen">
@@ -720,6 +750,7 @@ const Game = () => {
           </div>
         </div>
       )}
+
 
       {/* Top Bar */}
       <div className="top-bar">

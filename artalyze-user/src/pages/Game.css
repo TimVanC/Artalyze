@@ -532,6 +532,46 @@ h1 {
   animation: fullPageFillProgress 3s linear forwards; /* Fill the bar over 3 seconds */
 }
 
+.mobile-warning-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  opacity: 1;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.mobile-warning-content {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+}
+
+.mobile-warning-content h2 {
+  color: #d04e5f;
+  margin-bottom: 10px;
+}
+
+.mobile-warning-dismiss {
+  background: #d04e5f;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  font-size: 16px;
+  margin-top: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
 @keyframes fullPageFillProgress {
   0% {
     width: 0%;
