@@ -26,6 +26,7 @@ const StatsModal = ({
   imagePairs = [],
   correctCount = 0,
   isGameComplete = false,
+  completedSelections = [],
 }) => {
   const userId = localStorage.getItem('userId');
   const [stats, setStats] = useState(initialStats);
@@ -35,6 +36,8 @@ const StatsModal = ({
   const touchStartY = useRef(null);
   const hasAnimatedStats = useRef(false);
   const totalQuestions = imagePairs.length;
+  const [showShareWarning, setShowShareWarning] = useState(false);
+  const shareWarningTimeoutRef = useRef(null);
 
   // Fetch stats when modal opens
   useEffect(() => {
@@ -73,6 +76,15 @@ const StatsModal = ({
     }
   }, [isOpen, isLoggedIn, userId]);
 
+  useEffect(() => {
+    return () => {
+      if (shareWarningTimeoutRef.current) {
+        clearTimeout(shareWarningTimeoutRef.current);
+      }
+    };
+  }, []);
+  
+
   const handleHistoricalStatsShare = () => {
     const shareableText = `
 🎨 Artalyze Stats 🎨
@@ -105,48 +117,75 @@ Perfect Games: ${stats.perfectPuzzles}
   };
 
   const handleCompletionShare = () => {
-    console.log("Selections:", selections);
-    console.log("Image Pairs:", imagePairs);
-
-    if (!selections.length || !imagePairs.length) {
-      alert("No data available to share today's puzzle!");
+    // Allow sharing after the game is completed
+    if (isGameComplete) {
+      shareResults(completedSelections); // Pass finalized selections
       return;
     }
-
+  
+    // If the overlay is already active, do nothing
+    if (showShareWarning) return;
+  
+    // Prevent sharing if the puzzle isn’t complete
+    if (!selections.length || !imagePairs.length) {
+      setShowShareWarning(true);
+  
+      // Clear any existing timeout and set a new one
+      if (shareWarningTimeoutRef.current) {
+        clearTimeout(shareWarningTimeoutRef.current);
+      }
+  
+      shareWarningTimeoutRef.current = setTimeout(() => {
+        setShowShareWarning(false);
+        shareWarningTimeoutRef.current = null; // Clear the reference
+      }, 1000); // Show for 1 second
+  
+      return;
+    }
+  
+    shareResults(selections); // Use current selections for in-progress games
+  };
+  
+  // Helper function for sharing results
+  const shareResults = (usedSelections) => {
     const puzzleNumber = calculatePuzzleNumber();
-
-    const resultsVisual = selections
+  
+    // Generate the visual representation of results
+    const resultsVisual = usedSelections
       .map((selection, index) => {
         const isCorrect = selection?.selected === imagePairs[index]?.human;
         return isCorrect ? '🟢' : '🔴';
       })
       .join(' ');
-
+  
     const paintings = '🖼️ '.repeat(imagePairs.length).trim();
-
+  
     const shareableText = `
   Artalyze #${puzzleNumber} ${correctCount}/${imagePairs.length}
   ${resultsVisual}
   ${paintings}
   Try it at: artalyze.app
-    `;
-
+    `.trim();
+  
     if (navigator.share) {
       navigator
         .share({
           title: `Artalyze #${puzzleNumber}`,
-          text: shareableText.trim(),
+          text: shareableText,
         })
         .catch((error) => console.log('Error sharing:', error));
     } else {
       navigator.clipboard
-        .writeText(shareableText.trim())
+        .writeText(shareableText)
         .then(() => {
           alert('Results copied to clipboard! You can now paste it anywhere.');
         })
         .catch((error) => console.error('Failed to copy:', error));
     }
   };
+  
+  
+  
 
   if (!isOpen && !isDismissing) return null;
 
@@ -338,6 +377,15 @@ Perfect Games: ${stats.perfectPuzzles}
           </div>
         )}
       </div>
+      {/* Custom Share Warning Overlay */}
+      {showShareWarning && (
+        <div className="share-warning-overlay">
+          <div className="share-warning-content">
+            <p>Please complete today's puzzle before sharing.</p>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 

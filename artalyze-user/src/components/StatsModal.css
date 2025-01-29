@@ -174,7 +174,7 @@
 }
 
 .modal-share-button:hover {
-    background-color: #388E3C;
+    background-color: #2557a8;
     transform: scale(1.05);
 }
 
@@ -197,7 +197,7 @@
 }
 
 .modal-share-button:hover {
-  background-color: #388E3C;
+  background-color: #2557a8;
   transform: scale(1.08); /* Slightly larger hover effect */
 }
 
@@ -265,6 +265,56 @@
     background-color: #388E3C;
     transform: scale(1.05);
 }
+
+/* Custom Share Warning Overlay */
+.share-warning-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.share-warning-content {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  width: 80%;
+  max-width: 350px;
+  box-shadow: 0px 6px 18px rgba(0, 0, 0, 0.2);
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  animation: fadeInOut 1s ease-in-out;
+  animation-fill-mode: forwards; /* Prevents animation from resetting */
+}
+
+/* Fade In & Out Animation */
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  10% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  90% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
 
 /* Animations */
 @keyframes slide-up {

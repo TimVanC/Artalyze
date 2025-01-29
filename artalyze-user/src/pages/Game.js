@@ -746,6 +746,7 @@ const Game = () => {
 
 
 
+
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
