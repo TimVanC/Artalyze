@@ -888,7 +888,7 @@ const Game = () => {
                 <h2 className="mid-turn-overlay-title">Close! You're 1 away</h2>
                 <p className="mid-turn-overlay-message">You have 1 try left</p>
               </>
-            ) : correctCount >= 1 && correctCount <= 3 ? (
+            ) : correctCount >= 0 && correctCount <= 3 ? ( // Includes 0/5
               <>
                 <h2 className="mid-turn-overlay-title">{getRandomEncouragement()}</h2>
                 <p className="mid-turn-overlay-message">You have {triesLeft} tries left</p>
@@ -903,6 +903,7 @@ const Game = () => {
           </div>
         </div>
       )}
+
 
       {isGameComplete && (
         <div className="completion-screen">
