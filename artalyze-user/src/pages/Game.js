@@ -343,11 +343,14 @@ const Game = () => {
   }, []);
 
   useEffect(() => {
-    if (window.innerWidth >= 1025) { 
+    const hasDismissedWarning = localStorage.getItem("dismissedMobileWarning");
+
+    if (!hasDismissedWarning && window.innerWidth >= 1025) {
       setShowMobileWarning(true);
     }
   }, []);
-  
+
+
 
 
   // Monitor updates to imagePairs
@@ -735,7 +738,16 @@ const Game = () => {
           <div className="mobile-warning-content">
             <h2><strong>Warning</strong></h2>
             <p>This game is optimized for mobile devices. For the best experience, play on a phone or tablet.</p>
-            <button className="mobile-warning-dismiss" onClick={() => setShowMobileWarning(false)}>Close</button>
+            <button
+              className="mobile-warning-dismiss"
+              onClick={() => {
+                localStorage.setItem("dismissedMobileWarning", "true"); // Store that user dismissed it
+                setShowMobileWarning(false);
+              }}
+            >
+              Close
+            </button>
+
           </div>
         </div>
       )}
