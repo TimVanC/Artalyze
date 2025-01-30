@@ -177,24 +177,26 @@ exports.deleteUserStats = async (req, res) => {
 // Fetch selections
 exports.getSelections = async (req, res) => {
   try {
-    const { userId } = req.user;
-    const todayInEST = getTodayInEST();
-    const stats = await Stats.findOne({ userId });
+      const { userId } = req.user;
+      const todayInEST = getTodayInEST();
+      const stats = await Stats.findOne({ userId });
 
-    if (!stats) {
-      return res.status(404).json({ message: 'Stats not found for this user.' });
-    }
+      if (!stats) {
+          return res.status(404).json({ message: "Stats not found for this user." });
+      }
 
-    if (stats.lastSelectionMadeDate !== todayInEST) {
-      // Clear outdated selections
-      stats.selections = [];
-      stats.lastSelectionMadeDate = todayInEST;
-      await stats.save();
-    }
+      // ✅ **Reset selections if LSMD is from a previous day**
+      if (stats.lastSelectionMadeDate !== todayInEST) {
+          console.log("LSMD is outdated. Resetting selections.");
+          stats.selections = [];
+          stats.lastSelectionMadeDate = todayInEST;
+          await stats.save();
+      }
 
-    res.status(200).json({ selections: stats.selections });
+      res.status(200).json({ selections: stats.selections });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch selections.' });
+      console.error("Error fetching selections:", error);
+      res.status(500).json({ message: "Failed to fetch selections." });
   }
 };
 
@@ -307,10 +309,11 @@ exports.getTriesRemaining = async (req, res) => {
 exports.decrementTries = async (req, res) => {
   try {
     const { userId } = req.user;
+    const todayInEST = getTodayInEST();
 
     const stats = await Stats.findOneAndUpdate(
       { userId },
-      { $inc: { triesRemaining: -1 } },
+      { $inc: { triesRemaining: -1 }, lastTriesMadeDate: todayInEST }, // Update LTMD on attempt
       { new: true }
     );
 
@@ -325,19 +328,30 @@ exports.decrementTries = async (req, res) => {
   }
 };
 
+
 // Reset triesRemaining at midnight
 exports.resetTries = async (req, res) => {
   try {
     const { userId } = req.user;
+    const todayInEST = getTodayInEST();
 
-    const stats = await Stats.findOneAndUpdate(
-      { userId },
-      { $set: { triesRemaining: 3 } },
-      { new: true }
-    );
+    console.log(`Checking if tries should be reset for user ${userId}...`);
+
+    const stats = await Stats.findOne({ userId });
 
     if (!stats) {
+      console.error(`Stats not found for user ${userId}`);
       return res.status(404).json({ message: 'Stats not found for user.' });
+    }
+
+    // Reset tries if the game was completed today or if the user last attempted yesterday
+    if (stats.lastPlayedDate === todayInEST || stats.lastTriesMadeDate !== todayInEST) {
+      console.log(`Resetting triesRemaining to 3 for user ${userId}`);
+      stats.triesRemaining = 3;
+      stats.lastTriesMadeDate = todayInEST;
+      await stats.save();
+    } else {
+      console.log(`Tries remain unchanged for user ${userId}, current tries: ${stats.triesRemaining}`);
     }
 
     res.status(200).json({ triesRemaining: stats.triesRemaining });
