@@ -288,6 +288,28 @@ exports.saveCompletedSelections = async (req, res) => {
   }
 };
 
+exports.saveAlreadyGuessed = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    const { alreadyGuessed } = req.body;
+
+    if (!Array.isArray(alreadyGuessed)) {
+      return res.status(400).json({ message: "Invalid alreadyGuessed data." });
+    }
+
+    const stats = await Stats.findOneAndUpdate(
+      { userId },
+      { $set: { alreadyGuessed } },
+      { new: true, upsert: true }
+    );
+
+    res.status(200).json({ alreadyGuessed: stats.alreadyGuessed });
+  } catch (error) {
+    console.error("Error updating alreadyGuessed:", error);
+    res.status(500).json({ message: "Failed to update alreadyGuessed." });
+  }
+};
+
 // Fetch triesRemaining
 exports.getTriesRemaining = async (req, res) => {
   try {

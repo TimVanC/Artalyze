@@ -50,6 +50,11 @@ const Game = () => {
   const [userId, setUserId] = useState(localStorage.getItem("userId"));
   const { selections = [], updateSelections, isLoading, error: selectionsError } = useSelections(userId, isLoggedIn);
   const [completedSelections, setCompletedSelections] = useState([]);
+
+  const [alreadyGuessed, setAlreadyGuessed] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDuplicateOverlay, setShowDuplicateOverlay] = useState(false);
+
   const [stats, setStats] = useState({
     gamesPlayed: 0,
     winPercentage: 0,
@@ -68,11 +73,11 @@ const Game = () => {
 
   // Handle game completion
   const handleGameComplete = async () => {
-    console.log("handleGameComplete called");
+    console.log("🏁 handleGameComplete called");
     setIsGameComplete(true);
 
     if (!Array.isArray(selections) || !Array.isArray(imagePairs)) {
-      console.error("Invalid data: selections or imagePairs are undefined.");
+      console.error("❌ Invalid data: selections or imagePairs are undefined.");
       return;
     }
 
@@ -83,35 +88,34 @@ const Game = () => {
       return count;
     }, 0);
 
-    console.log("Final Correct Answers Count:", correctCount);
+    console.log("✅ Final Correct Answers Count:", correctCount);
     setCorrectCount(correctCount);
-    localStorage.setItem("correctCount", correctCount); // **Ensure correct count is stored**
+    localStorage.setItem("correctCount", correctCount);
 
     setCompletedSelections(selections);
 
     try {
+      const today = getTodayInEST();
+      const mistakes = imagePairs.length - correctCount;
+
       if (isUserLoggedIn()) {
-        const mistakes = imagePairs.length - correctCount;
-        const today = getTodayInEST();
         const payload = {
           correctAnswers: correctCount,
           totalQuestions: imagePairs.length,
           completedSelections: selections,
           mostRecentScore: mistakes,
-          lastPlayedDate: today, // Set lastPlayedDate on game completion
+          lastPlayedDate: today,
+          alreadyGuessed: [], // ✅ Reset alreadyGuessed on game completion
         };
 
-        console.log("Sending stats update to backend:", payload);
-        await axiosInstance.put(`/stats/${userId}`, payload, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
-        });
+        console.log("📡 Sending stats update to backend:", payload);
+        await axiosInstance.put(`/stats/${userId}`, payload);
 
-        console.log("Stats updated successfully in backend");
+        console.log("✅ Stats updated successfully in backend");
 
-        // **Ensure tries reset on game completion**
-        console.log("Resetting triesRemaining to 3...");
+        console.log("🔄 Resetting triesRemaining to 3...");
         const resetTriesResponse = await axiosInstance.put("/stats/tries/reset");
-        console.log("Reset tries response:", resetTriesResponse.data);
+        console.log("✅ Reset tries response:", resetTriesResponse.data);
 
         setTriesRemaining(3);
         setTriesLeft(3);
@@ -123,172 +127,204 @@ const Game = () => {
         setTriesRemaining(3);
         setTriesLeft(3);
       }
+
+      // ✅ Clear `alreadyGuessed` on game completion
+      setAlreadyGuessed([]);
+      localStorage.setItem("alreadyGuessed", JSON.stringify([]));
+      if (isUserLoggedIn()) {
+        await axiosInstance.put("/stats/already-guessed", { alreadyGuessed: [] });
+      }
+      console.log("✅ alreadyGuessed reset after game completion.");
     } catch (error) {
-      console.error("Error updating user stats:", error.response?.data || error.message);
+      console.error("❌ Error updating user stats:", error.response?.data || error.message);
     } finally {
       updateSelections([]);
       localStorage.removeItem("selections");
 
       setTimeout(() => {
         setIsStatsOpen(true);
-        console.log("StatsModal opened automatically after game completion.");
+        console.log("📊 StatsModal opened after game completion.");
       }, 500);
     }
   };
-
 
   // Initialize game logic
   const initializeGame = async () => {
     const today = getTodayInEST();
     const isLoggedIn = isUserLoggedIn();
-
+  
     if (isLoggedIn && !userId) {
-        console.error("User is logged in but no userId found in localStorage.");
-        setError("User ID is missing. Please log in again.");
-        return;
+      console.error("User is logged in but no userId found in localStorage.");
+      setError("User ID is missing. Please log in again.");
+      return;
     }
-
+  
     try {
-        setLoading(true);
-
-        let userSelections = [];
-        let userCompletedSelections = [];
-        let lastSelectionMadeDate = null;
-        let lastTriesMadeDate = null;
-        let lastPlayedDate = null;
-        let triesRemaining = 3;
-        let gameCompletedToday = false;
-
+      setLoading(true);
+  
+      let userSelections = [];
+      let userCompletedSelections = [];
+      let lastSelectionMadeDate = null;
+      let lastTriesMadeDate = null;
+      let lastPlayedDate = null;
+      let triesRemaining = 3;
+      let gameCompletedToday = false;
+      let alreadyGuessed = [];
+  
+      // ✅ **Restore alreadyGuessed from localStorage on refresh**
+      const storedGuesses = localStorage.getItem("alreadyGuessed");
+      if (storedGuesses) {
+        alreadyGuessed = JSON.parse(storedGuesses);
+        setAlreadyGuessed(alreadyGuessed);
+      }
+  
+      if (isLoggedIn) {
+        console.log("Fetching user selections, tries, and completed selections...");
+        const statsResponse = await axiosInstance.get(`/stats/${userId}`);
+  
+        userSelections = statsResponse.data.selections || [];
+        userCompletedSelections = statsResponse.data.completedSelections || [];
+        lastSelectionMadeDate = statsResponse.data.lastSelectionMadeDate;
+        lastTriesMadeDate = statsResponse.data.lastTriesMadeDate;
+        lastPlayedDate = statsResponse.data.lastPlayedDate;
+        triesRemaining = statsResponse.data.triesRemaining;
+        gameCompletedToday = lastPlayedDate === today;
+  
+        // ✅ **Restore alreadyGuessed from backend if available**
+        if (statsResponse.data.alreadyGuessed) {
+          alreadyGuessed = statsResponse.data.alreadyGuessed;
+          setAlreadyGuessed(alreadyGuessed);
+          localStorage.setItem("alreadyGuessed", JSON.stringify(alreadyGuessed));
+        }
+      } else {
+        console.log("Handling guest user selections...");
+        const savedSelections = localStorage.getItem("selections");
+        const savedCompletedSelections = localStorage.getItem("completedSelections");
+        lastSelectionMadeDate = localStorage.getItem("lastSelectionMadeDate");
+        lastTriesMadeDate = localStorage.getItem("lastTriesMadeDate");
+        lastPlayedDate = localStorage.getItem("lastPlayedDate");
+        triesRemaining = parseInt(localStorage.getItem("triesRemaining"), 10) || 3;
+        gameCompletedToday = lastPlayedDate === today;
+  
+        userSelections = savedSelections ? JSON.parse(savedSelections) : [];
+        userCompletedSelections = savedCompletedSelections ? JSON.parse(savedCompletedSelections) : [];
+      }
+  
+      console.log(`📅 TODAY: ${today}`);
+      console.log(`🔍 LAST SELECTION MADE DATE (LSMD): ${lastSelectionMadeDate}`);
+      console.log(`🔍 LAST TRIES MADE DATE (LTMD): ${lastTriesMadeDate}`);
+  
+      // ✅ **Lock users on the completion screen if they already finished today's game**
+      if (gameCompletedToday) {
+        console.log("✅ User already completed today's game. Staying on completion screen.");
+        setIsGameComplete(true);
+        return;
+      }
+  
+      // ✅ **Reset triesRemaining if lastPlayedDate is today (game completed)**
+      if (lastPlayedDate === today || lastTriesMadeDate !== today) {
+        console.log("🔄 Resetting triesRemaining to 3.");
+        triesRemaining = 3;
         if (isLoggedIn) {
-            console.log("Fetching user selections, tries, and completed selections...");
-            const statsResponse = await axiosInstance.get(`/stats/${userId}`);
-            userSelections = statsResponse.data.selections || [];
-            userCompletedSelections = statsResponse.data.completedSelections || [];
-            lastSelectionMadeDate = statsResponse.data.lastSelectionMadeDate;
-            lastTriesMadeDate = statsResponse.data.lastTriesMadeDate;
-            lastPlayedDate = statsResponse.data.lastPlayedDate;
-            triesRemaining = statsResponse.data.triesRemaining;
-            gameCompletedToday = lastPlayedDate === today;
+          await axiosInstance.put("/stats/tries/reset");
         } else {
-            console.log("Handling guest user selections...");
-            const savedSelections = localStorage.getItem("selections");
-            const savedCompletedSelections = localStorage.getItem("completedSelections");
-            lastSelectionMadeDate = localStorage.getItem("lastSelectionMadeDate");
-            lastTriesMadeDate = localStorage.getItem("lastTriesMadeDate");
-            lastPlayedDate = localStorage.getItem("lastPlayedDate");
-            triesRemaining = parseInt(localStorage.getItem("triesRemaining"), 10) || 3;
-            gameCompletedToday = lastPlayedDate === today;
-
-            userSelections = savedSelections ? JSON.parse(savedSelections) : [];
-            userCompletedSelections = savedCompletedSelections ? JSON.parse(savedCompletedSelections) : [];
+          localStorage.setItem("triesRemaining", "3");
+          localStorage.setItem("lastTriesMadeDate", today);
         }
-
-        console.log(`📅 TODAY: ${today}`);
-        console.log(`🔍 LAST SELECTION MADE DATE (LSMD): ${lastSelectionMadeDate}`);
-        console.log(`🔍 LAST TRIES MADE DATE (LTMD): ${lastTriesMadeDate}`);
-
-        // ✅ **Lock users on the completion screen if they already finished today's game**
-        if (gameCompletedToday) {
-            console.log("✅ User already completed today's game. Staying on completion screen.");
-            setIsGameComplete(true);
-            return;
-        }
-
-        // ✅ **Reset triesRemaining if lastPlayedDate is today (game completed)**
-        if (lastPlayedDate === today || lastTriesMadeDate !== today) {
-            console.log("🔄 Resetting triesRemaining to 3.");
-            triesRemaining = 3;
-            if (isLoggedIn) {
-                await axiosInstance.put("/stats/tries/reset");
-            } else {
-                localStorage.setItem("triesRemaining", "3");
-                localStorage.setItem("lastTriesMadeDate", today);
-            }
-        }
-
-        // ✅ **Ensure selections reset properly if LSMD is outdated**
-        if (!lastSelectionMadeDate || lastSelectionMadeDate !== today) {
-            console.log("🆕 New puzzle detected. Resetting selections BEFORE updating LSMD.");
-
-            // **Clear localStorage before making API call**
-            localStorage.removeItem("selections");
-            localStorage.removeItem("completedSelections");
-
-            userSelections = [];
-            userCompletedSelections = [];
-
-            console.log("🗑️ Selections cleared:", userSelections);
-
-            if (isLoggedIn) {
-                await axiosInstance.put("/stats/selections", { selections: [], lastSelectionMadeDate: today });
-            } else {
-                localStorage.setItem("selections", JSON.stringify([]));
-                localStorage.setItem("lastSelectionMadeDate", today);
-            }
-
-            console.log(`✅ LSMD Updated to ${today}`);
+      }
+  
+      // ✅ **Ensure selections reset properly if LSMD is outdated**
+      if (!lastSelectionMadeDate || lastSelectionMadeDate !== today) {
+        console.log("🆕 New puzzle detected. Resetting selections BEFORE updating LSMD.");
+  
+        // **Clear localStorage before making API call**
+        localStorage.removeItem("selections");
+        localStorage.removeItem("completedSelections");
+  
+        userSelections = [];
+        userCompletedSelections = [];
+  
+        console.log("🗑️ Selections cleared:", userSelections);
+  
+        if (isLoggedIn) {
+          await axiosInstance.put("/stats/selections", { selections: [], lastSelectionMadeDate: today });
         } else {
-            console.log("✅ Persisting selections as LSMD matches today's date.");
+          localStorage.setItem("selections", JSON.stringify([]));
+          localStorage.setItem("lastSelectionMadeDate", today);
         }
-
-        // ✅ **Ensure selections persist across refreshes during active gameplay**
-        if (!gameCompletedToday) {
-            console.log("Restoring previous selections from localStorage.");
-            const savedSelections = localStorage.getItem("selections");
-            if (savedSelections) {
-                userSelections = JSON.parse(savedSelections);
-            }
+  
+        console.log(`✅ LSMD Updated to ${today}`);
+      } else {
+        console.log("✅ Persisting selections as LSMD matches today's date.");
+      }
+  
+      // ✅ **Ensure selections persist across refreshes during active gameplay**
+      if (!gameCompletedToday) {
+        console.log("Restoring previous selections from localStorage.");
+        const savedSelections = localStorage.getItem("selections");
+        if (savedSelections) {
+          userSelections = JSON.parse(savedSelections);
         }
-
-        // ✅ **Add short delay before updating state to prevent race conditions**
-        setTimeout(() => {
-            updateSelections(userSelections);
-            setCompletedSelections(userCompletedSelections);
-            setTriesLeft(triesRemaining);
-            setTriesRemaining(triesRemaining);
-        }, 100); // Delay to ensure state updates correctly
-
-        console.log("📡 Fetching daily puzzle...");
-        const puzzleResponse = await axiosInstance.get("/game/daily-puzzle");
-        console.log("📦 Puzzle Response:", puzzleResponse.data);
-
-        if (puzzleResponse.data?.imagePairs?.length > 0) {
-            const pairs = puzzleResponse.data.imagePairs.map((pair) => ({
-                human: pair.humanImageURL,
-                ai: pair.aiImageURL,
-                images: Math.random() > 0.5
-                    ? [pair.humanImageURL, pair.aiImageURL]
-                    : [pair.aiImageURL, pair.humanImageURL],
-            }));
-
-            console.log("🖼️ Setting imagePairs:", pairs);
-            setImagePairs(pairs);
-            localStorage.setItem("completedPairs", JSON.stringify(puzzleResponse.data.imagePairs));
-        } else {
-            console.warn("⚠️ No image pairs available for today.");
-            setImagePairs([]);
+      }
+  
+      // ✅ **Ensure alreadyGuessed does not reset unless game completes**
+      if (!gameCompletedToday) {
+        const storedGuesses = localStorage.getItem("alreadyGuessed");
+        if (storedGuesses) {
+          alreadyGuessed = JSON.parse(storedGuesses);
+          setAlreadyGuessed(alreadyGuessed);
         }
+      }
+  
+      // ✅ **Add short delay before updating state to prevent race conditions**
+      setTimeout(() => {
+        updateSelections(userSelections);
+        setCompletedSelections(userCompletedSelections);
+        setTriesLeft(triesRemaining);
+        setTriesRemaining(triesRemaining);
+        setAlreadyGuessed(alreadyGuessed);
+      }, 100); // Delay to ensure state updates correctly
+  
+      console.log("📡 Fetching daily puzzle...");
+      const puzzleResponse = await axiosInstance.get("/game/daily-puzzle");
+      console.log("📦 Puzzle Response:", puzzleResponse.data);
+  
+      if (puzzleResponse.data?.imagePairs?.length > 0) {
+        const pairs = puzzleResponse.data.imagePairs.map((pair) => ({
+          human: pair.humanImageURL,
+          ai: pair.aiImageURL,
+          images: Math.random() > 0.5
+            ? [pair.humanImageURL, pair.aiImageURL]
+            : [pair.aiImageURL, pair.humanImageURL],
+        }));
+  
+        console.log("🖼️ Setting imagePairs:", pairs);
+        setImagePairs(pairs);
+        localStorage.setItem("completedPairs", JSON.stringify(puzzleResponse.data.imagePairs));
+      } else {
+        console.warn("⚠️ No image pairs available for today.");
+        setImagePairs([]);
+      }
     } catch (error) {
-        console.error("❌ Error initializing game:", error.response?.data || error.message);
-        setError("Failed to initialize the game. Please try again later.");
+      console.error("❌ Error initializing game:", error.response?.data || error.message);
+      setError("Failed to initialize the game. Please try again later.");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-};
+  };
+  
 
-  
-  
   // Restore game state function
   const restoreGameState = () => {
     console.log("Restoring game state...");
     const savedPairs = localStorage.getItem("completedPairs");
     const savedSelections = localStorage.getItem("selections");
     const savedCompletedSelections = localStorage.getItem("completedSelections");
-  
+
     console.log("Saved pairs from localStorage:", savedPairs);
     console.log("Saved selections from localStorage:", savedSelections);
     console.log("Saved completedSelections from localStorage:", savedCompletedSelections);
-  
+
     if (savedPairs) {
       const pairs = JSON.parse(savedPairs);
       setImagePairs(
@@ -300,13 +336,13 @@ const Game = () => {
             : [pair.aiImageURL, pair.humanImageURL],
         }))
       );
-  
+
       if (savedSelections) {
         const selections = JSON.parse(savedSelections);
         updateSelections(selections);
         console.log("Restored selections:", selections);
       }
-  
+
       if (savedCompletedSelections) {
         const completedSelections = JSON.parse(savedCompletedSelections);
         setCompletedSelections(completedSelections);
@@ -322,8 +358,6 @@ const Game = () => {
       setCompletedSelections([]);
     }
   };
-  
-  
 
   // Game logic: Initialize or restore game state based on completion status
   useEffect(() => {
@@ -736,26 +770,67 @@ const Game = () => {
     clearTimeout(longPressTimer.current);
   };
 
-  const handleSubmit = () => {
-    let correct = 0;
+  const handleSubmit = async () => {
+    console.log("📡 Submit button pressed!");
 
-    selections.forEach((selection, index) => {
-      if (selection.isHumanSelection && selection.selected === imagePairs[index].human) {
-        correct++;
+    if (isSubmitting) return; // ✅ Prevent multiple rapid submissions
+    setIsSubmitting(true);
+
+    const currentSubmission = selections.map((selection) => selection.selected);
+
+    // ✅ Check if this exact submission was already made
+    const isDuplicateSubmission = alreadyGuessed.some(
+      (pastSubmission) => JSON.stringify(pastSubmission) === JSON.stringify(currentSubmission)
+    );
+
+    if (isDuplicateSubmission) {
+      console.log("⛔ Duplicate full submission detected! Showing overlay.");
+      setShowDuplicateOverlay(true);
+      setTimeout(() => setShowDuplicateOverlay(false), 1000);
+      setIsSubmitting(false);
+      return;
+    }
+
+    // ✅ Store new guess in `alreadyGuessed`
+    const updatedGuesses = [...alreadyGuessed, currentSubmission];
+    setAlreadyGuessed(updatedGuesses);
+    localStorage.setItem("alreadyGuessed", JSON.stringify(updatedGuesses));
+
+    console.log("✅ Submission stored in alreadyGuessed:", updatedGuesses);
+
+    if (isUserLoggedIn()) {
+      try {
+        await axiosInstance.put("/stats/already-guessed", { alreadyGuessed: updatedGuesses });
+        console.log("✅ alreadyGuessed updated in backend.");
+      } catch (error) {
+        console.error("❌ Error updating alreadyGuessed:", error);
       }
-    });
+    }
+
+    // ✅ Calculate correct guesses
+    let correct = selections.reduce((count, selection, index) => {
+      return selection.isHumanSelection && selection.selected === imagePairs[index].human
+        ? count + 1
+        : count;
+    }, 0);
 
     setCorrectCount(correct);
 
+    // ✅ Check game completion or decrement tries
     if (correct === imagePairs.length || triesLeft === 1) {
+      console.log("🏁 Game completed! Correct answers:", correct);
       setIsGameComplete(true);
-      setShowOverlay(false); // Ensure no overlay on game completion
-      handleGameComplete(); // Finalize game
+      setShowOverlay(false);
+      handleGameComplete();
     } else {
-      setShowOverlay(true); // Display mid-turn feedback overlay
-      decrementTries(); // Update tries remaining
+      console.log("🔄 Guess submitted, but game is NOT complete yet. Showing mid-turn overlay...");
+      setShowOverlay(true);
+      await decrementTries();
     }
+
+    setIsSubmitting(false);
   };
+
 
   const handleStatsModalClose = () => {
     setIsStatsOpen(false);
@@ -789,6 +864,18 @@ const Game = () => {
           </div>
         </div>
       )}
+
+      {/* Already Guessed Overlay */}
+      {showDuplicateOverlay && (
+        <div className="duplicate-overlay">
+          <div className="duplicate-overlay-content">
+            <h2 className="duplicate-overlay-title">You already tried this guess!</h2>
+          </div>
+        </div>
+      )}
+
+
+
 
 
       {/* Full Page Loading Screen */}

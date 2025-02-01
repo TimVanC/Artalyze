@@ -57,11 +57,11 @@ const statsSchema = new mongoose.Schema(
     },
     lastSelectionMadeDate: {
       type: String,
-      default: null, // Tracks the last date selections were made
+      default: null, 
     },
     lastTriesMadeDate: {
       type: String,
-      default: null, // Tracks the last date an attempt was made
+      default: null,
     },
     triesRemaining: {
       type: Number,
@@ -73,6 +73,10 @@ const statsSchema = new mongoose.Schema(
     },
     completedSelections: {
       type: Array,
+      default: [],
+    },
+    alreadyGuessed: {
+      type: [[String]],
       default: [],
     },
   },

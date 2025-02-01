@@ -572,6 +572,45 @@ h1 {
   cursor: pointer;
 }
 
+/* ✅ Duplicate Guess Overlay (Styled like Mid-Turn Overlay) */
+.duplicate-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* Slightly lighter background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.duplicate-overlay-content {
+  background: white;
+  padding: 15px; /* Slightly smaller padding */
+  border-radius: 10px; /* Slightly smaller border radius */
+  text-align: center;
+  width: 60%; /* Smaller width */
+  max-width: 300px; /* Smaller max width */
+  box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.25s ease-in-out, scaleUp 0.25s ease-in-out, shake 0.4s ease-out;
+}
+
+.duplicate-overlay-content.disappearing {
+  animation: fadeOut 0.25s ease-in-out, scaleDown 0.25s ease-in-out;
+}
+
+.duplicate-overlay-title {
+  font-size: 18px; /* Smaller font size */
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+
+
+
 @keyframes fullPageFillProgress {
   0% {
     width: 0%;

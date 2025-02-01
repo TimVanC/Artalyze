@@ -7,9 +7,10 @@ const {
   decrementTries, 
   getSelections, 
   saveSelections, 
-  getCompletedSelections, // Import getCompletedSelections
-  saveCompletedSelections, // Import saveCompletedSelections
-  resetTries 
+  getCompletedSelections, 
+  saveCompletedSelections, 
+  resetTries,
+  saveAlreadyGuessed
 } = require('../controllers/statsController');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
@@ -37,6 +38,8 @@ router.get('/completed-selections', getCompletedSelections);
 // Route to save completedSelections
 router.put('/completed-selections/:userId', saveCompletedSelections);
 
+// ✅ Route to save alreadyGuessed
+router.put("/already-guessed", saveAlreadyGuessed);
 
 // Route to fetch user statistics
 router.get('/:userId', getUserStats);
