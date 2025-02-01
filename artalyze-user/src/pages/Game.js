@@ -214,6 +214,18 @@ const Game = () => {
       console.log(`🔍 LAST SELECTION MADE DATE (LSMD): ${lastSelectionMadeDate}`);
       console.log(`🔍 LAST TRIES MADE DATE (LTMD): ${lastTriesMadeDate}`);
   
+      // ✅ **Reset alreadyGuessed if LSMD is outdated**
+      if (!lastSelectionMadeDate || lastSelectionMadeDate !== today) {
+        console.log("🔄 LSMD mismatch! Resetting alreadyGuessed to prevent stale data.");
+        alreadyGuessed = [];
+  
+        if (isLoggedIn) {
+          await axiosInstance.put("/stats/already-guessed", { alreadyGuessed: [] });
+        } else {
+          localStorage.setItem("alreadyGuessed", JSON.stringify([]));
+        }
+      }
+  
       // ✅ **Lock users on the completion screen if they already finished today's game**
       if (gameCompletedToday) {
         console.log("✅ User already completed today's game. Staying on completion screen.");
@@ -313,7 +325,6 @@ const Game = () => {
     }
   };
   
-
   // Restore game state function
   const restoreGameState = () => {
     console.log("Restoring game state...");
