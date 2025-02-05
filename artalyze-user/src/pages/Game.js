@@ -178,37 +178,44 @@ const Game = () => {
         setAlreadyGuessed(alreadyGuessed);
       }
   
-      if (isLoggedIn) {
-        console.log("Fetching user selections, tries, and completed selections...");
-        const statsResponse = await axiosInstance.get(`/stats/${userId}`);
+      try {
+        if (isLoggedIn) {
+          console.log("Fetching user selections, tries, and completed selections...");
+          const statsResponse = await axiosInstance.get(`/stats/${userId}`);
   
-        userSelections = statsResponse.data.selections || [];
-        userCompletedSelections = statsResponse.data.completedSelections || [];
-        lastSelectionMadeDate = statsResponse.data.lastSelectionMadeDate;
-        lastTriesMadeDate = statsResponse.data.lastTriesMadeDate;
-        lastPlayedDate = statsResponse.data.lastPlayedDate;
-        triesRemaining = statsResponse.data.triesRemaining;
-        gameCompletedToday = lastPlayedDate === today;
+          userSelections = statsResponse.data.selections || [];
+          userCompletedSelections = statsResponse.data.completedSelections || [];
+          lastSelectionMadeDate = statsResponse.data.lastSelectionMadeDate;
+          lastTriesMadeDate = statsResponse.data.lastTriesMadeDate;
+          lastPlayedDate = statsResponse.data.lastPlayedDate;
+          triesRemaining = statsResponse.data.triesRemaining;
+          gameCompletedToday = lastPlayedDate === today;
   
-        // ✅ **Restore alreadyGuessed from backend if available**
-        if (statsResponse.data.alreadyGuessed) {
-          alreadyGuessed = statsResponse.data.alreadyGuessed;
-          setAlreadyGuessed(alreadyGuessed);
-          localStorage.setItem("alreadyGuessed", JSON.stringify(alreadyGuessed));
+          // ✅ **Restore alreadyGuessed from backend if available**
+          if (statsResponse.data.alreadyGuessed) {
+            alreadyGuessed = statsResponse.data.alreadyGuessed;
+            setAlreadyGuessed(alreadyGuessed);
+            localStorage.setItem("alreadyGuessed", JSON.stringify(alreadyGuessed));
+          }
+        } else {
+          console.log("Handling guest user selections...");
+          const savedSelections = localStorage.getItem("selections");
+          const savedCompletedSelections = localStorage.getItem("completedSelections");
+          lastSelectionMadeDate = localStorage.getItem("lastSelectionMadeDate");
+          lastTriesMadeDate = localStorage.getItem("lastTriesMadeDate");
+          lastPlayedDate = localStorage.getItem("lastPlayedDate");
+          triesRemaining = parseInt(localStorage.getItem("triesRemaining"), 10) || 3;
+          gameCompletedToday = lastPlayedDate === today;
+  
+          userSelections = savedSelections ? JSON.parse(savedSelections) : [];
+          userCompletedSelections = savedCompletedSelections ? JSON.parse(savedCompletedSelections) : [];
         }
-      } else {
-        console.log("Handling guest user selections...");
-        const savedSelections = localStorage.getItem("selections");
-        const savedCompletedSelections = localStorage.getItem("completedSelections");
-        lastSelectionMadeDate = localStorage.getItem("lastSelectionMadeDate");
-        lastTriesMadeDate = localStorage.getItem("lastTriesMadeDate");
+      } catch (error) {
+        console.error("Error fetching play status:", error);
         lastPlayedDate = localStorage.getItem("lastPlayedDate");
-        triesRemaining = parseInt(localStorage.getItem("triesRemaining"), 10) || 3;
         gameCompletedToday = lastPlayedDate === today;
-  
-        userSelections = savedSelections ? JSON.parse(savedSelections) : [];
-        userCompletedSelections = savedCompletedSelections ? JSON.parse(savedCompletedSelections) : [];
       }
+
   
       console.log(`📅 TODAY: ${today}`);
       console.log(`🔍 LAST SELECTION MADE DATE (LSMD): ${lastSelectionMadeDate}`);

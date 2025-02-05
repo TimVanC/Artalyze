@@ -38,43 +38,46 @@ exports.getDailyPuzzle = async (req, res) => {
 // Check if the user has played today
 exports.checkIfPlayedToday = async (req, res) => {
   try {
-    const { userId } = req.user; // Get the authenticated user's ID
-    const todayInEST = getTodayInEST(); // Get today's date in EST format
+    const todayInEST = getTodayInEST();
 
-    let stats = await Stats.findOne({ userId });
+    // ✅ If user is logged in, check database
+    if (req.user) {
+      const { userId } = req.user;
+      let stats = await Stats.findOne({ userId });
 
-    if (!stats) {
-      // Initialize stats for a new user
-      stats = new Stats({
-        userId,
-        triesRemaining: 3,
-        lastPlayedDate: todayInEST,
-      });
-      await stats.save();
+      if (!stats) {
+        stats = new Stats({
+          userId,
+          triesRemaining: 3,
+          lastPlayedDate: todayInEST,
+        });
+        await stats.save();
+        return res.status(200).json({
+          hasPlayedToday: false,
+          triesRemaining: stats.triesRemaining,
+        });
+      }
+
       return res.status(200).json({
-        hasPlayedToday: false,
+        hasPlayedToday: stats.lastPlayedDate === todayInEST,
         triesRemaining: stats.triesRemaining,
       });
     }
 
-    if (stats.lastPlayedDate !== todayInEST) {
-      // User hasn't played today; reset game state
-      return res.status(200).json({
-        hasPlayedToday: false,
-        triesRemaining: stats.triesRemaining,
-      });
-    }
+    // ✅ Guest logic (Use `localStorage` equivalent if needed)
+    const guestLastPlayed = req.cookies?.guestLastPlayed || null;
+    const hasPlayedToday = guestLastPlayed === todayInEST;
 
-    // User has already played today
     return res.status(200).json({
-      hasPlayedToday: true,
-      triesRemaining: stats.triesRemaining,
+      hasPlayedToday,
+      triesRemaining: hasPlayedToday ? 0 : 3, // Guests reset tries daily
     });
   } catch (error) {
     console.error('Error checking if user has played today:', error);
     return res.status(500).json({ message: 'Failed to check play status.' });
   }
 };
+
 
 // Mark the user as played today
 exports.markAsPlayedToday = async (req, res) => {
