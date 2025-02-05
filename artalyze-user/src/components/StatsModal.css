@@ -227,44 +227,55 @@
 
 
 /* Non-Logged-In View */
-.stats-logo {
-    max-width: 150px;
-    margin: 20px auto;
+.guest-stats-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+  padding: 20px;
 }
 
-.non-logged-in-message {
-    font-size: 22px;
-    font-weight: bold;
-    margin: 10px 0;
-    color: #333333;
+.guest-stats-logo {
+  width: 150px;
+  margin-bottom: 15px;
 }
 
-.non-logged-in-subtext {
-    font-size: 16px;
-    color: #666666;
-    margin-bottom: 20px;
+.guest-message {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 10px;
 }
 
-.cta-button {
-    background-color: #4CAF50;
-    color: white;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-    width: 80%;
-    max-width: 300px;
-    margin: 20px auto;
-    display: block;
+.guest-subtext {
+  font-size: 1rem;
+  color: #666;
+  max-width: 300px;
+  line-height: 1.5;
 }
 
-.cta-button:hover {
-    background-color: #388E3C;
-    transform: scale(1.05);
+.guest-cta-button {
+  background-color: #4CAF50;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  width: 80%;
+  max-width: 300px;
+  margin: 20px auto;
+  display: block;
 }
+
+.guest-cta-button:hover {
+  background-color: #388E3C;
+  transform: scale(1.05);
+}
+
 
 /* Custom Share Warning Overlay */
 .share-warning-overlay {

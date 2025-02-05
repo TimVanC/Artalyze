@@ -359,15 +359,15 @@ Perfect Games: ${stats.perfectPuzzles}
             <img
               src={logo}
               alt="Track your stats illustration"
-              className="guest-stats-image"
+              className="guest-stats-logo"
             />
-            <h2>Track Your Artalyze Stats</h2>
-            <p>
+            <h2 className="guest-message">Track Your Artalyze Stats</h2>
+            <p className="guest-subtext">
               Register to follow your streaks, total completed puzzles, win rate,
               and more.
             </p>
             <button
-              className="cta-button"
+              className="guest-cta-button"
               onClick={() => {
                 window.location.href = "/register";
               }}
@@ -375,6 +375,7 @@ Perfect Games: ${stats.perfectPuzzles}
               Create a Free Account
             </button>
           </div>
+
         )}
       </div>
       {/* Custom Share Warning Overlay */}
