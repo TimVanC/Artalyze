@@ -75,51 +75,51 @@ const Game = () => {
   const handleGameComplete = async () => {
     console.log("🏁 handleGameComplete called");
     setIsGameComplete(true);
-
+  
     if (!Array.isArray(selections) || !Array.isArray(imagePairs)) {
       console.error("❌ Invalid data: selections or imagePairs are undefined.");
       return;
     }
-
+  
     const correctCount = selections.reduce((count, selection, index) => {
       if (selection && imagePairs[index] && selection.selected === imagePairs[index].human) {
         return count + 1;
       }
       return count;
     }, 0);
-
+  
     console.log("✅ Final Correct Answers Count:", correctCount);
     setCorrectCount(correctCount);
     localStorage.setItem("correctCount", correctCount);
-
+  
     setCompletedSelections(selections);
-
+  
     try {
       const today = getTodayInEST();
       const mistakes = imagePairs.length - correctCount;
-
+  
       if (isUserLoggedIn()) {
         const payload = {
           correctAnswers: correctCount,
           totalQuestions: imagePairs.length,
           completedSelections: selections,
           mostRecentScore: mistakes,
-          lastPlayedDate: today,
+          lastPlayedDate: today, // ✅ Ensure lastPlayedDate updates
           alreadyGuessed: [], // ✅ Reset alreadyGuessed on game completion
         };
-
+  
         console.log("📡 Sending stats update to backend:", payload);
         await axiosInstance.put(`/stats/${userId}`, payload);
-
+  
         console.log("✅ Stats updated successfully in backend");
-
+  
         console.log("🔄 Resetting triesRemaining to 3...");
         const resetTriesResponse = await axiosInstance.put("/stats/tries/reset");
         console.log("✅ Reset tries response:", resetTriesResponse.data);
-
+  
         setTriesRemaining(3);
         setTriesLeft(3);
-
+  
         await fetchAndSetStats(userId);
       } else {
         const updatedCompletedSelections = selections.map((s) => ({
@@ -131,10 +131,11 @@ const Game = () => {
         console.log("✅ Guest completedSelections saved to localStorage:", updatedCompletedSelections);
         setCompletedSelections(updatedCompletedSelections);
         localStorage.setItem("triesRemaining", "3");
+        localStorage.setItem("lastPlayedDate", today); // ✅ Update lastPlayedDate for guest users
         setTriesRemaining(3);
         setTriesLeft(3);
       }
-
+  
       // ✅ Clear `alreadyGuessed` on game completion
       setAlreadyGuessed([]);
       localStorage.setItem("alreadyGuessed", JSON.stringify([]));
@@ -150,13 +151,14 @@ const Game = () => {
     } finally {
       updateSelections([]);
       localStorage.removeItem("selections");
-
+  
       setTimeout(() => {
         setIsStatsOpen(true);
         console.log("📊 StatsModal opened after game completion.");
       }, 500);
     }
   };
+  
 
   // Initialize game logic
   const initializeGame = async () => {
