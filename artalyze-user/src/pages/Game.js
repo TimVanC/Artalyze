@@ -93,6 +93,7 @@ const Game = () => {
     localStorage.setItem("correctCount", correctCount);
   
     setCompletedSelections(selections);
+    localStorage.setItem("completedSelections", JSON.stringify(selections)); // ✅ Save to localStorage
   
     try {
       const today = getTodayInEST();
@@ -104,8 +105,8 @@ const Game = () => {
           totalQuestions: imagePairs.length,
           completedSelections: selections,
           mostRecentScore: mistakes,
-          lastPlayedDate: today, // ✅ Ensure lastPlayedDate updates
-          alreadyGuessed: [], // ✅ Reset alreadyGuessed on game completion
+          lastPlayedDate: today,
+          alreadyGuessed: [],
         };
   
         console.log("📡 Sending stats update to backend:", payload);
@@ -122,16 +123,16 @@ const Game = () => {
   
         await fetchAndSetStats(userId);
       } else {
-        localStorage.setItem("completedSelections", JSON.stringify(selections));
+        localStorage.setItem("completedSelections", JSON.stringify(selections)); // ✅ Save for guest users
         localStorage.setItem("triesRemaining", "3");
-        localStorage.setItem("lastPlayedDate", today); // ✅ Update lastPlayedDate for guest users
+        localStorage.setItem("lastPlayedDate", today);
         setTriesRemaining(3);
         setTriesLeft(3);
       }
   
-      // ✅ Clear `alreadyGuessed` on game completion
       setAlreadyGuessed([]);
       localStorage.setItem("alreadyGuessed", JSON.stringify([]));
+  
       if (isUserLoggedIn()) {
         await axiosInstance.put("/stats/already-guessed", { alreadyGuessed: [] });
       }
@@ -149,7 +150,6 @@ const Game = () => {
     }
   };
   
-
   // Initialize game logic
   const initializeGame = async () => {
     const today = getTodayInEST();
@@ -479,16 +479,26 @@ const Game = () => {
     }
   }, [selections, isLoggedIn]);
 
-  // Persist completedSelections for guest users and sync with backend
-  useEffect(() => {
-    if (!isLoggedIn && completedSelections.length > 0) {
+// Persist and restore completedSelections for guest users
+useEffect(() => {
+  if (!isLoggedIn) {
+    if (completedSelections.length > 0) {
       console.log("Persisting completedSelections to localStorage for guest user.");
       localStorage.setItem("completedSelections", JSON.stringify(completedSelections));
-    } else if (isLoggedIn && isGameComplete) {
-      console.log("Syncing completedSelections with backend...");
-      saveCompletedSelectionsToBackend(completedSelections);
+    } else {
+      // Restore completedSelections from localStorage if empty
+      const savedCompletedSelections = localStorage.getItem("completedSelections");
+      if (savedCompletedSelections) {
+        console.log("Restoring completedSelections from localStorage for guest user.");
+        setCompletedSelections(JSON.parse(savedCompletedSelections));
+      }
     }
-  }, [completedSelections, isLoggedIn, isGameComplete]);
+  } else if (isLoggedIn && isGameComplete) {
+    console.log("Syncing completedSelections with backend...");
+    saveCompletedSelectionsToBackend(completedSelections);
+  }
+}, [completedSelections, isLoggedIn, isGameComplete]);
+
 
   // Reset completedSelections when a new day starts
   useEffect(() => {
