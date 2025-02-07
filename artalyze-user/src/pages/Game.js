@@ -509,10 +509,19 @@ const Game = () => {
   
     if (!isGameComplete && lastPlayedDate !== today) {
       console.log("New day detected. Resetting completedSelections.");
+  
       setCompletedSelections([]);
       localStorage.removeItem("completedSelections");
+  
+      if (isLoggedIn) {
+        console.log("📡 Resetting completedSelections in the backend...");
+        axiosInstance.put(`/stats/completed-selections/${userId}`, { completedSelections: [] })
+          .then(() => console.log("✅ completedSelections reset in backend"))
+          .catch(error => console.error("❌ Error resetting completedSelections in backend:", error));
+      }
     }
   }, [isGameComplete]);
+  
   
   // ✅ Now, update `lastPlayedDate` **only when the user actually completes a game**
   useEffect(() => {
@@ -1089,29 +1098,30 @@ const Game = () => {
         </>
       )}
 
-      {showOverlay && (
-        <div className="mid-turn-overlay">
-          <div className="mid-turn-overlay-content">
-            {correctCount === 4 ? (
-              <>
-                <h2 className="mid-turn-overlay-title">Close! You're 1 away</h2>
-                <p className="mid-turn-overlay-message">You have 1 try left</p>
-              </>
-            ) : correctCount >= 0 && correctCount <= 3 ? ( // Includes 0/5
-              <>
-                <h2 className="mid-turn-overlay-title">{getRandomEncouragement()}</h2>
-                <p className="mid-turn-overlay-message">You have {triesLeft} tries left</p>
-              </>
-            ) : null}
-            <button
-              onClick={() => setShowOverlay(false)}
-              className="mid-turn-overlay-try-again-button"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      )}
+{showOverlay && (
+  <div className="mid-turn-overlay">
+    <div className="mid-turn-overlay-content">
+      {correctCount === imagePairs.length - 1 ? ( // ✅ Dynamically check "1 away"
+        <>
+          <h2 className="mid-turn-overlay-title">Close! You're 1 away</h2>
+          <p className="mid-turn-overlay-message">You have {triesLeft} tries left</p>  {/* ✅ Now correct */}
+        </>
+      ) : correctCount >= 0 && correctCount <= 3 ? (
+        <>
+          <h2 className="mid-turn-overlay-title">{getRandomEncouragement()}</h2>
+          <p className="mid-turn-overlay-message">You have {triesLeft} tries left</p>
+        </>
+      ) : null}
+      <button
+        onClick={() => setShowOverlay(false)}
+        className="mid-turn-overlay-try-again-button"
+      >
+        Try Again
+      </button>
+    </div>
+  </div>
+)}
+
 
 
       {isGameComplete && (
