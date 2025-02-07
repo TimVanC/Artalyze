@@ -806,12 +806,22 @@ const Game = () => {
     }
   };
 
-  const handleLongPress = (image) => {
+  
+  const handleLongPress = (imageUrl) => {
     clearTimeout(longPressTimer.current);
     longPressTimer.current = setTimeout(() => {
-      setEnlargedImage(image);
-    }, 500); // Long press threshold
+      setEnlargedImage(imageUrl);
+    }, 500); // Long press threshold (500ms)
   };
+  
+  const handleImageClick = (imageUrl) => {
+    setEnlargedImage(imageUrl); // Tap to enlarge on completion screen
+  };
+  
+  const closeEnlargedImage = () => {
+    setEnlargedImage(null);
+  };
+  
 
   const handleRelease = () => {
     clearTimeout(longPressTimer.current);
@@ -885,10 +895,6 @@ const Game = () => {
   };
 
   const isSubmitEnabled = selections.length === imagePairs.length;
-
-  const closeEnlargedImage = () => {
-    setEnlargedImage(null);
-  };
 
   return (
     <div className="game-container">
