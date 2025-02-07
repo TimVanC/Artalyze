@@ -488,7 +488,7 @@ const Game = () => {
   useEffect(() => {
     if (!isLoggedIn) {
       const savedCompletedSelections = localStorage.getItem("completedSelections");
-  
+
       if (completedSelections.length === 0 && savedCompletedSelections) {
         console.log("Restoring completedSelections from localStorage for guest user.");
         setCompletedSelections(JSON.parse(savedCompletedSelections));
@@ -506,13 +506,13 @@ const Game = () => {
   useEffect(() => {
     const today = getTodayInEST();
     const lastPlayedDate = localStorage.getItem("lastPlayedDate");
-  
+
     if (!isGameComplete && lastPlayedDate !== today) {
       console.log("New day detected. Resetting completedSelections.");
-  
+
       setCompletedSelections([]);
       localStorage.removeItem("completedSelections");
-  
+
       if (isLoggedIn) {
         console.log("📡 Resetting completedSelections in the backend...");
         axiosInstance.put(`/stats/completed-selections/${userId}`, { completedSelections: [] })
@@ -521,8 +521,8 @@ const Game = () => {
       }
     }
   }, [isGameComplete]);
-  
-  
+
+
   // ✅ Now, update `lastPlayedDate` **only when the user actually completes a game**
   useEffect(() => {
     if (isGameComplete) {
@@ -531,7 +531,7 @@ const Game = () => {
       localStorage.setItem("lastPlayedDate", today);
     }
   }, [isGameComplete]);
-    
+
 
   // Prevent re-fetching completedSelections endlessly
   useEffect(() => {
@@ -1088,39 +1088,62 @@ const Game = () => {
             ))}
           </div>
 
-          <button
-            className={`submit-button ${isSubmitEnabled ? 'enabled' : 'disabled'}`}
-            onClick={handleSubmit}
-            disabled={!isSubmitEnabled}
-          >
-            Submit
-          </button>
+          <div className="button-container">
+            <button
+              className={`clear-button ${selections.length > 0 ? 'enabled' : ''}`}
+              onClick={() => {
+                if (selections.length > 0) {
+                  updateSelections([]);
+                  localStorage.removeItem("selections");
+
+                  if (isUserLoggedIn()) {
+                    axiosInstance.put(`/stats/selections`, { selections: [] })
+                      .then(() => console.log("Selections cleared in backend"))
+                      .catch(error => console.error("Error clearing selections:", error));
+                  }
+                }
+              }}
+              disabled={selections.length === 0}
+            >
+              Clear
+            </button>
+
+            <button
+              className={`submit-button ${isSubmitEnabled ? 'enabled' : 'disabled'}`}
+              onClick={handleSubmit}
+              disabled={!isSubmitEnabled}
+            >
+              Submit
+            </button>
+          </div>
+
+
         </>
       )}
 
-{showOverlay && (
-  <div className="mid-turn-overlay">
-    <div className="mid-turn-overlay-content">
-      {correctCount === imagePairs.length - 1 ? ( // ✅ Dynamically check "1 away"
-        <>
-          <h2 className="mid-turn-overlay-title">Close! You're 1 away</h2>
-          <p className="mid-turn-overlay-message">You have {triesLeft} tries left</p>  {/* ✅ Now correct */}
-        </>
-      ) : correctCount >= 0 && correctCount <= 3 ? (
-        <>
-          <h2 className="mid-turn-overlay-title">{getRandomEncouragement()}</h2>
-          <p className="mid-turn-overlay-message">You have {triesLeft} tries left</p>
-        </>
-      ) : null}
-      <button
-        onClick={() => setShowOverlay(false)}
-        className="mid-turn-overlay-try-again-button"
-      >
-        Try Again
-      </button>
-    </div>
-  </div>
-)}
+      {showOverlay && (
+        <div className="mid-turn-overlay">
+          <div className="mid-turn-overlay-content">
+            {correctCount === imagePairs.length - 1 ? ( // ✅ Dynamically check "1 away"
+              <>
+                <h2 className="mid-turn-overlay-title">Close! You're 1 away</h2>
+                <p className="mid-turn-overlay-message">You have {triesLeft} tries left</p>  {/* ✅ Now correct */}
+              </>
+            ) : correctCount >= 0 && correctCount <= 3 ? (
+              <>
+                <h2 className="mid-turn-overlay-title">{getRandomEncouragement()}</h2>
+                <p className="mid-turn-overlay-message">You have {triesLeft} tries left</p>
+              </>
+            ) : null}
+            <button
+              onClick={() => setShowOverlay(false)}
+              className="mid-turn-overlay-try-again-button"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      )}
 
 
 

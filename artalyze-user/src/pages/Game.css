@@ -190,13 +190,14 @@ h1 {
 .submit-button {
   background-color: grey;
   color: white;
-  padding: 12px 25px;
+  padding: 12px 24px;
   font-size: 18px;
   border: none;
   cursor: pointer;
   border-radius: 12px;
   margin: 5% 0;
-  width: 30%;
+  width: 35%;
+  transition: all 0.3s ease;
 }
 
 .submit-button.enabled {
@@ -207,6 +208,39 @@ h1 {
   background-color: #ccc;
   cursor: not-allowed;
 }
+
+/* Clear Button */
+.clear-button {
+  background-color: transparent;
+  border: 2px solid grey; /* Default greyed-out state */
+  color: grey;
+  padding: 8px 16px;
+  font-size: 18px;
+  border-radius: 12px;
+  cursor: not-allowed; /* Disabled by default */
+  transition: all 0.3s ease;
+}
+
+.clear-button.enabled {
+  border: 2px solid #4d73af;
+  color: #4d73af;
+  cursor: pointer;
+}
+
+.clear-button.enabled:hover {
+  background-color: #4d73af;
+  color: white;
+}
+
+/* Button Container */
+.button-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 10px;
+}
+
 
 
 /* Mid-Turn Feedback Overlay */
