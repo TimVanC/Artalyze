@@ -7,6 +7,7 @@ const gameRoutes = require('./routes/gameRoutes'); // Game-related routes
 const imageRoutes = require('./routes/imageRoutes'); // Image upload routes
 const adminRoutes = require('./routes/adminRoutes'); // Admin-related routes for image pairs
 const statsRoutes = require('./routes/statsRoutes'); // Stats-related routes
+const userRoutes = require('./routes/userRoutes');
 
 const connectDB = require('./config/db'); // Database connection function
 
@@ -58,6 +59,9 @@ app.use('/api/admin', adminRoutes);
 
 console.log('Mounting statsRoutes at /api/stats');
 app.use('/api/stats', statsRoutes);
+
+console.log('Mounting statsRoutes at /api/user');
+app.use('/api/user', userRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

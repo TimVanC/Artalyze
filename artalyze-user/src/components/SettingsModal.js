@@ -1,21 +1,50 @@
 import React, { useState, useEffect } from 'react';
+import axiosInstance from '../axiosInstance';
 import './SettingsModal.css';
 
 const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
-    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-    setDarkMode(savedDarkMode);
-    document.body.classList.toggle('dark-mode', savedDarkMode);
-  }, []);
-
-  const toggleDarkMode = () => {
+    const fetchThemePreference = async () => {
+      const userId = localStorage.getItem("userId"); // Get userId from localStorage
+      const userToken = localStorage.getItem("authToken"); // Get authToken from localStorage
+  
+      if (isLoggedIn && userId && userToken) {
+        try {
+          const response = await axiosInstance.get(`/user/theme`); // ✅ Fixed path
+          setDarkMode(response.data.themePreference === 'dark');
+          document.body.classList.toggle('dark-mode', response.data.themePreference === 'dark');
+        } catch (error) {
+          console.error('Error fetching theme preference:', error);
+        }
+      } else {
+        const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+        setDarkMode(savedDarkMode);
+        document.body.classList.toggle('dark-mode', savedDarkMode);
+      }
+    };
+    fetchThemePreference();
+  }, [isLoggedIn]);
+  
+  const toggleDarkMode = async () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
     document.body.classList.toggle('dark-mode', newMode);
-    localStorage.setItem('darkMode', newMode);
-  };
+  
+    const userId = localStorage.getItem("userId"); // Get userId from localStorage
+    const userToken = localStorage.getItem("authToken"); // Get authToken from localStorage
+  
+    if (isLoggedIn && userId && userToken) {
+      try {
+        await axiosInstance.put(`/user/theme`, { themePreference: newMode ? 'dark' : 'light' }); // ✅ Fixed path
+      } catch (error) {
+        console.error('Error updating theme preference:', error);
+      }
+    } else {
+      localStorage.setItem('darkMode', newMode);
+    }
+  }; 
 
   const handleLogout = () => {
     localStorage.clear(); // Clear all local storage
