@@ -1183,3 +1183,83 @@ body.dark-mode .submit-button.disabled {
     overflow-y: hidden !important;
   }
 }
+
+/* Dark Mode: Mid-Turn Overlay */
+body.dark-mode .mid-turn-overlay {
+  background-color: rgba(0, 0, 0, 0.85); /* Darkened background */
+}
+
+body.dark-mode .mid-turn-overlay-content {
+  background-color: #181818;
+  color: #CFCFCF;
+  border: 1px solid #444;
+}
+
+body.dark-mode .mid-turn-overlay-title {
+  color: #CFCFCF;
+}
+
+body.dark-mode .mid-turn-overlay-message {
+  color: #CFCFCF;
+}
+
+body.dark-mode .mid-turn-overlay-try-again-button {
+  background-color: #4d73af;
+  color: white;
+}
+
+body.dark-mode .mid-turn-overlay-try-again-button:hover {
+  background-color: #365a89;
+}
+
+/* Dark Mode: Already Guessed Overlay */
+body.dark-mode .duplicate-overlay {
+  background-color: rgba(0, 0, 0, 0.85); /* Darker background */
+}
+
+body.dark-mode .duplicate-overlay-content {
+  background-color: #181818;
+  color: #CFCFCF;
+  border: 1px solid #444;
+}
+
+body.dark-mode .duplicate-overlay-title {
+  color: #CFCFCF;
+}
+
+/* Dark Mode: Mobile Warning Overlay */
+body.dark-mode .mobile-warning-overlay {
+  background-color: rgba(0, 0, 0, 0.85);
+}
+
+body.dark-mode .mobile-warning-content {
+  background-color: #181818;
+  color: #CFCFCF;
+  border: 1px solid #444;
+}
+
+body.dark-mode .mobile-warning-dismiss {
+  background-color: #4d73af;
+  color: white;
+}
+
+body.dark-mode .mobile-warning-dismiss:hover {
+  background-color: #365a89;
+}
+
+/* Dark Mode: Loading Screen */
+body.dark-mode .full-page-loading-screen {
+  background-color: #181818;
+}
+
+body.dark-mode .loading-logo {
+  filter: brightness(80%); /* Adjust logo brightness for dark mode */
+}
+
+body.dark-mode .full-page-progress-bar {
+  background-color: #444;
+}
+
+body.dark-mode .full-page-progress-fill {
+  background-color: #4d73af;
+}

@@ -1,50 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import axiosInstance from '../axiosInstance';
-import './SettingsModal.css';
+import React from "react";
+import { useDarkMode } from "../hooks/useDarkMode";
+import "./SettingsModal.css";
 
 const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
-  const [darkMode, setDarkMode] = useState(false);
-
-  useEffect(() => {
-    const fetchThemePreference = async () => {
-      const userId = localStorage.getItem("userId"); // Get userId from localStorage
-      const userToken = localStorage.getItem("authToken"); // Get authToken from localStorage
-
-      if (isLoggedIn && userId && userToken) {
-        try {
-          const response = await axiosInstance.get(`/user/theme`); // ✅ Fixed path
-          setDarkMode(response.data.themePreference === 'dark');
-          document.body.classList.toggle('dark-mode', response.data.themePreference === 'dark');
-        } catch (error) {
-          console.error('Error fetching theme preference:', error);
-        }
-      } else {
-        const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-        setDarkMode(savedDarkMode);
-        document.body.classList.toggle('dark-mode', savedDarkMode);
-      }
-    };
-    fetchThemePreference();
-  }, [isLoggedIn]);
+  const { darkMode, setDarkMode } = useDarkMode();
 
   const toggleDarkMode = async () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
-    document.body.classList.toggle('dark-mode', newMode);
-
-    const userId = localStorage.getItem("userId"); // Get userId from localStorage
-    const userToken = localStorage.getItem("authToken"); // Get authToken from localStorage
-
-    if (isLoggedIn && userId && userToken) {
+    localStorage.setItem("darkMode", newMode);
+    window.dispatchEvent(new Event("darkModeChanged"));
+  
+    const userId = localStorage.getItem("userId");
+    const userToken = localStorage.getItem("authToken");
+  
+    if (userId && userToken) {
       try {
-        await axiosInstance.put(`/user/theme`, { themePreference: newMode ? 'dark' : 'light' }); // ✅ Fixed path
+        await fetch(`/api/user/theme`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${userToken}`,
+          },
+          body: JSON.stringify({ themePreference: newMode ? "dark" : "light" }),
+        });
       } catch (error) {
-        console.error('Error updating theme preference:', error);
+        console.error("Error syncing theme preference:", error);
       }
-    } else {
-      localStorage.setItem('darkMode', newMode);
     }
   };
+  
 
   const handleLogout = () => {
     localStorage.clear(); // Clear all local storage

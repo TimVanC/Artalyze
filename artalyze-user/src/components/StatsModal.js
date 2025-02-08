@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
-import './StatsModal.css';
+import React, { useEffect, useState, useRef } from "react";
+import { useDarkMode } from "../hooks/useDarkMode";
+import "./StatsModal.css";
 import { FaShareAlt } from 'react-icons/fa';
 import { handleShare } from '../utils/shareUtils';
 import { getTodayInEST, getYesterdayInEST } from '../utils/dateUtils';
@@ -38,6 +39,7 @@ const StatsModal = ({
   const totalQuestions = imagePairs.length;
   const [showShareWarning, setShowShareWarning] = useState(false);
   const shareWarningTimeoutRef = useRef(null);
+  const { darkMode } = useDarkMode();
 
   // Fetch stats when modal opens
   useEffect(() => {
@@ -83,7 +85,7 @@ const StatsModal = ({
       }
     };
   }, []);
-  
+
 
   const handleHistoricalStatsShare = () => {
     const shareableText = `
@@ -122,34 +124,34 @@ Perfect Games: ${stats.perfectPuzzles}
       shareResults(completedSelections); // Pass finalized selections
       return;
     }
-  
+
     // If the overlay is already active, do nothing
     if (showShareWarning) return;
-  
+
     // Prevent sharing if the puzzle isn’t complete
     if (!selections.length || !imagePairs.length) {
       setShowShareWarning(true);
-  
+
       // Clear any existing timeout and set a new one
       if (shareWarningTimeoutRef.current) {
         clearTimeout(shareWarningTimeoutRef.current);
       }
-  
+
       shareWarningTimeoutRef.current = setTimeout(() => {
         setShowShareWarning(false);
         shareWarningTimeoutRef.current = null; // Clear the reference
       }, 1000); // Show for 1 second
-  
+
       return;
     }
-  
+
     shareResults(selections); // Use current selections for in-progress games
   };
-  
+
   // Helper function for sharing results
   const shareResults = (usedSelections) => {
     const puzzleNumber = calculatePuzzleNumber();
-  
+
     // Generate the visual representation of results
     const resultsVisual = usedSelections
       .map((selection, index) => {
@@ -157,16 +159,16 @@ Perfect Games: ${stats.perfectPuzzles}
         return isCorrect ? '🟢' : '🔴';
       })
       .join(' ');
-  
+
     const paintings = '🖼️ '.repeat(imagePairs.length).trim();
-  
+
     const shareableText = `
   Artalyze #${puzzleNumber} ${correctCount}/${imagePairs.length}
   ${resultsVisual}
   ${paintings}
   Try it at: artalyze.app
     `.trim();
-  
+
     if (navigator.share) {
       navigator
         .share({
@@ -183,9 +185,9 @@ Perfect Games: ${stats.perfectPuzzles}
         .catch((error) => console.error('Failed to copy:', error));
     }
   };
-  
-  
-  
+
+
+
 
   if (!isOpen && !isDismissing) return null;
 
@@ -214,11 +216,11 @@ Perfect Games: ${stats.perfectPuzzles}
 
   return (
     <div
-      className={`stats-overlay ${isDismissing ? "transparent" : ""}`}
-      onTouchStart={handleTouchStart} // Detect the start of the swipe
-      onTouchMove={handleTouchMove} // Detect the swipe-down gesture
+      className={`stats-overlay ${isDismissing ? "transparent" : ""} ${darkMode ? "dark-mode" : ""}`}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
     >
-      <div className={`stats-overlay-content ${isDismissing ? "slide-down" : ""}`}>
+      <div className={`stats-overlay-content ${isDismissing ? "slide-down" : ""} ${darkMode ? "dark-mode" : ""}`}>
         <span className="close-icon" onClick={handleDismiss}>
           ✖
         </span>

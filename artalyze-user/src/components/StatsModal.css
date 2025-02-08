@@ -306,6 +306,68 @@
   animation-fill-mode: forwards; /* Prevents animation from resetting */
 }
 
+/* Dark Mode: Stats Modal */
+body.dark-mode .stats-overlay-content {
+  background-color: #181818;
+  color: #CFCFCF;
+}
+
+/* Dark Mode: Overlay */
+body.dark-mode .stats-overlay {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* Dark Mode: Close Icon */
+body.dark-mode .close-icon {
+  color: #CFCFCF;
+}
+
+/* Dark Mode: Header */
+body.dark-mode .stats-header {
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  color: #CFCFCF;
+}
+
+/* Dark Mode: Separator */
+body.dark-mode .separator {
+  border-top: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Dark Mode: Stat Overview */
+body.dark-mode .stat-item {
+  color: #CFCFCF;
+}
+
+/* Dark Mode: Mistake Distribution */
+body.dark-mode .mistake-label {
+  color: #CFCFCF;
+}
+
+body.dark-mode .distribution-bar {
+  background-color: #181818;
+}
+
+body.dark-mode .bar-fill {
+  background-color: #4d73af !important;
+}
+
+/* Dark Mode: Guest Message */
+body.dark-mode .guest-message,
+body.dark-mode .guest-subtext {
+  color: #CFCFCF;
+}
+
+/* Dark Mode: Guest CTA Button */
+body.dark-mode .guest-cta-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+body.dark-mode .guest-cta-button:hover {
+  background-color: #388E3C;
+}
+
+
 /* Fade In & Out Animation */
 @keyframes fadeInOut {
   0% {

@@ -131,6 +131,50 @@
   margin-top: 10px;
 }
 
+/* Dark Mode: Modal Overlay */
+body.dark-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.8); /* Darker background */
+}
+
+/* Dark Mode: Modal Content */
+body.dark-mode .modal-content {
+  background-color: #181818;
+  color: #CFCFCF;
+}
+
+/* Dark Mode: Close Icon */
+body.dark-mode .close-icon {
+  color: #CFCFCF;
+}
+
+/* Dark Mode: Section Separators */
+body.dark-mode .section-separator {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Dark Mode: Text Elements */
+body.dark-mode .rules-heading,
+body.dark-mode .examples-section h3,
+body.dark-mode .cta-message,
+body.dark-mode .modal-footer {
+  color: #CFCFCF;
+}
+
+/* Dark Mode: Example Image Borders */
+body.dark-mode .example-image {
+  border: 2px solid #444;
+}
+
+/* Dark Mode: CTA Link */
+body.dark-mode .cta-link {
+  color: #4d73af;
+}
+
+body.dark-mode .cta-link:hover {
+  color: #365a89;
+}
+
+
 /* Slide-up Animation */
 @keyframes slide-up {
   from {

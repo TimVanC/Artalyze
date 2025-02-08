@@ -1,11 +1,14 @@
 import React, { useState, useRef } from 'react';
+import { useDarkMode } from '../hooks/useDarkMode';
 import './InfoModal.css';
 import humanExample from '../assets/images/human-example.png';
 import aiExample from '../assets/images/ai-example.png';
 
+
 const InfoModal = ({ isOpen, onClose }) => {
   const [isDismissing, setIsDismissing] = useState(false);
   const touchStartY = useRef(null);
+  const { darkMode } = useDarkMode();
 
   if (!isOpen && !isDismissing) return null;
 
@@ -30,11 +33,11 @@ const InfoModal = ({ isOpen, onClose }) => {
 
   return (
     <div
-      className={`modal-overlay ${isDismissing ? 'transparent' : ''}`}
-      onTouchStart={handleTouchStart} // Start tracking the touch gesture
-      onTouchMove={handleTouchMove}  // Detect swipe-down gesture
+      className={`modal-overlay ${isDismissing ? 'transparent' : ''} ${darkMode ? 'dark-mode' : ''}`}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
     >
-      <div className={`modal-content ${isDismissing ? 'slide-down' : ''}`}>
+      <div className={`modal-content ${isDismissing ? 'slide-down' : ''} ${darkMode ? 'dark-mode' : ''}`}>
         <span className="close-icon" onClick={handleDismiss}>✖</span>
 
         <h2>How to Play</h2>
