@@ -367,6 +367,23 @@ body.dark-mode .guest-cta-button:hover {
   background-color: #388E3C;
 }
 
+/* Dark Mode: Mistake Distribution */
+body.dark-mode .mistake-label {
+  color: #CFCFCF;
+}
+
+body.dark-mode .distribution-bar {
+  background-color: #181818;
+}
+
+body.dark-mode .bar-fill {
+  background-color: #909090 !important; /* Default gray for all bars in dark mode */
+}
+
+body.dark-mode .bar-fill.highlight {
+  background-color: #4d73af !important; /* Highlight blue for the current mistake count */
+}
+
 
 /* Fade In & Out Animation */
 @keyframes fadeInOut {
