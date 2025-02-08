@@ -546,12 +546,12 @@ h1 {
 }
 
 .loading-logo {
-  width: 63px; /* Set the logo width */
+  width: 70px; /* Set the logo width */
   margin-bottom: 20px; /* Add spacing between the logo and the progress bar */
 }
 
 .full-page-progress-bar {
-  width: 40%; /* Compact width for the progress bar */
+  width: 150px; 
   height: 10px; /* Slim progress bar */
   background-color: #ffffff; /* White background for the bar */
   border-radius: 5px;

@@ -121,13 +121,13 @@ html, body {
 
 /* Loading Logo */
 .loading-logo {
-  width: 63px;
+  width: 70px;
   margin-bottom: 20px;
 }
 
 /* Loading Progress Bar */
 .full-page-progress-bar {
-  width: 40%;
+  width: 150px;
   height: 10px;
   background-color: #ffffff;
   border-radius: 5px;
