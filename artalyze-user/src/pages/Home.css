@@ -166,3 +166,66 @@ html, body {
     transform: translateY(0);
   }
 }
+
+/* Dark Mode: Home Container */
+body.dark-mode .home-container {
+  background-color: #181818;
+  color: #CFCFCF;
+}
+
+/* Dark Mode: Home Title */
+body.dark-mode .home-title {
+  color: #CFCFCF;
+}
+
+/* Dark Mode: Home Description */
+body.dark-mode .home-description {
+  color: #CFCFCF;
+}
+
+/* Dark Mode: Play Button */
+body.dark-mode .play-button {
+  background-color: #4d73af;
+  color: white;
+  border: 2px solid #4d73af;
+}
+
+body.dark-mode .play-button:hover {
+  background-color: #365a89;
+}
+
+/* Dark Mode: Login Button */
+body.dark-mode .login-button {
+  background-color: transparent;
+  color: white;
+  border: 2px solid white;
+}
+
+body.dark-mode .login-button:hover {
+  background-color: white;
+  color: black;
+}
+
+/* Dark Mode: Date, Puzzle Number, and Author */
+body.dark-mode .date,
+body.dark-mode .puzzle-number,
+body.dark-mode .author {
+  color: #CFCFCF;
+}
+
+/* Dark Mode: Loading Screen */
+body.dark-mode .full-page-loading-screen {
+  background-color: #181818;
+}
+
+body.dark-mode .loading-logo {
+  filter: brightness(80%);
+}
+
+body.dark-mode .full-page-progress-bar {
+  background-color: #444;
+}
+
+body.dark-mode .full-page-progress-fill {
+  background-color: #4d73af;
+}

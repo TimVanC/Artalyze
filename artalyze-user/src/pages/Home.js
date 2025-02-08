@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDarkMode } from '../hooks/useDarkMode'; // ✅ Import Dark Mode Hook
 import './Home.css';
 import logo from '../assets/images/artalyze-logo.png';
 import axiosInstance from '../axiosInstance';
@@ -12,6 +13,7 @@ const Home = () => {
   const [date, setDate] = useState('');
   const [puzzleNumber, setPuzzleNumber] = useState(0);
   const [loading, setLoading] = useState(true); // Loading state
+  const { darkMode } = useDarkMode();
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -58,14 +60,14 @@ const Home = () => {
   };
 
   return loading ? (
-    <div className="full-page-loading-screen">
+    <div className={`full-page-loading-screen ${darkMode ? "dark-mode" : ""}`}>
       <img src={logo} alt="Artalyze Logo" className="loading-logo" />
       <div className="full-page-progress-bar">
         <div className="full-page-progress-fill"></div>
       </div>
     </div>
   ) : (
-    <div className="home-container fade-in">
+    <div className={`home-container fade-in ${darkMode ? "dark-mode" : ""}`}>
       <img src={logo} alt="Artalyze Logo" className="home-logo" />
       <h1 className="home-title">Artalyze</h1>
       <p className="home-description">Can you spot the human masterpiece?</p>
