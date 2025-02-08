@@ -9,7 +9,7 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
     const fetchThemePreference = async () => {
       const userId = localStorage.getItem("userId"); // Get userId from localStorage
       const userToken = localStorage.getItem("authToken"); // Get authToken from localStorage
-  
+
       if (isLoggedIn && userId && userToken) {
         try {
           const response = await axiosInstance.get(`/user/theme`); // ✅ Fixed path
@@ -26,15 +26,15 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
     };
     fetchThemePreference();
   }, [isLoggedIn]);
-  
+
   const toggleDarkMode = async () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
     document.body.classList.toggle('dark-mode', newMode);
-  
+
     const userId = localStorage.getItem("userId"); // Get userId from localStorage
     const userToken = localStorage.getItem("authToken"); // Get authToken from localStorage
-  
+
     if (isLoggedIn && userId && userToken) {
       try {
         await axiosInstance.put(`/user/theme`, { themePreference: newMode ? 'dark' : 'light' }); // ✅ Fixed path
@@ -44,7 +44,7 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
     } else {
       localStorage.setItem('darkMode', newMode);
     }
-  }; 
+  };
 
   const handleLogout = () => {
     localStorage.clear(); // Clear all local storage
@@ -60,12 +60,13 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
       <div className="settings-modal-content">
         <h2>Settings</h2>
         <ul className="settings-options">
-          <li>
+          <li className="dark-mode-toggle-wrapper">
             <div className="dark-mode-toggle-container" onClick={toggleDarkMode}>
-              <span>{darkMode ? "Dark Mode" : "Light Mode"}</span>
+              <span className="dark-mode-toggle-label">Dark Mode</span>
               <div className={`dark-mode-toggle ${darkMode ? "active" : ""}`}></div>
             </div>
           </li>
+
           <li>
             <button
               className="settings-button"
@@ -133,7 +134,7 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
       </div>
     </div>
   );
-  
+
 };
 
 export default SettingsModal;
