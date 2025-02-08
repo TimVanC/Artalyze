@@ -346,3 +346,111 @@
     }
   }
   
+
+  /* ✅ Extra Small Phones - iPhone SE, iPod Touch, Galaxy Fold (320px x 568px) */
+@media (max-width: 320px) and (max-height: 568px) {
+  .stats-overlay-content {
+    width: 100%; /* Make it slightly narrower */
+    max-width: 320px; /* Prevents excessive width */
+    height: 85vh; /* Reduce height so it doesn’t take up too much space */
+    padding: 12px;
+    border-radius: 15px 15px 0 0; /* Slightly less rounded */
+  }
+
+  .close-icon {
+    top: 10px;
+    right: 12px;
+    font-size: 20px; /* Reduce size */
+  }
+
+  .stats-header {
+    font-size: 18px; /* Reduce heading size */
+    margin-bottom: 15px;
+  }
+
+  .stat-item {
+    font-size: 14px; /* Make stat labels smaller */
+  }
+
+  .stat-value {
+    font-size: 18px; /* Reduce stat numbers */
+  }
+
+  .mistake-label {
+    font-size: 13px; /* Reduce mistake distribution labels */
+  }
+
+  .bar-value {
+    font-size: 12px; /* Reduce mistake distribution numbers */
+  }
+
+  .modal-share-button,
+  .modal-share-today-button {
+    width: 80%; /* Slightly narrower buttons */
+    font-size: 14px; /* Reduce button text size */
+    padding: 10px 15px; /* Adjust padding */
+  }
+
+  .guest-message {
+    font-size: 1.2rem; /* Reduce guest message text */
+  }
+
+  .guest-subtext {
+    font-size: 0.9rem; /* Reduce subtext */
+    max-width: 260px;
+  }
+}
+
+/* ✅ Small Phones - iPhone 6/7/8, iPhone X, Galaxy S10e, Pixel 4 (321px - 375px width, max-height 667px) */
+@media (min-width: 321px) and (max-width: 375px) and (max-height: 667px) {
+  .stats-overlay-content {
+    width: 100%; /* Ensure full width */
+    max-width: 340px; /* Slightly wider than 320px version */
+    height: 80vh; /* Adjust height */
+    padding: 14px;
+    border-radius: 18px 18px 0 0; /* Slightly rounded */
+  }
+
+  .close-icon {
+    top: 12px;
+    right: 14px;
+    font-size: 22px; /* Slightly larger close icon */
+  }
+
+  .stats-header {
+    font-size: 20px; /* Slightly larger heading */
+    margin-bottom: 15px;
+  }
+
+  .stat-item {
+    font-size: 15px; /* Make stat labels a bit larger */
+  }
+
+  .stat-value {
+    font-size: 19px; /* Adjust stat numbers */
+  }
+
+  .mistake-label {
+    font-size: 14px; /* Slightly larger mistake distribution labels */
+  }
+
+  .bar-value {
+    font-size: 13px; /* Slightly larger mistake distribution numbers */
+  }
+
+  .modal-share-button,
+  .modal-share-today-button {
+    width: 85%; /* Slightly wider buttons */
+    font-size: 15px; /* Adjust button text size */
+    padding: 12px 18px; /* Adjust padding */
+  }
+
+  .guest-message {
+    font-size: 1.3rem; /* Increase guest message text */
+  }
+
+  .guest-subtext {
+    font-size: 1rem; /* Adjust subtext */
+    max-width: 280px;
+  }
+}

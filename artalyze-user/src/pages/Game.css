@@ -1128,10 +1128,6 @@ h1 {
   }
 }
 
-
-
-
-
 /* ✅ Enable scrolling if screen height is below 830px */
 @media (max-height: 829px) {
   .game-container {

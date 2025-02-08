@@ -806,22 +806,22 @@ const Game = () => {
     }
   };
 
-  
+
   const handleLongPress = (imageUrl) => {
     clearTimeout(longPressTimer.current);
     longPressTimer.current = setTimeout(() => {
       setEnlargedImage(imageUrl);
     }, 500); // Long press threshold (500ms)
   };
-  
+
   const handleImageClick = (imageUrl) => {
     setEnlargedImage(imageUrl); // Tap to enlarge on completion screen
   };
-  
+
   const closeEnlargedImage = () => {
     setEnlargedImage(null);
   };
-  
+
 
   const handleRelease = () => {
     clearTimeout(longPressTimer.current);
@@ -1179,54 +1179,54 @@ const Game = () => {
           </div>
 
           <div className="horizontal-thumbnail-grid">
-  {/* First row: Pairs 1-3 */}
-  <div className="first-row">
-    {imagePairs.slice(0, 3).map((pair, index) => {
-      const selection = completedSelections[index];
-      const isCorrect = selection?.selected === pair.human;
-      return (
-        <div key={index} className="pair-thumbnails-horizontal">
-          <div
-            className={`thumbnail-container human ${selection?.selected === pair.human ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
-            onClick={() => setEnlargedImage(pair.human)}
-          >
-            <img src={pair.human} alt={`Human Painting for pair ${index + 1}`} />
-          </div>
-          <div
-            className={`thumbnail-container ai ${selection?.selected === pair.ai ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
-            onClick={() => setEnlargedImage(pair.ai)}
-          >
-            <img src={pair.ai} alt={`AI Painting for pair ${index + 1}`} />
-          </div>
-        </div>
-      );
-    })}
-  </div>
+            {/* First row: Pairs 1-3 */}
+            <div className="first-row">
+              {imagePairs.slice(0, 3).map((pair, index) => {
+                const selection = completedSelections[index];
+                const isCorrect = selection?.selected === pair.human;
+                return (
+                  <div key={index} className="pair-thumbnails-horizontal">
+                    <div
+                      className={`thumbnail-container human ${selection?.selected === pair.human ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
+                      onClick={() => setEnlargedImage(pair.human)}
+                    >
+                      <img src={pair.human} alt={`Human Painting for pair ${index + 1}`} />
+                    </div>
+                    <div
+                      className={`thumbnail-container ai ${selection?.selected === pair.ai ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
+                      onClick={() => setEnlargedImage(pair.ai)}
+                    >
+                      <img src={pair.ai} alt={`AI Painting for pair ${index + 1}`} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-  {/* Second row: Pairs 4-5 */}
-  <div className="second-row">
-    {imagePairs.slice(3, 5).map((pair, index) => {
-      const selection = completedSelections[index + 3];
-      const isCorrect = selection?.selected === pair.human;
-      return (
-        <div key={index + 3} className="pair-thumbnails-horizontal">
-          <div
-            className={`thumbnail-container human ${selection?.selected === pair.human ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
-            onClick={() => setEnlargedImage(pair.human)}
-          >
-            <img src={pair.human} alt={`Human Painting for pair ${index + 4}`} />
+            {/* Second row: Pairs 4-5 */}
+            <div className="second-row">
+              {imagePairs.slice(3, 5).map((pair, index) => {
+                const selection = completedSelections[index + 3];
+                const isCorrect = selection?.selected === pair.human;
+                return (
+                  <div key={index + 3} className="pair-thumbnails-horizontal">
+                    <div
+                      className={`thumbnail-container human ${selection?.selected === pair.human ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
+                      onClick={() => setEnlargedImage(pair.human)}
+                    >
+                      <img src={pair.human} alt={`Human Painting for pair ${index + 4}`} />
+                    </div>
+                    <div
+                      className={`thumbnail-container ai ${selection?.selected === pair.ai ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
+                      onClick={() => setEnlargedImage(pair.ai)}
+                    >
+                      <img src={pair.ai} alt={`AI Painting for pair ${index + 4}`} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div
-            className={`thumbnail-container ai ${selection?.selected === pair.ai ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
-            onClick={() => setEnlargedImage(pair.ai)}
-          >
-            <img src={pair.ai} alt={`AI Painting for pair ${index + 4}`} />
-          </div>
-        </div>
-      );
-    })}
-  </div>
-</div>
 
 
 
