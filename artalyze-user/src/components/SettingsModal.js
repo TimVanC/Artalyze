@@ -61,12 +61,9 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
         <h2>Settings</h2>
         <ul className="settings-options">
           <li>
-            <div className="dark-mode-toggle-container">
-              <span>Dark Mode</span>
-              <div
-                className={`dark-mode-toggle ${darkMode ? 'active' : ''}`}
-                onClick={toggleDarkMode}
-              ></div>
+            <div className="dark-mode-toggle-container" onClick={toggleDarkMode}>
+              <span>{darkMode ? "Dark Mode" : "Light Mode"}</span>
+              <div className={`dark-mode-toggle ${darkMode ? "active" : ""}`}></div>
             </div>
           </li>
           <li>
@@ -74,7 +71,7 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
               className="settings-button"
               onClick={() => {
                 onClose();
-                window.location.href = 'mailto:info@artalyze.app?subject=Feedback';
+                window.location.href = "mailto:info@artalyze.app?subject=Feedback";
               }}
             >
               Feedback
@@ -85,7 +82,7 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
               className="settings-button"
               onClick={() => {
                 onClose();
-                window.location.href = '/privacy-policy';
+                window.location.href = "/privacy-policy";
               }}
             >
               Privacy Policy
@@ -96,7 +93,7 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
               className="settings-button"
               onClick={() => {
                 onClose();
-                window.location.href = 'mailto:info@artalyze.app?subject=Bug Report';
+                window.location.href = "mailto:info@artalyze.app?subject=Bug Report";
               }}
             >
               Report a Bug
@@ -107,7 +104,7 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
               className="settings-button"
               onClick={() => {
                 onClose();
-                window.location.href = '/terms-of-service';
+                window.location.href = "/terms-of-service";
               }}
             >
               Terms of Service
@@ -121,23 +118,22 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
                 if (isLoggedIn) {
                   handleLogout(); // Log out if user is logged in
                 } else {
-                  window.location.href = '/login'; // Redirect to login/create account page
+                  window.location.href = "/login"; // Redirect to login/create account page
                 }
               }}
             >
-              {isLoggedIn ? 'Log Out' : 'Create Account'}
+              {isLoggedIn ? "Log Out" : "Create Account"}
             </button>
           </li>
         </ul>
-        <footer className="settings-footer">
-          &copy; {currentYear} Artalyze
-        </footer>
+        <footer className="settings-footer">&copy; {currentYear} Artalyze</footer>
         <button className="close-modal" onClick={onClose}>
           Close
         </button>
       </div>
     </div>
   );
+  
 };
 
 export default SettingsModal;

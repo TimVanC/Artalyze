@@ -54,6 +54,10 @@ const Game = () => {
   const [alreadyGuessed, setAlreadyGuessed] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDuplicateOverlay, setShowDuplicateOverlay] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem("darkMode") === "true";
+  });
+  
 
   const [stats, setStats] = useState({
     gamesPlayed: 0,
@@ -603,6 +607,16 @@ const Game = () => {
     }
   }, [isGameComplete]);
 
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setDarkMode(localStorage.getItem("darkMode") === "true");
+    };
+  
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+  
+
   const encouragementMessages = [
     "Keep it up!",
     "You're doing great!",
@@ -897,7 +911,7 @@ const Game = () => {
   const isSubmitEnabled = selections.length === imagePairs.length;
 
   return (
-    <div className="game-container">
+    <div className={`game-container ${darkMode ? "dark-mode" : ""}`}>  
       {/* Mobile Warning Overlay */}
       {showMobileWarning && (
         <div className="mobile-warning-overlay">

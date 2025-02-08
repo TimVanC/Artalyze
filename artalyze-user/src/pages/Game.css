@@ -23,6 +23,12 @@ html, body {
   position: relative;
 }
 
+body.dark-mode .top-bar {
+  background-color: #181818; /* Match dark mode background */
+  border-bottom: 2px solid #222; /* Slightly darker for contrast */
+}
+
+
 .app-title {
   font-size: 20px;
   font-weight: 700;
@@ -30,6 +36,15 @@ html, body {
   left: 50%;
   transform: translateX(-50%);
 }
+
+body.dark-mode .app-title,
+body.dark-mode .icon,
+body.dark-mode .game-header,
+body.dark-mode .tries-left,
+body.dark-mode .palette-icon {
+  color: #CFCFCF;
+}
+
 
 .icons-right {
   display: flex;
@@ -173,10 +188,18 @@ h1 {
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
+body.dark-mode .nav-button {
+  background-color: #909090;
+}
+
 /* Subtle green hue for selected buttons */
 .navigation-buttons .nav-button.selected {
   background-color: #A8D5BA;  /* Soft green hue when selected */
   color: white;
+}
+
+body.dark-mode .nav-button.selected {
+  background-color: #72B58A;
 }
 
 /* Active button (current index) stays blue */
@@ -186,6 +209,10 @@ h1 {
   font-weight: bold;
 }
   
+body.dark-mode .nav-button.active {
+  background-color: #4d73af;
+}
+
 /* Submit Button */
 .submit-button {
   background-color: grey;
@@ -209,16 +236,21 @@ h1 {
   cursor: not-allowed;
 }
 
+body.dark-mode .submit-button.disabled {
+  background-color: #909090;
+}
+
 /* Clear Button */
 .clear-button {
   background-color: transparent;
-  border: 2px solid grey; /* Default greyed-out state */
+  border: 2px solid #909090; /* Default greyed-out state */
   color: grey;
   padding: 8px 16px;
   font-size: 18px;
   border-radius: 12px;
   cursor: not-allowed; /* Disabled by default */
   transition: all 0.3s ease;
+  letter-spacing: .1rem;
 }
 
 .clear-button.enabled {

@@ -28,6 +28,59 @@
   color: #61dafb;
 }
 
+/* Dark Mode Styles */
+body.dark-mode {
+  background-color: #181818; /* ✅ Updated dark mode background */
+  color: #ffffff;
+}
+
+.dark-mode .App-header {
+  background-color: #181818; /* ✅ Updated */
+  color: #ffffff;
+}
+
+.dark-mode .App-link {
+  color: #4d73af; /* Adjusted link color for dark mode */
+}
+
+/* Dark Mode Toggle */
+.dark-mode-toggle-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.dark-mode-toggle {
+  width: 40px;
+  height: 20px;
+  background-color: #ccc;
+  border-radius: 10px;
+  position: relative;
+  transition: background 0.3s;
+}
+
+.dark-mode-toggle::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  transition: transform 0.3s;
+}
+
+.dark-mode-toggle.active {
+  background-color: #4d73af; /* Active state */
+}
+
+.dark-mode-toggle.active::before {
+  transform: translateX(20px);
+}
+
+/* Animation */
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);
