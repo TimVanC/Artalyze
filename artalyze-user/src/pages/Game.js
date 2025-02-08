@@ -34,6 +34,7 @@ const Game = () => {
   const [isGameComplete, setIsGameComplete] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [enlargedImage, setEnlargedImage] = useState(null);
+  const [enlargedImageMode, setEnlargedImageMode] = useState("");
   const [enlargedImageIndex, setEnlargedImageIndex] = useState(0);
   const longPressTimer = useRef(null);
   const [showOverlay, setShowOverlay] = useState(false);
@@ -57,7 +58,7 @@ const Game = () => {
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("darkMode") === "true";
   });
-  
+
 
   const [stats, setStats] = useState({
     gamesPlayed: 0,
@@ -611,11 +612,11 @@ const Game = () => {
     const handleStorageChange = () => {
       setDarkMode(localStorage.getItem("darkMode") === "true");
     };
-  
+
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
-  
+
 
   const encouragementMessages = [
     "Keep it up!",
@@ -825,12 +826,15 @@ const Game = () => {
     clearTimeout(longPressTimer.current);
     longPressTimer.current = setTimeout(() => {
       setEnlargedImage(imageUrl);
+      setEnlargedImageMode("game-screen"); // Set mode for game screen enlargement
     }, 500); // Long press threshold (500ms)
   };
 
   const handleImageClick = (imageUrl) => {
-    setEnlargedImage(imageUrl); // Tap to enlarge on completion screen
+    setEnlargedImage(imageUrl);
+    setEnlargedImageMode("completion-screen"); // Set mode for completion screen enlargement
   };
+
 
   const closeEnlargedImage = () => {
     setEnlargedImage(null);
@@ -911,7 +915,7 @@ const Game = () => {
   const isSubmitEnabled = selections.length === imagePairs.length;
 
   return (
-    <div className={`game-container ${darkMode ? "dark-mode" : ""}`}>  
+    <div className={`game-container ${darkMode ? "dark-mode" : ""}`}>
       {/* Mobile Warning Overlay */}
       {showMobileWarning && (
         <div className="mobile-warning-overlay">
@@ -1265,12 +1269,13 @@ const Game = () => {
       )}
 
       {enlargedImage && (
-        <div className="enlarge-modal" onClick={closeEnlargedImage}>
+        <div className={`enlarge-modal ${enlargedImageMode}`} onClick={closeEnlargedImage}>
           <div className="enlarged-image-container">
             <img src={enlargedImage} alt="Enlarged view" className="enlarged-image" onClick={(e) => e.stopPropagation()} />
           </div>
         </div>
       )}
+
     </div>
   );
 

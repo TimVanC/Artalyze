@@ -377,11 +377,63 @@ body.dark-mode .submit-button.disabled {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-.enlarged-image {
-  max-width: 90vw;
-  max-height: 90vh;
-  border-radius: 8px;
+/* Enlarged Image Modal: Ensure it takes up full screen and centers content */
+.enlarge-modal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.7); /* Dim background */
+  z-index: 1000;
 }
+
+/* Enlarged Image Modal: Ensure full-screen and center content */
+.enlarge-modal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.7); /* Dim background */
+  z-index: 1000;
+}
+
+/* Center the enlarged image while allowing it to scale */
+.enlarged-image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;  /* Allow full width scaling */
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Ensure images scale properly when enlarged */
+.enlarged-image {
+  display: block;
+  max-width: none;  /* Prevent width limitations */
+  max-height: none; /* Prevent height limitations */
+}
+
+/* Enlarged Image for Game Screen (1.5x) */
+.enlarge-modal.game-screen .enlarged-image {
+  width: 70%;
+  height: auto;
+}
+
+/* Enlarged Image for Completion Screen (3x) */
+.enlarge-modal.completion-screen .enlarged-image {
+  width: 300%;
+  height: auto;
+}
+
 
 .swipe-button {
   position: absolute;
