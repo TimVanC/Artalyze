@@ -10,10 +10,10 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
     setDarkMode(newMode);
     localStorage.setItem("darkMode", newMode);
     window.dispatchEvent(new Event("darkModeChanged"));
-  
+
     const userId = localStorage.getItem("userId");
     const userToken = localStorage.getItem("authToken");
-  
+
     if (userId && userToken) {
       try {
         await fetch(`/api/user/theme`, {
@@ -29,11 +29,10 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
       }
     }
   };
-  
 
   const handleLogout = () => {
     localStorage.clear(); // Clear all local storage
-    window.location.href = '/'; // Redirect to the homepage or login page
+    window.location.href = "/"; // Redirect to the homepage or login page
   };
 
   if (!isOpen) return null;
@@ -68,7 +67,7 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
               className="settings-button"
               onClick={() => {
                 onClose();
-                window.location.href = "/privacy-policy";
+                window.open("/privacy-policy.html", "_blank");
               }}
             >
               Privacy Policy
@@ -90,7 +89,7 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
               className="settings-button"
               onClick={() => {
                 onClose();
-                window.location.href = "/terms-of-service";
+                window.open("/terms-of-service.html", "_blank");
               }}
             >
               Terms of Service
@@ -119,7 +118,6 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
       </div>
     </div>
   );
-
 };
 
 export default SettingsModal;

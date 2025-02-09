@@ -91,3 +91,19 @@ process.on('SIGTERM', () => {
         // Close your DB connection here if necessary
     });
 });
+
+// Serve static files from "public"
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Remove `.html` from URLs
+app.get('/:page', (req, res, next) => {
+    const page = req.params.page;
+    const filePath = path.join(__dirname, 'public', `${page}.html`);
+    
+    // Check if the file exists and serve it
+    res.sendFile(filePath, (err) => {
+        if (err) {
+            next(); // If file doesn't exist, continue to other routes
+        }
+    });
+});

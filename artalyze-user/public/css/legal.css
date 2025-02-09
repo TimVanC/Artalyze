@@ -1,0 +1,125 @@
+/* Importing a Clean Font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+/* General Styles */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f7f7f7; /* Soft grey background */
+    color: #333;
+    margin: 0;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 100%;
+    overflow-x: hidden; /* Prevents horizontal scrolling */
+}
+
+/* Page Title */
+h1 {
+    text-align: left;
+    font-size: 32px;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 20px;
+}
+
+
+/* Content Box */
+.content-wrapper {
+    background: white;
+    max-width: 900px;
+    width: 90%; /* Ensures it scales properly */
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box; /* Prevents content from expanding beyond width */
+    overflow: hidden; /* Prevents accidental horizontal scrolling */
+}
+
+/* Last Updated */
+.last-updated {
+    font-style: italic;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+/* Notice Section */
+.notice {
+    font-weight: 700;
+    font-size: 16px;
+    color: #000;
+    margin: 20px 0;
+    text-transform: uppercase;
+    word-wrap: break-word; /* Ensures long words break properly */
+    white-space: normal; /* Allows text to wrap */
+    line-height: 1.5;
+}
+
+/* Introduction */
+.intro {
+    font-size: 18px;
+    color: #444;
+    margin-bottom: 25px;
+}
+
+/* Table of Contents */
+.toc {
+    margin-bottom: 25px;
+}
+
+.toc h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.toc ul {
+    list-style: none;
+    padding: 0;
+}
+
+.toc ul li {
+    margin: 5px 0;
+}
+
+.toc ul li a {
+    text-decoration: none;
+    color: #0056b3;
+    font-size: 16px;
+}
+
+.toc ul li a:hover {
+    text-decoration: underline;
+}
+
+/* Sections */
+.section {
+    margin-bottom: 40px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.section:last-child {
+    border-bottom: none;
+}
+
+/* Prevent Overflow Issues */
+html, body {
+    max-width: 100%;
+    overflow-x: hidden; /* Ensures no horizontal scroll */
+}
+
+/* Responsive Fixes */
+@media (max-width: 768px) {
+    .content-wrapper {
+        width: 95%;
+        padding: 20px;
+        min-height: auto; /* Prevents large empty space on short pages */
+    }
+
+    h1 {
+        font-size: 28px; /* Adjust title size for smaller screens */
+        text-align: center;
+    }
+}
