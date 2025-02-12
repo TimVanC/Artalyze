@@ -47,31 +47,33 @@ const StatsModal = ({
       try {
         const userIdFromStorage = localStorage.getItem("userId");
         const resolvedUserId = userId || userIdFromStorage;
-
+    
         if (!resolvedUserId) {
           console.warn("User ID is missing. Cannot fetch stats.");
           return;
         }
-
+    
         console.log("Fetching stats when StatsModal opens...");
-        const response = await fetch(`/api/stats/${resolvedUserId}`, {
+        const response = await fetch(`https://artalyze-backend-production.up.railway.app/api/stats/${resolvedUserId}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
         });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch stats: ${response.statusText}`);
+    
+        const text = await response.text(); // Get raw response
+    
+        try {
+          const updatedStats = JSON.parse(text); // Parse as JSON
+          console.log("Fetched stats from backend:", updatedStats);
+          setStats(updatedStats);
+          setAnimatedBars(updatedStats.mistakeDistribution || {});
+          setShouldAnimateNumbers(true);
+        } catch (jsonError) {
+          console.error("Failed to parse JSON. Raw response:", text);
+          throw jsonError;
         }
-
-        const updatedStats = await response.json();
-        console.log("Fetched stats from backend:", updatedStats);
-
-        setStats(updatedStats); // Update the local state
-        setAnimatedBars(updatedStats.mistakeDistribution || {});
-        setShouldAnimateNumbers(true);
       } catch (error) {
         console.error("Error fetching or validating stats:", error);
       }
-    };
+    };    
 
     if (isOpen && isLoggedIn) {
       fetchAndValidateStats();
@@ -151,7 +153,7 @@ Perfect Games: ${stats.perfectPuzzles}
   // Helper function for sharing results
   const shareResults = (usedSelections) => {
     const puzzleNumber = calculatePuzzleNumber();
-
+  
     // Generate the visual representation of results
     const resultsVisual = usedSelections
       .map((selection, index) => {
@@ -159,16 +161,15 @@ Perfect Games: ${stats.perfectPuzzles}
         return isCorrect ? '🟢' : '🔴';
       })
       .join(' ');
-
+  
     const paintings = '🖼️ '.repeat(imagePairs.length).trim();
-
-    const shareableText = `
-  Artalyze #${puzzleNumber} ${correctCount}/${imagePairs.length}
+  
+    // Adjust the formatting to remove the extra line break before "Try it at:"
+    const shareableText = `Artalyze #${puzzleNumber} ${correctCount}/${imagePairs.length}
   ${resultsVisual}
   ${paintings}
-  Try it at: artalyze.app
-    `.trim();
-
+  Try it at: artalyze.app`;
+  
     if (navigator.share) {
       navigator
         .share({
@@ -185,6 +186,7 @@ Perfect Games: ${stats.perfectPuzzles}
         .catch((error) => console.error('Failed to copy:', error));
     }
   };
+  
 
 
 

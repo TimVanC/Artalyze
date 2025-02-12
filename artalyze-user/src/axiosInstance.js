@@ -1,11 +1,14 @@
 import axios from "axios";
 
+const BASE_URL = "https://artalyze-backend-production.up.railway.app/api";
+
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:5000/api", // Correct baseURL
+  baseURL: BASE_URL, // Now using the deployed backend
   headers: {
     "Content-Type": "application/json",
   },
 });
+
 
 // Attach token to all requests
 axiosInstance.interceptors.request.use(

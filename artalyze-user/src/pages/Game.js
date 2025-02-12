@@ -344,6 +344,7 @@ const Game = () => {
     }
   };
 
+
   // Restore game state function
   const restoreGameState = () => {
     console.log("Restoring game state...");
@@ -427,6 +428,39 @@ const Game = () => {
       }
     }
   }, [userId, isGameComplete, imagePairs.length]);
+
+  useEffect(() => {
+    const disableContextMenu = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const disableLongPress = (event) => {
+      if (event.target.tagName === 'IMG') {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    // Add event listeners to block right-click and long-press
+    document.addEventListener('contextmenu', disableContextMenu, { capture: true });
+    document.addEventListener('touchstart', disableLongPress, { passive: false, capture: true });
+    document.addEventListener('touchend', disableLongPress, { passive: false, capture: true });
+    document.addEventListener('pointerdown', disableLongPress, { passive: false, capture: true });
+    document.addEventListener('pointerup', disableLongPress, { passive: false, capture: true });
+    document.addEventListener('mousedown', disableLongPress, { passive: false, capture: true });
+    document.addEventListener('mouseup', disableLongPress, { passive: false, capture: true });
+
+    return () => {
+      document.removeEventListener('contextmenu', disableContextMenu, { capture: true });
+      document.removeEventListener('touchstart', disableLongPress, { capture: true });
+      document.removeEventListener('touchend', disableLongPress, { capture: true });
+      document.removeEventListener('pointerdown', disableLongPress, { capture: true });
+      document.removeEventListener('pointerup', disableLongPress, { capture: true });
+      document.removeEventListener('mousedown', disableLongPress, { capture: true });
+      document.removeEventListener('mouseup', disableLongPress, { capture: true });
+    };
+  }, []);
 
   // Persist isGameComplete state across refreshes
   useEffect(() => {
@@ -826,24 +860,23 @@ const Game = () => {
     clearTimeout(longPressTimer.current);
     longPressTimer.current = setTimeout(() => {
       setEnlargedImage(imageUrl);
-      setEnlargedImageMode("game-screen"); // Set mode for game screen enlargement
+      setEnlargedImageMode("game-screen");
     }, 500); // Long press threshold (500ms)
   };
 
   const handleImageClick = (imageUrl) => {
     setEnlargedImage(imageUrl);
-    setEnlargedImageMode("completion-screen"); // Set mode for completion screen enlargement
+    setEnlargedImageMode("completion-screen");
   };
-
 
   const closeEnlargedImage = () => {
     setEnlargedImage(null);
   };
 
-
   const handleRelease = () => {
     clearTimeout(longPressTimer.current);
   };
+
 
   const handleSubmit = async () => {
     console.log("📡 Submit button pressed!");
@@ -1036,25 +1069,30 @@ const Game = () => {
               {imagePairs.map((pair, index) => (
                 <SwiperSlide key={index}>
                   <div className="image-pair-container">
-                    {pair.images && pair.images.length > 0 ? (
-                      pair.images.map((image, idx) => (
-                        <div
-                          key={idx}
-                          className={`image-container ${selections[index]?.selected === image ? "selected" : ""}`}
-                          onClick={() => handleSelection(image, image === pair.human)}
-                          onTouchStart={() => handleLongPress(image)} // Start long press
-                          onTouchEnd={handleRelease} // Release long press
-                          onMouseDown={() => handleLongPress(image)} // For desktop users
-                          onMouseUp={handleRelease} // Release long press on desktop
-                        >
-                          <img src={image} alt={`Painting ${idx + 1}`} />
-                        </div>
-                      ))
-                    ) : (
-                      <p>No images available for this pair.</p>
-                    )}
+                    {pair.images.map((image, idx) => (
+                      <div
+                        key={idx}
+                        className={`image-container ${selections[index]?.selected === image ? "selected" : ""}`}
+                        onClick={() => handleSelection(image, image === pair.human)}
+                      >
+                        <img
+                          src={image}
+                          alt={`Painting ${idx + 1}`}
+                          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          onTouchStart={(e) => { handleLongPress(image); e.preventDefault(); e.stopPropagation(); }}
+                          onTouchEnd={handleRelease}
+                          onPointerDown={(e) => e.preventDefault()} // Prevents Chrome long-press
+                          onPointerUp={(e) => e.preventDefault()}
+                          onMouseDown={(e) => e.preventDefault()}
+                          draggable="false"
+                        />
+
+                      </div>
+                    ))}
                   </div>
                 </SwiperSlide>
+
+
               ))}
             </Swiper>
           ) : (
@@ -1081,12 +1119,19 @@ const Game = () => {
                         <div className="enlarged-image-container">
                           {/* Display only one image per slide (human or AI) */}
                           <img
-                            src={
-                              enlargedImageIndex % 2 === 0 ? pair.human : pair.ai
-                            }
-                            alt={`Enlarged Painting ${index + 1}`}
+                            src={enlargedImage}
+                            alt="Enlarged view"
                             className="enlarged-image"
+                            onClick={(e) => e.stopPropagation()}
+                            onContextMenu={(e) => e.preventDefault()}
+                            onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                            onTouchEnd={handleRelease}
+                            onPointerDown={(e) => e.preventDefault()} // 🔹 Blocks long-press options
+                            onPointerUp={(e) => e.preventDefault()}
+                            onMouseDown={(e) => e.preventDefault()}
                           />
+
+
                         </div>
                       </SwiperSlide>
                     ))}
@@ -1106,11 +1151,12 @@ const Game = () => {
                   setCurrentIndex(index);
                   swiperRef.current.slideToLoop(index);
                 }}
-              >
-                {index + 1}
-              </button>
+                aria-label={`Go to image pair ${index + 1}`} /* Accessibility */
+              />
             ))}
           </div>
+
+
 
           <div className="button-container">
             <button
@@ -1208,13 +1254,38 @@ const Game = () => {
                       className={`thumbnail-container human ${selection?.selected === pair.human ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
                       onClick={() => setEnlargedImage(pair.human)}
                     >
-                      <img src={pair.human} alt={`Human Painting for pair ${index + 1}`} />
+                      <img
+                        src={pair.human}
+                        alt={`Human Painting for pair ${index + 1}`}
+                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onTouchStart={(e) => { handleLongPress(image); e.preventDefault(); e.stopPropagation(); }}
+                        onTouchEnd={handleRelease}
+                        onPointerDown={(e) => e.preventDefault()} // Prevents Chrome long-press
+                        onPointerUp={(e) => e.preventDefault()}
+                        onMouseDown={(e) => e.preventDefault()}
+                        draggable="false"
+                      />
+
+
                     </div>
                     <div
                       className={`thumbnail-container ai ${selection?.selected === pair.ai ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
                       onClick={() => setEnlargedImage(pair.ai)}
                     >
-                      <img src={pair.ai} alt={`AI Painting for pair ${index + 1}`} />
+                      <img
+                        src={pair.ai}
+                        alt={`AI Painting for pair ${index + 1}`}
+                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onTouchStart={(e) => { handleLongPress(image); e.preventDefault(); e.stopPropagation(); }}
+                        onTouchEnd={handleRelease}
+                        onPointerDown={(e) => e.preventDefault()} // Prevents Chrome long-press
+                        onPointerUp={(e) => e.preventDefault()}
+                        onMouseDown={(e) => e.preventDefault()}
+                        draggable="false"
+                      />
+
+
+
                     </div>
                   </div>
                 );
@@ -1232,13 +1303,37 @@ const Game = () => {
                       className={`thumbnail-container human ${selection?.selected === pair.human ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
                       onClick={() => setEnlargedImage(pair.human)}
                     >
-                      <img src={pair.human} alt={`Human Painting for pair ${index + 4}`} />
+                      <img
+                        src={pair.human}
+                        alt={`Human Painting for pair ${index + 4}`}
+                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onTouchStart={(e) => { handleLongPress(image); e.preventDefault(); e.stopPropagation(); }}
+                        onTouchEnd={handleRelease}
+                        onPointerDown={(e) => e.preventDefault()} // Prevents Chrome long-press
+                        onPointerUp={(e) => e.preventDefault()}
+                        onMouseDown={(e) => e.preventDefault()}
+                        draggable="false"
+                      />
+
+
+
                     </div>
                     <div
                       className={`thumbnail-container ai ${selection?.selected === pair.ai ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
                       onClick={() => setEnlargedImage(pair.ai)}
                     >
-                      <img src={pair.ai} alt={`AI Painting for pair ${index + 4}`} />
+                      <img
+                        src={pair.ai}
+                        alt={`AI Painting for pair ${index + 4}`}
+                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onTouchStart={(e) => { handleLongPress(image); e.preventDefault(); e.stopPropagation(); }}
+                        onTouchEnd={handleRelease}
+                        onPointerDown={(e) => e.preventDefault()} // Prevents Chrome long-press
+                        onPointerUp={(e) => e.preventDefault()}
+                        onMouseDown={(e) => e.preventDefault()}
+                        draggable="false"
+                      />
+
                     </div>
                   </div>
                 );
@@ -1271,7 +1366,18 @@ const Game = () => {
       {enlargedImage && (
         <div className={`enlarge-modal ${enlargedImageMode}`} onClick={closeEnlargedImage}>
           <div className="enlarged-image-container">
-            <img src={enlargedImage} alt="Enlarged view" className="enlarged-image" onClick={(e) => e.stopPropagation()} />
+            <img
+              src={enlargedImage}
+              alt="Enlarged view"
+              className="enlarged-image"
+              onClick={(e) => e.stopPropagation()}
+              onContextMenu={(e) => e.preventDefault()}
+              onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onTouchEnd={handleRelease}
+              onPointerDown={(e) => e.preventDefault()} // 🔹 Blocks Chrome long-press save
+              onPointerUp={(e) => e.preventDefault()}
+              onMouseDown={(e) => e.preventDefault()}
+            />
           </div>
         </div>
       )}

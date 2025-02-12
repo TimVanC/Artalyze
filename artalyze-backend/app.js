@@ -8,10 +8,14 @@ const imageRoutes = require('./routes/imageRoutes'); // Image upload routes
 const adminRoutes = require('./routes/adminRoutes'); // Admin-related routes for image pairs
 const statsRoutes = require('./routes/statsRoutes'); // Stats-related routes
 const userRoutes = require('./routes/userRoutes');
-
 const connectDB = require('./config/db'); // Database connection function
 
-const app = express();
+const app = express(); // ✅ Express app is initialized before routes
+
+// ✅ Health check route (Placed correctly)
+app.get("/", (req, res) => {
+    res.json({ message: "Backend is running successfully!" });
+});
 
 // Middleware for request logging
 app.use((req, res, next) => {
@@ -21,8 +25,11 @@ app.use((req, res, next) => {
 
 // CORS configuration
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' ? ['https://artalyze.app'] : ['http://localhost:3000', 'http://localhost:3001'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    origin: process.env.NODE_ENV === 'production' 
+        ? ['https://artalyze.app', 'https://www.artalyze.app', 'https://artalyze-admin.vercel.app', 'https://artalyze-user.vercel.app']
+        : ['http://localhost:3000', 'http://localhost:3001'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
 
@@ -60,7 +67,7 @@ app.use('/api/admin', adminRoutes);
 console.log('Mounting statsRoutes at /api/stats');
 app.use('/api/stats', statsRoutes);
 
-console.log('Mounting statsRoutes at /api/user');
+console.log('Mounting userRoutes at /api/user'); // Fixed logging
 app.use('/api/user', userRoutes);
 
 // Error handling middleware
@@ -69,11 +76,16 @@ app.use((err, req, res, next) => {
     res.status(500).send({ message: 'An error occurred. Please try again later.' });
 });
 
-// Serve frontend in production
+// Ensure API routes are processed before serving frontend
 if (process.env.NODE_ENV === 'production') {
+    app.use('/api/admin', adminRoutes); // ✅ Admin API routes before serving frontend
     app.use(express.static(path.join(__dirname, '../artalyze-user/build')));
     app.get('*', (req, res) => {
-        res.sendFile(path.resolve(__dirname, '../artalyze-user', 'build', 'index.html'));
+        if (req.path.startsWith('/api/')) {
+            res.status(404).json({ error: 'API route not found' }); // ✅ Prevents frontend from catching API 404 errors
+        } else {
+            res.sendFile(path.resolve(__dirname, '../artalyze-user', 'build', 'index.html'));
+        }
     });
 }
 

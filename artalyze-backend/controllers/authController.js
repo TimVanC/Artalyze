@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Stats = require('../models/Stats'); // Assuming Stats is a model for user statistics
@@ -282,3 +282,4 @@ exports.deleteAccount = async (req, res) => {
     res.status(500).json({ message: 'Error deleting account' });
   }
 };
+

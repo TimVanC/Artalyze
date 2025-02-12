@@ -13,6 +13,7 @@ router.post('/verify-reset-otp', authController.verifyResetOtp);
 router.post('/reset-password', authController.resetPassword);
 
 
+
 router.post('/resend-otp', (req, res, next) => {
     console.log('Resend OTP route hit');
     next();
