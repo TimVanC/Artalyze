@@ -177,26 +177,36 @@ exports.deleteUserStats = async (req, res) => {
 // Fetch selections
 exports.getSelections = async (req, res) => {
   try {
-      const { userId } = req.user;
-      const todayInEST = getTodayInEST();
-      const stats = await Stats.findOne({ userId });
+    const { userId } = req.user;
+    const todayInEST = getTodayInEST();
+    const stats = await Stats.findOne({ userId });
 
-      if (!stats) {
-          return res.status(404).json({ message: "Stats not found for this user." });
-      }
+    if (!stats) {
+      return res.status(404).json({ message: "Stats not found for this user." });
+    }
 
-      // ✅ **Reset selections if LSMD is from a previous day**
-      if (stats.lastSelectionMadeDate !== todayInEST) {
-          console.log("LSMD is outdated. Resetting selections.");
-          stats.selections = [];
-          stats.lastSelectionMadeDate = todayInEST;
-          await stats.save();
-      }
+    // ✅ **Reset selections, attempts, completedSelections, and completedAttempts if LSMD is outdated**
+    if (stats.lastSelectionMadeDate !== todayInEST) {
+      console.log("LSMD is outdated. Resetting selections, attempts, completedSelections, and completedAttempts.");
+      stats.selections = [];
+      stats.attempts = [];
+      stats.completedSelections = []; // ✅ Ensures completedSelections reset on a new day
+      stats.completedAttempts = []; // ✅ Ensures completedAttempts reset on a new day
+      stats.lastSelectionMadeDate = todayInEST;
+      await stats.save();
+    }
 
-      res.status(200).json({ selections: stats.selections });
+    console.log("✅ Returning selections, attempts, completedSelections, completedAttempts, and alreadyGuessed.");
+    res.status(200).json({
+      selections: stats.selections || [],
+      attempts: stats.attempts || [],
+      completedSelections: stats.completedSelections || [], // ✅ Now included
+      completedAttempts: stats.completedAttempts || [],
+      alreadyGuessed: stats.alreadyGuessed || [],
+    });
   } catch (error) {
-      console.error("Error fetching selections:", error);
-      res.status(500).json({ message: "Failed to fetch selections." });
+    console.error("Error fetching selections:", error);
+    res.status(500).json({ message: "Failed to fetch selections." });
   }
 };
 
@@ -213,8 +223,8 @@ exports.saveSelections = async (req, res) => {
 
     const stats = await Stats.findOneAndUpdate(
       { userId },
-      { 
-        $set: { 
+      {
+        $set: {
           selections,
           lastSelectionMadeDate: todayInEST, // Update LSMD
         }
@@ -310,6 +320,56 @@ exports.saveAlreadyGuessed = async (req, res) => {
   }
 };
 
+exports.saveAttempts = async (req, res) => {
+  const { userId } = req.user;
+  const { attempts } = req.body;
+
+  if (!Array.isArray(attempts)) {
+    return res.status(400).json({ message: "Invalid attempts data." });
+  }
+
+  // Ensure boolean values are stored
+  const formattedAttempts = attempts.map(attempt =>
+    attempt.map(selected => !!selected) // Convert values to true/false
+  );
+
+  const stats = await Stats.findOneAndUpdate(
+    { userId },
+    { $set: { attempts: formattedAttempts } },
+    { new: true, upsert: true }
+  );
+
+  res.status(200).json({ attempts: stats.attempts });
+};
+
+exports.saveCompletedAttempts = async (req, res) => {
+  try {
+    const { userId } = req.user;
+    const { completedAttempts } = req.body;
+
+    if (!Array.isArray(completedAttempts)) {
+      return res.status(400).json({ message: "Invalid completedAttempts data." });
+    }
+
+    // ✅ Ensure the user document exists before updating
+    let stats = await Stats.findOne({ userId });
+
+    if (!stats) {
+      console.log(`⚠️ No stats found for user ${userId}, creating new document.`);
+      stats = new Stats({ userId, completedAttempts: [] });
+    }
+
+    stats.completedAttempts = completedAttempts;
+    await stats.save();
+
+    res.status(200).json({ completedAttempts: stats.completedAttempts });
+  } catch (error) {
+    console.error("❌ Error updating completedAttempts:", error);
+    res.status(500).json({ message: "Failed to update completedAttempts.", error });
+  }
+};
+
+
 // Fetch triesRemaining
 exports.getTriesRemaining = async (req, res) => {
   try {
@@ -350,7 +410,6 @@ exports.decrementTries = async (req, res) => {
   }
 };
 
-
 // Reset triesRemaining at midnight
 exports.resetTries = async (req, res) => {
   try {
@@ -382,4 +441,3 @@ exports.resetTries = async (req, res) => {
     res.status(500).json({ message: 'Failed to reset triesRemaining.' });
   }
 };
-

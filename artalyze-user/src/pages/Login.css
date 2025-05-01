@@ -1,11 +1,13 @@
 .login-container {
-  background-color: white; /* Set the background to white */
-  height: 100vh;
+  background-color: white;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center; /* Center content vertically */
-  padding-bottom: 60px; /* Add padding to avoid overlap with the footer */
+  justify-content: flex-start;
+  overflow: hidden; /* Disable scrolling by default */
+  padding-top: 70px; /* Prevent top bar from cutting off content */
+  padding-bottom: 60px; /* Keep footer visible */
 }
 
 /* Login Page Top Bar */
@@ -30,17 +32,17 @@
   color: #333;
 }
 
-/* Login Logo Container */
 .login-logo-container {
-  margin: 20px 0; /* Add some spacing around the logo */
+  margin-top: 20px; /* Keep default spacing */
   text-align: center;
+  transition: opacity 0.3s ease, height 0.3s ease; /* Smoothly hides it */
 }
 
-/* Login Logo Styling */
 .login-app-logo {
-  width: 125px; /* Set the logo width */
-  max-width: 90%; /* Ensure it resizes properly on smaller screens */
-  height: auto; /* Maintain the aspect ratio */
+  width: 125px; /* Default logo size */
+  max-width: 90%;
+  height: auto;
+  transition: width 0.3s ease-in-out; /* Smooth transition */
 }
 
 h2 {

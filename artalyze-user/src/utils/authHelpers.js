@@ -1,4 +1,5 @@
 export const validatePassword = (password) => {
+    // Check password meets security requirements
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumber = /\d/.test(password);
@@ -9,10 +10,12 @@ export const validatePassword = (password) => {
   };
   
   export const validateOtp = (otp) => {
-    return /^\d{6}$/.test(otp); // Ensure OTP is exactly 6 numeric digits
+    // Verify OTP is exactly 6 digits
+    return /^\d{6}$/.test(otp);
   };
   
   export const sendOtp = async (email) => {
+    // Request OTP code to be sent to user's email
     const response = await fetch('/api/auth/request-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -27,6 +30,7 @@ export const validatePassword = (password) => {
   };
   
   export const verifyOtp = async (email, otp) => {
+    // Verify OTP code entered by user
     const response = await fetch('/api/auth/verify-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

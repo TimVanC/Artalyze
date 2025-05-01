@@ -28,6 +28,7 @@ const StatsModal = ({
   correctCount = 0,
   isGameComplete = false,
   completedSelections = [],
+  attempts = [],
 }) => {
   const userId = localStorage.getItem('userId');
   const [stats, setStats] = useState(initialStats);
@@ -41,27 +42,27 @@ const StatsModal = ({
   const shareWarningTimeoutRef = useRef(null);
   const { darkMode } = useDarkMode();
 
-  // Fetch stats when modal opens
+  // Load user stats when the modal opens
   useEffect(() => {
     const fetchAndValidateStats = async () => {
       try {
         const userIdFromStorage = localStorage.getItem("userId");
         const resolvedUserId = userId || userIdFromStorage;
-    
+
         if (!resolvedUserId) {
           console.warn("User ID is missing. Cannot fetch stats.");
           return;
         }
-    
+
         console.log("Fetching stats when StatsModal opens...");
         const response = await fetch(`https://artalyze-backend-production.up.railway.app/api/stats/${resolvedUserId}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
         });
-    
-        const text = await response.text(); // Get raw response
-    
+
+        const text = await response.text();
+
         try {
-          const updatedStats = JSON.parse(text); // Parse as JSON
+          const updatedStats = JSON.parse(text);
           console.log("Fetched stats from backend:", updatedStats);
           setStats(updatedStats);
           setAnimatedBars(updatedStats.mistakeDistribution || {});
@@ -73,13 +74,14 @@ const StatsModal = ({
       } catch (error) {
         console.error("Error fetching or validating stats:", error);
       }
-    };    
+    };
 
     if (isOpen && isLoggedIn) {
       fetchAndValidateStats();
     }
   }, [isOpen, isLoggedIn, userId]);
 
+  // Clean up share warning timeout on unmount
   useEffect(() => {
     return () => {
       if (shareWarningTimeoutRef.current) {
@@ -88,18 +90,22 @@ const StatsModal = ({
     };
   }, []);
 
-
+  // Share historical stats with friends
   const handleHistoricalStatsShare = () => {
     const shareableText = `
-🎨 Artalyze Stats 🎨
-Games Played: ${stats.gamesPlayed}
-Win %: ${stats.winPercentage}%
-Current Streak: ${stats.currentStreak}
-Max Streak: ${stats.maxStreak}
-Perfect Streak: ${stats.perfectStreak}
-Max Perfect Streak: ${stats.maxPerfectStreak}
-Perfect Games: ${stats.perfectPuzzles}
-    `;
+    Artalyze Stats
+    
+    Games Played: ${stats.gamesPlayed}
+    Win Rate: ${stats.winPercentage}%
+    Current Streak: ${stats.currentStreak}
+    Max Streak: ${stats.maxStreak}
+    Perfect Streak: ${stats.perfectStreak}
+    Max Perfect Streak: ${stats.maxPerfectStreak}
+    Perfect Games: ${stats.perfectPuzzles}
+    
+    Track your stats and play daily:
+    https://artalyze.app
+    `;    
 
     if (navigator.share) {
       navigator
@@ -120,55 +126,35 @@ Perfect Games: ${stats.perfectPuzzles}
     }
   };
 
+  // Share today's puzzle results
   const handleCompletionShare = () => {
-    // Allow sharing after the game is completed
-    if (isGameComplete) {
-      shareResults(completedSelections); // Pass finalized selections
+    if (!completedSelections.length || !imagePairs.length) {
+      alert("No data available to share today's puzzle!");
       return;
     }
-
-    // If the overlay is already active, do nothing
-    if (showShareWarning) return;
-
-    // Prevent sharing if the puzzle isn’t complete
-    if (!selections.length || !imagePairs.length) {
-      setShowShareWarning(true);
-
-      // Clear any existing timeout and set a new one
-      if (shareWarningTimeoutRef.current) {
-        clearTimeout(shareWarningTimeoutRef.current);
+  
+    const score = completedSelections.reduce((count, selection, index) => {
+      if (selection?.selected === imagePairs[index]?.human) {
+        return count + 1;
       }
-
-      shareWarningTimeoutRef.current = setTimeout(() => {
-        setShowShareWarning(false);
-        shareWarningTimeoutRef.current = null; // Clear the reference
-      }, 1000); // Show for 1 second
-
-      return;
-    }
-
-    shareResults(selections); // Use current selections for in-progress games
-  };
-
-  // Helper function for sharing results
-  const shareResults = (usedSelections) => {
+      return count;
+    }, 0);
+  
     const puzzleNumber = calculatePuzzleNumber();
   
-    // Generate the visual representation of results
-    const resultsVisual = usedSelections
-      .map((selection, index) => {
-        const isCorrect = selection?.selected === imagePairs[index]?.human;
-        return isCorrect ? '🟢' : '🔴';
-      })
-      .join(' ');
+    const formattedGuesses = attempts
+      .map(attempt => attempt
+        .map((selected) => (selected ? "🟢" : "🔴"))
+        .join(" ")
+      ).join("\n");
   
-    const paintings = '🖼️ '.repeat(imagePairs.length).trim();
+    const finalAttempt = completedSelections
+      .map((selection, index) => (selection?.selected === imagePairs[index]?.human ? "🟢" : "🔴"))
+      .join(" ");
   
-    // Adjust the formatting to remove the extra line break before "Try it at:"
-    const shareableText = `Artalyze #${puzzleNumber} ${correctCount}/${imagePairs.length}
-  ${resultsVisual}
-  ${paintings}
-  Try it at: artalyze.app`;
+    const paintings = "🖼️ ".repeat(imagePairs.length).trim();
+  
+    const shareableText = `Artalyze #${puzzleNumber} ${score}/${imagePairs.length}\n${formattedGuesses}\n${finalAttempt}\n${paintings}\n\nCheck it out here:\nhttps://artalyze.app`;
   
     if (navigator.share) {
       navigator
@@ -176,23 +162,59 @@ Perfect Games: ${stats.perfectPuzzles}
           title: `Artalyze #${puzzleNumber}`,
           text: shareableText,
         })
-        .catch((error) => console.log('Error sharing:', error));
+        .catch((error) => console.log("Error sharing:", error));
     } else {
       navigator.clipboard
         .writeText(shareableText)
         .then(() => {
-          alert('Results copied to clipboard! You can now paste it anywhere.');
+          alert("Results copied to clipboard! You can now paste it anywhere.");
         })
-        .catch((error) => console.error('Failed to copy:', error));
+        .catch((error) => console.error("Failed to copy:", error));
     }
   };
   
-
-
-
+  // Share current game results
+  const shareResults = (usedSelections, allAttempts) => {
+    if (!usedSelections.length || !imagePairs.length || !allAttempts.length) {
+      alert("No data available to share today's puzzle!");
+      return;
+    }
+  
+    const puzzleNumber = calculatePuzzleNumber();
+  
+    const correctCount = usedSelections.reduce((count, selection, index) => {
+      return selection?.selected === imagePairs[index]?.human ? count + 1 : count;
+    }, 0);
+  
+    const formattedGuesses = allAttempts
+      .map(attempt =>
+        attempt.map((selected) => (selected ? "🟢" : "🔴")).join(" ")
+      ).join("\n");
+  
+    const paintings = "🖼️ ".repeat(imagePairs.length).trim();
+  
+    const shareableText = `Artalyze #${puzzleNumber} ${correctCount}/${imagePairs.length}\n${formattedGuesses}\n${paintings}\n\nCheck it out here:\nhttps://artalyze.app`;
+  
+    if (navigator.share) {
+      navigator
+        .share({
+          title: `Artalyze #${puzzleNumber}`,
+          text: shareableText,
+        })
+        .catch((error) => console.log("Error sharing:", error));
+    } else {
+      navigator.clipboard
+        .writeText(shareableText)
+        .then(() => {
+          alert("Results copied to clipboard! You can now paste it anywhere.");
+        })
+        .catch((error) => console.error("Failed to copy:", error));
+    }
+  };
 
   if (!isOpen && !isDismissing) return null;
 
+  // Handle modal dismissal with animation
   const handleDismiss = () => {
     setIsDismissing(true);
     setTimeout(() => {
@@ -201,10 +223,12 @@ Perfect Games: ${stats.perfectPuzzles}
     }, 400);
   };
 
+  // Track touch start position for swipe detection
   const handleTouchStart = (e) => {
     touchStartY.current = e.touches[0].clientY;
   };
 
+  // Handle swipe down to dismiss modal
   const handleTouchMove = (e) => {
     const touchEndY = e.touches[0].clientY;
     if (touchStartY.current && touchEndY - touchStartY.current > 50) {
@@ -214,7 +238,6 @@ Perfect Games: ${stats.perfectPuzzles}
 
   // Ensure mistakeDistribution always has valid data
   const maxValue = Math.max(1, ...Object.values(stats.mistakeDistribution || {}));
-
 
   return (
     <div
@@ -272,7 +295,7 @@ Perfect Games: ${stats.perfectPuzzles}
               </div>
             </div>
             <hr className="separator" />
-            <div className="stats-overview">
+            <div className="stats-overview-second-row">
               <div className="stat-item">
                 <div className="stat-value">
                   {shouldAnimateNumbers ? (
@@ -308,7 +331,7 @@ Perfect Games: ${stats.perfectPuzzles}
             </div>
             <hr className="separator" />
             <div className="mistake-distribution">
-              <h3>Mistake Distribution</h3>
+              <h3 className="distribution-header">Mistake Distribution</h3>
               {Object.keys(stats.mistakeDistribution).map((mistakeCount) => {
                 const value = stats.mistakeDistribution[mistakeCount] || 0;
 
@@ -340,23 +363,22 @@ Perfect Games: ${stats.perfectPuzzles}
               })}
             </div>
             <hr className="separator" />
-            <button
-              className="modal-share-button"
-              onClick={handleHistoricalStatsShare}
-            >
-              <FaShareAlt /> Share All Stats
-            </button>
-            <button
-              className="modal-share-today-button"
-              onClick={() =>
-                handleCompletionShare(
-                  stats.mostRecentSelections || [],
-                  stats.mostRecentImagePairs || []
-                )
-              }
-            >
-              <FaShareAlt /> Share Today's Puzzle
-            </button>
+            <div className="share-buttons-container">
+              <button
+                className="modal-share-button"
+                onClick={handleHistoricalStatsShare}
+              >
+                <FaShareAlt className="share-icon" /> Share Stats
+              </button>
+              <button 
+              className="modal-share-today-button" 
+              onClick={handleCompletionShare}
+              >
+                <FaShareAlt className="share-icon" /> Share Today
+              </button>
+            </div>
+
+
           </>
         ) : (
           <div className="guest-stats-content">
@@ -373,7 +395,7 @@ Perfect Games: ${stats.perfectPuzzles}
             <button
               className="guest-cta-button"
               onClick={() => {
-                window.location.href = "/register";
+                window.location.href = "/login";
               }}
             >
               Create a Free Account
@@ -386,7 +408,7 @@ Perfect Games: ${stats.perfectPuzzles}
       {showShareWarning && (
         <div className="share-warning-overlay">
           <div className="share-warning-content">
-            <p>Please complete today's puzzle before sharing.</p>
+            <p>Please finish the puzzle to share your results</p>
           </div>
         </div>
       )}

@@ -6,9 +6,48 @@ body {
   box-sizing: border-box;
 }
 
-/* Reset for html and body on the game screen */
+/* Prevents zooming the entire page */
 html, body {
-  background-color: #ffffff; /* Set the game screen background to white */
+  background-color: #ffffff;
+  touch-action: manipulation; /* ✅ Keeps scrolling but prevents full-page zoom */
+  overflow-x: hidden;
+}
+
+/* Prevents long press and selection on normal images */
+img {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: auto;
+  touch-action: none; /* ❌ Blocks zoom on all images */
+}
+
+@media (max-width: 650px) {
+  .enlarged-image-container {
+    overflow: hidden; /* Prevents white space from appearing */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  .zoom-wrapper {
+    overflow: hidden; /* Prevents zooming out too far */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    transform-origin: center;
+  }
+
+  .zoomable {
+    touch-action: pinch-zoom;
+    max-width: 100%;
+    max-height: 100%;
+    transform-origin: center;
+  }
 }
 
 /* Top Bar */
@@ -57,123 +96,140 @@ h1 {
   margin-top: 20px;
 }
 
-/* Progress Bar */
-.progress-bar-container {
-  width: 60%;
-  margin: 10px auto;
-}
-
-.progress-bar {
-  height: 10px;
-  background-color: #e0e0e0;
-  border-radius: 5px;
-  overflow: hidden;
-  display: flex;
-}
-
-.progress-bar-segment {
-  flex: 1;
-  height: 100%;
-  border-right: 1px solid white;
-}
-
-.progress-bar-segment:last-child {
-  border-right: none;
-}
-
-/* Status Bar */
-.status-bar {
-  margin-bottom: 20px;
-}
-
-.game-header {
-  font-size: 18px;
-  font-weight: 600;
-  text-align: center;
-  color: #333;
-  margin-bottom: 20px;
-}
-
-.header-separator {
-  margin-bottom: 20px;
-}
-
-/* Tries Left */
+/* ========================= */
+/*       TRIES LEFT          */
+/* ========================= */
 .tries-left {
   display: flex;
-  justify-content: center;
   align-items: center;
-  font-weight: normal;
-  gap: 10px;
-  margin-bottom: 2vh;
-  font-size: 16px;
-  color: black;
+  justify-content: center;
+  gap: 6px;
+  font-size: 15px;
+  color: #333333;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+  /* Added margin to separate from images */
 }
 
-.palette-icon {
-  font-size: 16px;
-  color: black;
+.tries-circle {
+  width: 13px;
+  height: 13px;
+  background-color: #4A4A4A;
+  /* Default filled */
+  border-radius: 50%;
+  display: inline-block;
 }
 
-/* Image Pairs */
+/* ========================= */
+/*        IMAGE PAIRS        */
+/* ========================= */
+
 .image-pair-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 8px 0;
-  overflow: visible;
-  margin-top: -1vh; /* Adjusted to prevent clipping */
+  margin-top: -1vh;
+  width: 100%;
+  /* Ensure full width */
+  overflow: hidden;
+  /* Prevent horizontal overflow */
 }
 
+/* Ensure image containers fully fill the screen width */
 .image-container {
   position: relative;
-  width: 25vh; /* Responsive size */
-  height: 25vh;
-  background-color: #f5f5f5;
+  width: 29vh;
+  height: 29vh;
+  background-color: #2a2a2a;
   border-radius: 8px;
+  /* Ensures rounded corners */
   overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
-}
-
-.image-container:not(:last-child) {
-  margin-bottom: 2vh; 
+  flex-shrink: 0;
 }
 
 .image-container img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain; /* Prevents image clipping */
-  border-radius: 8px;
-  z-index: 1;
+  width: 101%;
+  height: 101%;
+  object-fit: cover;
+  border-radius: inherit;
+  /* Ensures it matches parent container */
+  display: block;
+  image-rendering: -webkit-optimize-contrast;
 }
 
-/* Selected image styling */
+
+@supports (-webkit-touch-callout: none) {
+  .image-container img {
+    width: 101%;
+    height: 101%;
+  }
+}
+
+/* Prevent any extra margins from shifting images */
+.image-container:not(:last-child) {
+  margin-bottom: 2vh;
+}
+
 .image-container.selected {
-  border: 4px solid #4CAF50;
-  box-shadow: 0 0 15px 5px rgba(76, 175, 80, 0.6);
+  border: 5px solid #5f91e3;
+  /* Thick border */
+  border-radius: 5px;
+  /* Keeps corners tight */
+  box-shadow:
+    inset 0 0 6px 2px rgba(95, 145, 227, 0.6),
+    /* Inner glow to cover white gaps */
+    0 0 8px 2px rgba(95, 145, 227, 0.8);
+  /* Outer glow for visibility */
+  overflow: hidden;
+  /* Prevents any border leaking */
 }
 
-/* Navigation Buttons */
-.navigation-buttons {
-  margin: 10px 0;
+/* ========================= */
+/*       STATUS BAR          */
+/* ========================= */
+.status-bar {
   display: flex;
   justify-content: center;
-  gap: 2vh; /* Increased spacing slightly */
+  /* Center everything */
+  align-items: center;
+  gap: 22px;
+  /* Matches completion screen spacing */
+  flex-wrap: nowrap;
+  /* Prevent wrapping */
+  width: 100%;
+  max-width: 350px;
+  /* Keep it from spreading too wide */
+  margin: 10px auto;
+}
+
+/* ========================= */
+/*    NAVIGATION BUTTONS     */
+/* ========================= */
+.navigation-buttons {
+  display: flex;
+  justify-content: center;
+  flex-grow: 1;
+  /* Ensures even spacing */
+  gap: 2vh;
+  /* Keeps buttons evenly spaced */
 }
 
 .navigation-buttons .nav-button {
   background-color: #ccc;
-  color: white;
-  width: 2.5vh;  /* Small circles */
+  width: 2.5vh;
+  /* Small circles */
   height: 2.5vh;
   border-radius: 50%;
   border: none;
-  display: inline-flex;
+  display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 0; /* Hide text */
+  font-size: 0;
+  /* Hide text */
   cursor: pointer;
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
@@ -187,70 +243,27 @@ h1 {
   background-color: #4d73af;
 }
 
-/* Submit & Clear Buttons */
-.button-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 15px;
-  margin-top: 2vh; /* Keeps them close to nav buttons */
-}
-
-.submit-button {
-  background-color: grey;
-  color: white;
-  padding: 1.2vh 4vh; /* Reduced height, increased width */
-  font-size: 2.2vh; /* Slightly smaller text */
-  border: none;
-  cursor: pointer;
-  border-radius: 1.2vh; /* Slightly reduced border-radius */
-  width: auto;
-  min-width: 22vw; /* Increased width */
-  max-width: 27vw;
-  transition: all 0.3s ease;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-}
-
-.submit-button.enabled {
-  background-color: #4d73af;
-}
-
-.submit-button.disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.submit-button,
-.clear-button {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-}
-
-/* Clear Button */
+/* ========================= */
+/*       CLEAR BUTTON        */
+/* ========================= */
 .clear-button {
   background-color: transparent;
   border: 2px solid #909090;
   color: grey;
-  padding: 0.8vh 3vh; /* Reduced height, increased width */
-  font-size: 2vh;
-  border-radius: 1.2vh; /* Reduced border-radius */
+  padding: 1.2vh 1.5vh;
+  font-size: 15px;
+  border-radius: 6px;
   cursor: not-allowed;
   transition: all 0.3s ease;
-  letter-spacing: .1rem;
-  width: auto;
-  min-width: 16vw; /* Increased width */
-  max-width: 20vw;
+  min-width: 70px;
+  max-width: 95px;
+  height: 4.7vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  text-align: center;
 }
 
+/* Enabled Clear Button */
 .clear-button.enabled {
   border: 2px solid #4d73af;
   color: #4d73af;
@@ -262,14 +275,501 @@ h1 {
   color: white;
 }
 
-/* Mid-Turn Feedback Overlay */
+/* ========================= */
+/*       SUBMIT BUTTON       */
+/* ========================= */
+.submit-button {
+  background-color: grey;
+  color: white;
+  padding: 1.2vh 2vh;
+  font-size: 15px;
+  border: none;
+  cursor: not-allowed;
+  border-radius: 6px;
+  min-width: 90px;
+  max-width: 115px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+/* Enabled Submit Button */
+.submit-button.enabled {
+  background-color: #4d73af;
+  cursor: pointer;
+}
+
+.submit-button.enabled:hover {
+  background-color: #355a86;
+}
+
+/* Keyframe Animation for Shaking "No" Nod */
+@keyframes shake {
+  0% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-10px);
+    /* Move left */
+  }
+
+  50% {
+    transform: translateX(10px);
+    /* Move right */
+  }
+
+  75% {
+    transform: translateX(-10px);
+    /* Move left again */
+  }
+
+  100% {
+    transform: translateX(0);
+    /* Return to original position */
+  }
+}
+
+/* ========================= */
+/*     ENLARGED IMAGE MODAL  */
+/* ========================= */
+
+/* Fullscreen Overlay for Enlarged Images */
+.enlarge-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  /* Dim background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Container to properly center the enlarged image */
+.enlarged-image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 70vw;
+  /* Unified width across all screens */
+  max-height: 70vh;
+  /* Unified height across all screens */
+  overflow: hidden;
+}
+
+/* Enlarged Image Styling */
+.enlarged-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  /* Maintain aspect ratio */
+  border-radius: 8px;
+  /* Match overall UI */
+  transform: scale(1);
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Prevent unintended duplicate image stacking */
+.enlarge-modal img {
+  position: relative;
+  z-index: 1001;
+  /* Ensure it's above the background */
+}
+
+/* Background Overlay */
+.enlarge-modal::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  /* Dim background */
+  z-index: 999;
+  /* Keep it behind the image */
+}
+
+
+/* ========================= */
+/*       COMPLETION SCREEN   */
+/* ========================= */
+
+.completion-screen {
+  margin: 20px;
+  text-align: center;
+}
+
+/* Completion Message */
+.completion-message {
+  font-size: 17px;
+  font-weight: bold;
+  margin-bottom: 1.5vh;
+  /* Added space below the message */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Completion Header (Stats, Score Badge, Share) */
+.completion-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 22px;
+  /* Reduce space between elements */
+  flex-wrap: nowrap;
+  /* Prevent wrapping to a new line */
+  width: 100%;
+  max-width: 350px;
+  /* Keep it from spreading too wide */
+  margin: 0 auto 15px;
+  /* Adjusted margin */
+}
+
+/* ========================= */
+/*        SCORE BADGE        */
+/* ========================= */
+
+.completion-score-badge {
+  display: inline-block;
+  padding: 1.2vh 1vh;
+  /* Increased height */
+  color: white;
+  background-color: #e0b54c;
+  /* Default yellow */
+  font-size: 15px;
+  /* Slightly larger text */
+  font-weight: bold;
+  border-radius: 6px;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  letter-spacing: .7px;
+  min-width: 100px;
+  /* Slightly wider */
+  height: auto;
+  /* Let it expand based on content */
+}
+
+/* Score Badge Variants */
+.completion-score-badge.zero-correct {
+  background-color: #d04e5f;
+  /* Red for 0/5 */
+}
+
+.completion-score-badge.one-correct {
+  background-color: #c56a56;
+  /* Red-orange for 1/5 */
+}
+
+.completion-score-badge.two-correct {
+  background-color: #d08852;
+  /* Deep orange for 2/5 */
+}
+
+.completion-score-badge.three-correct {
+  background-color: #c5a54e;
+  /* Mustard yellow for 3/5 */
+}
+
+.completion-score-badge.four-correct {
+  background-color: #89a45b;
+  /* Yellow-green for 4/5 */
+}
+
+.completion-score-badge.five-correct {
+  background-color: #5c9b62;
+  /* Green for 5/5 */
+}
+
+/* ========================= */
+/*        BUTTONS            */
+/* ========================= */
+
+/* Compact Buttons */
+.stats-button.compact,
+.share-button.compact {
+  padding: 1.2vh 1vh;
+  font-size: 15px;
+  min-width: 65px;
+  max-width: 90px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Completion Buttons */
+.completion-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2vh;
+  margin-top: 1vh;
+}
+
+/* Default Button Styles */
+.stats-button,
+.share-button {
+  padding: 1.2vh 3vh;
+  border: none;
+  border-radius: 1vh;
+  font-size: 2vh;
+  font-weight: bold;
+  color: white;
+  /* Made button text white */
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1vh;
+  width: 22vh;
+  height: 5vh;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+/* Button Hover Effects */
+.stats-button:hover,
+.share-button:hover {
+  transform: scale(1.05);
+}
+
+/* Button Colors */
+.stats-button {
+  background-color: #4d73af;
+}
+
+.stats-button:hover {
+  background-color: #355a86;
+}
+
+.share-button {
+  background-color: #7bbf70;
+}
+
+.share-button:hover {
+  background-color: #4e8a53;
+}
+
+/* Accessibility */
+.completion-buttons button:focus {
+  outline: 3px solid #82b1ff;
+  outline-offset: 2px;
+}
+
+
+/* ========================= */
+/*       IMAGE GRID          */
+/* ========================= */
+
+.horizontal-thumbnail-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+/* ✅ Maintain Proper Pairing Layout */
+.pair-thumbnails-horizontal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 8px;
+}
+
+/* ✅ Make Thumbnails Slightly Smaller */
+.thumbnail-container {
+  flex: 1 1 50%;
+  width: 22vw !important;
+  height: 22vw !important;
+  max-width: 95px;
+  max-height: 95px;
+  border-radius: 2px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #2a2a2a; /* Darker grey for consistency */
+  transition: transform 0.3s ease;
+  position: relative;
+}
+
+/* ✅ Ensure images fully fill the container */
+.thumbnail-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+/* ✅ Maintain white space fix for Safari */
+@supports (-webkit-touch-callout: none) {
+  .thumbnail-container img {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+/* ✅ Restore Rounded Corners for Selections */
+.thumbnail-container.correct,
+.thumbnail-container.incorrect {
+  overflow: hidden;
+}
+
+/* ✅ Adjust Selection Borders */
+.thumbnail-container.correct {
+  border: 3px solid #4CAF50;
+  box-shadow: 0 0 10px 4px rgba(76, 175, 80, 0.4);
+}
+
+.thumbnail-container.incorrect {
+  border: 3px solid #FF3D3D;
+  box-shadow: 0 0 10px 4px rgba(255, 61, 61, 0.4);
+}
+
+/* ✅ Loader for images */
+.thumbnail-loader {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* ✅ Spinner Animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ✅ Hide loader once image is loaded */
+.thumbnail-container.loaded .thumbnail-loader {
+  display: none;
+}
+
+
+/* ========================= */
+/*      SWIPE OVERLAY        */
+/* ========================= */
+
+/* General Overlay Styling */
+.swipe-overlay,
+.swipe-left-overlay,
+.double-tap-overlay,
+.info-overlay {
+  position: fixed;
+  left: 50%;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  animation: fadeInOut 2s ease-in-out;
+  white-space: nowrap;
+}
+
+/* Dark Mode - Light background with black text */
+body.dark-mode .swipe-overlay,
+body.dark-mode .swipe-left-overlay,
+body.dark-mode .double-tap-overlay,
+body.dark-mode .info-overlay {
+  background: rgba(255, 255, 255, 0.8);
+  color: black;
+}
+
+/* Swipe Right Overlay (Stays the same) */
+.swipe-overlay {
+  transform: translate(-50%, -60%);
+  top: 52%;
+}
+
+/* Swipe Left Overlay (5% higher) */
+.swipe-left-overlay {
+  transform: translate(-50%, -65%);
+  top: 47%;
+}
+
+/* Double Tap Overlay (5% lower, now exactly where swipe overlay was) */
+.double-tap-overlay {
+  transform: translate(-50%, -60%);
+  top: 52%;
+}
+
+/* Info Overlay (5% higher, now exactly where swipe left overlay was) */
+.info-overlay {
+  transform: translate(-50%, -65%);
+  top: 47%;
+}
+
+/* Larger Arrow */
+.swipe-arrow {
+  font-size: 26px;
+}
+
+/* Info Icon Styling */
+.info-icon {
+  font-size: 18px;
+  vertical-align: middle;
+}
+
+/* Fade-in and fade-out animation */
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+
+/* Fade-in and fade-out animation */
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+
+/* ========================= */
+/*      MID-TURN OVERLAY     */
+/* ========================= */
+
 .mid-turn-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6);  /* Semi-transparent background */
+  background: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -284,7 +784,7 @@ h1 {
   width: 80%;
   max-width: 400px;
   box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.2);
-  animation: fadeIn 0.3s ease-in-out, scaleUp 0.3s ease-in-out, shake 0.5s ease-out; /* Apply the shake animation */
+  animation: fadeIn 0.3s ease-in-out, scaleUp 0.3s ease-in-out, shake 0.5s ease-out;
 }
 
 .mid-turn-overlay-content.disappearing {
@@ -321,323 +821,89 @@ h1 {
   transform: scale(1.05);
 }
 
-/* Keyframe Animation for Shaking "No" Nod */
-@keyframes shake {
+/* ========================= */
+/*  Image Pre-loader         */
+/* ========================= */
+
+
+/* ✅ Wrapper to position the spinner */
+.image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ✅ Hide spinner once the image loads */
+.image-wrapper.loaded .image-loader {
+  display: none;
+}
+
+/* ✅ Basic Loading Spinner */
+.image-loader {
+  position: absolute;
+  width: 35px; /* Slightly larger */
+  height: 35px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff; /* Bright white for visibility */
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* ✅ Keyframes for Spinning Animation */
+@keyframes spin {
   0% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-10px); /* Move left */
-  }
-  50% {
-    transform: translateX(10px); /* Move right */
-  }
-  75% {
-    transform: translateX(-10px); /* Move left again */
+    transform: rotate(0deg);
   }
   100% {
-    transform: translateX(0); /* Return to original position */
+    transform: rotate(360deg);
   }
 }
 
+/* ========================= */
+/*  FULL PAGE LOADING SCREEN */
+/* ========================= */
 
-
-/* Enlarged Image Modal */
-.enlarge-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  position: relative;
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-/* Enlarged Image Modal: Ensure it takes up full screen and centers content */
-.enlarge-modal {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.7); /* Dim background */
-  z-index: 1000;
-}
-
-/* Enlarged Image Modal: Ensure full-screen and center content */
-.enlarge-modal {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.7); /* Dim background */
-  z-index: 1000;
-}
-
-/* Center the enlarged image while allowing it to scale */
-.enlarged-image-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;  /* Allow full width scaling */
-  height: 100%;
-  overflow: hidden;
-}
-
-/* Ensure images scale properly when enlarged */
-.enlarged-image {
-  display: block;
-  max-width: none;  /* Prevent width limitations */
-  max-height: none; /* Prevent height limitations */
-}
-
-/* Enlarged Image for Game Screen (1.5x) */
-.enlarge-modal.game-screen .enlarged-image {
-  width: 70%;
-  height: auto;
-}
-
-/* Enlarged Image for Completion Screen (3x) */
-.enlarge-modal.completion-screen .enlarged-image {
-  width: 300%;
-  height: auto;
-}
-
-
-.swipe-button {
+.full-page-loading-screen {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 30px;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  border: none;
-  padding: 10px;
-  cursor: pointer;
+  top: 50px;
+  left: 0;
+  width: 100%;
+  height: calc(100vh - 50px);
+  background-color: #b2cbed;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   z-index: 10;
 }
 
-.swipe-button.left {
-  left: 10px;
-}
-
-.swipe-button.right {
-  right: 10px;
-}
-
-
-/* Completion Screen */
-.completion-score-container {
-  text-align: center;
-  margin: 1.5em 0; /* Add spacing around the badge */
-}
-
-.completion-score-badge {
-  display: inline-block;
-  padding: 0.5em 1.5em; /* Compact padding */
-  color: white; /* Text color */
-  background-color: #4d73af; /* Default blue background color */
-  font-size: 1.2em;
-  font-weight: bold;
-  border-radius: 8px; /* Rounded edges */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
-}
-
-.completion-score-badge.five-correct {
-  background-color: #5c9b62; /* Green for 5/5 */
-}
-
-.completion-score-badge.zero-correct {
-  background-color: #d04e5f; /* Red for 0/5 */
-}
-
-.completion-screen {
-  margin: 20px;
-  text-align: center;
-}
-
-.completion-message {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 1.3rem;
-}
-
-
-.image-pair-message {
-  font-size: 1rem;
-  color: #666;
-  margin-bottom: 15px;
-}
-
-.horizontal-thumbnail-grid {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.thumbnail-container {
-  width: 17vw !important;  /* 17% of the viewport width */
-  height: 17vw !important; /* Maintain square aspect ratio */
-  max-width: 150px; /* Prevent images from being too large */
-  max-height: 150px;
-  border-radius: 5px;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #f4f4f4;
-  transition: transform 0.3s ease;
-  position: relative;
-}
-
-.pair-thumbnails-horizontal {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  gap: 2vw; /* Space between human and AI images */
-  margin-bottom: 1vh; /* Reduce spacing between pairs */
-}
-
-.thumbnail-container.ai {
-  border-left: 1px solid rgba(0, 0, 0, 0.1); /* Subtle vertical divider between human and AI */
-}
-
-.thumbnail-container img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain; /* Prevents distortion */
-}
-
-.thumbnail-container:hover {
-  transform: scale(1.05); /* Slightly enlarge on hover */
-}
-
-/* ✅ Highlight Correct & Incorrect Selections */
-.thumbnail-container.correct {
-  border: 3px solid #4CAF50;
-  box-shadow: 0 0 10px 4px rgba(76, 175, 80, 0.4);
-}
-
-.thumbnail-container.incorrect {
-  border: 3px solid #FF3D3D;
-  box-shadow: 0 0 10px 4px rgba(255, 61, 61, 0.4);
-}
-
-
-/* Completion Buttons */
-.completion-buttons {
-  display: flex;
-  justify-content: center; /* Centers the buttons horizontally */
-  align-items: center; /* Aligns buttons vertically */
-  gap: 2vh; /* Equal spacing between buttons */
-  margin-top: 1.5vh; /* Adjusted margin to 1.5vh */
-}
-
-.stats-button,
-.share-button {
-  background-color: #4CAF50;
-  color: white;
-  padding: 1.2vh 3vh; /* Increased padding for better tap area */
-  border: none;
-  border-radius: 1vh; /* Adjusted rounded edges */
-  font-size: 2vh; /* Adjusted font size */
-  font-weight: bold;
-  cursor: pointer;
-  display: flex;
-  justify-content: center; /* Centers content horizontally within the button */
-  align-items: center; /* Centers content vertically within the button */
-  gap: 1vh; /* Space between icon and text */
-  width: 22vh; /* Ensuring a consistent width */
-  height: 5vh; /* Increased height slightly for better tap area */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
-  transition: all 0.3s ease; /* Smooth transition for hover */
-  white-space: nowrap; /* Ensures 'See Stats' stays in one line */
-}
-
-.stats-button:hover,
-.share-button:hover {
-  transform: scale(1.05); /* Slight zoom effect on hover */
-}
-
-.stats-button {
-  background-color: #4d73af; /* Blue for stats */
-}
-
-.stats-button:hover {
-  background-color: #355a86; /* Darker blue on hover */
-}
-
-.share-button {
-  background-color: #7bbf70; /* Green for share */
-}
-
-.share-button:hover {
-  background-color: #4e8a53; /* Darker green on hover */
-}
-
-/* Accessibility */
-.completion-buttons button:focus {
-  outline: 3px solid #82b1ff; /* Highlight focus for accessibility */
-  outline-offset: 2px;
-}
-
-
-
-/* Image Loading */
-.full-page-loading-screen {
-  position: absolute;
-  top: 50px; /* Matches the height of the top bar */
-  left: 0;
-  width: 100%;
-  height: calc(100vh - 50px); /* Full height minus the top bar */
-  background-color: #b2cbed; /* Light blue background */
-  display: flex;
-  flex-direction: column; /* Stack logo above the progress bar */
-  justify-content: center;
-  align-items: center;
-  z-index: 10; /* Ensure it overlays all other content */
-}
-
 .loading-logo {
-  width: 70px; /* Set the logo width */
-  margin-bottom: 20px; /* Add spacing between the logo and the progress bar */
+  width: 70px;
+  margin-bottom: 20px;
 }
 
 .full-page-progress-bar {
-  width: 150px; 
-  height: 10px; /* Slim progress bar */
-  background-color: #ffffff; /* White background for the bar */
+  width: 150px;
+  height: 10px;
+  background-color: #ffffff;
   border-radius: 5px;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .full-page-progress-fill {
-  width: 0%; /* Start with an empty bar */
+  width: 0%;
   height: 100%;
-  background-color: #000000; /* Black fill color */
-  animation: fullPageFillProgress 3s linear forwards; /* Fill the bar over 3 seconds */
+  background-color: #000000;
+  animation: fullPageFillProgress 3s linear forwards;
 }
+
+/* ========================= */
+/*  MOBILE WARNING OVERLAY   */
+/* ========================= */
 
 .mobile-warning-overlay {
   position: fixed;
@@ -679,14 +945,17 @@ h1 {
   cursor: pointer;
 }
 
-/* ✅ Duplicate Guess Overlay (Styled like Mid-Turn Overlay) */
+/* ========================= */
+/*   DUPLICATE GUESS OVERLAY */
+/* ========================= */
+
 .duplicate-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5); /* Slightly lighter background */
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -695,11 +964,11 @@ h1 {
 
 .duplicate-overlay-content {
   background: white;
-  padding: 15px; /* Slightly smaller padding */
-  border-radius: 10px; /* Slightly smaller border radius */
+  padding: 15px;
+  border-radius: 10px;
   text-align: center;
-  width: 60%; /* Smaller width */
-  max-width: 300px; /* Smaller max width */
+  width: 60%;
+  max-width: 300px;
   box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
   animation: fadeIn 0.25s ease-in-out, scaleUp 0.25s ease-in-out, shake 0.4s ease-out;
 }
@@ -709,7 +978,7 @@ h1 {
 }
 
 .duplicate-overlay-title {
-  font-size: 18px; /* Smaller font size */
+  font-size: 18px;
   font-weight: bold;
   color: #333;
   margin-bottom: 8px;
@@ -719,6 +988,7 @@ h1 {
   0% {
     width: 0%;
   }
+
   100% {
     width: 100%;
   }
@@ -729,6 +999,7 @@ h1 {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -738,6 +1009,7 @@ h1 {
   from {
     transform: scale(0.9);
   }
+
   to {
     transform: scale(1);
   }
@@ -747,6 +1019,7 @@ h1 {
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0;
   }
@@ -756,6 +1029,7 @@ h1 {
   from {
     transform: scale(1);
   }
+
   to {
     transform: scale(0.9);
   }
@@ -768,10 +1042,12 @@ h1 {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.2);
     opacity: 0.8;
   }
+
   100% {
     transform: scale(1);
     opacity: 1;
@@ -780,13 +1056,15 @@ h1 {
 
 .thumbnail-container.animate-pulse {
   animation: pulseEffect 0.6s ease-in-out;
-  animation-delay: var(--animation-delay, 0s); /* Staggered delay */
+  animation-delay: var(--animation-delay, 0s);
+  /* Staggered delay */
 }
 
 /* Media Queries */
 
 /* ✅ Large Tablets - iPad Pro 12.9", Surface Pro, Galaxy Tab S8 Ultra (1024px x 1366px) */
-@media (min-width: 1100px) and (max-width: 1279px) and (max-height: 1366px) {
+@media (min-width: 850px) and (max-width: 1279px) and (max-height: 1366px) {
+
   /* Increase top bar text size */
   .app-title {
     font-size: 26px;
@@ -800,19 +1078,19 @@ h1 {
 
   /* Increase game header size */
   .game-header {
-    font-size: 26px;
+    font-size: 17px;
     margin-bottom: 20px;
   }
 
   /* Increase "Tries Left" text size */
   .tries-left {
-    font-size: 24px;
+    font-size: 16px;
     margin-bottom: 30px;
   }
 
-  /* Increase palette icon size */
-  .palette-icon {
-    font-size: 22px;
+  /* Increase circle icon size */
+  .tries-circle {
+    font-size: 16px;
   }
 
   /* Increase image pair size */
@@ -821,7 +1099,16 @@ h1 {
     height: 30vh;
   }
 
-  /* ✅ Fix: Display image pairs in two rows */
+  /* ✅ Fix: Display image pairs in a row instead of stacked */
+  .image-pair-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 3vw;
+  }
+
+  /* ✅ Adjust completion screen layout */
   .completion-screen .horizontal-thumbnail-grid {
     display: flex;
     flex-direction: column;
@@ -837,89 +1124,179 @@ h1 {
     gap: 4vw;
   }
 
-  /* ✅ Make Navigation Buttons Smaller */
-  .navigation-buttons .nav-button {
-    width: 3vh;
-    height: 3vh;
-    font-size: 0;
-    margin: 0.8vh;
+  /* ✅ Fixed Submit & Clear Button Sizes */
+  .game-container .button-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
   }
 
-  /* ✅ Force Button Sizes with Higher Specificity */
   .game-container .button-container .submit-button {
-    width: 160px !important;
-    height: 40px !important;
-    padding: 8px 26px !important;
+    width: 170px !important;
+    height: 42px !important;
+    padding: 8px 24px !important;
+    font-size: 16px !important;
+    max-width: 170px !important;
+    min-width: auto !important;
+    flex-grow: 0 !important;
   }
 
   .game-container .button-container .clear-button {
-    width: 120px !important;
-    height: 35px !important;
-    padding: 5.5px 20px !important;
+    width: 130px !important;
+    height: 38px !important;
+    padding: 6px 20px !important;
+    font-size: 15px !important;
+    max-width: 130px !important;
+    min-width: auto !important;
+    flex-grow: 0 !important;
   }
 }
 
 /* ✅ Desktops & Large Screens */
 @media (min-width: 1280px) {
-  body .game-container .image-container {
-    width: 35vh !important;
-    height: 35vh !important;
+
+  /* Increase game header size */
+  .game-header {
+    font-size: 17px;
+    margin-bottom: 20px;
   }
 
-  body .game-container .game-header {
-    font-size: 30px !important;
+  /* Increase "Tries Left" text size */
+  .tries-left {
+    font-size: 16px;
+    margin-bottom: 30px;
   }
 
-  /* ✅ Fix: Ensure completion screen follows two-row structure */
-  body .completion-screen .horizontal-thumbnail-grid {
+  /* Increase circle icon size */
+  .tries-circle {
+    font-size: 16px;
+  }
+
+  /* Ensure image pairs display properly */
+  .image-pair-container {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    gap: 4vw !important;
+  }
+
+  /* ✅ Completion screen image grid - Two Rows on Large Screens */
+  .completion-screen .horizontal-thumbnail-grid {
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     gap: 5vh !important;
   }
 
-  body .completion-screen .first-row,
-  body .completion-screen .second-row {
+  .completion-screen .first-row,
+  .completion-screen .second-row {
     display: flex !important;
     flex-direction: row !important;
     justify-content: center !important;
     gap: 5vw !important;
   }
 
-  /* ✅ Make Navigation Buttons Even Smaller */
-  body .game-container .navigation-buttons .nav-button {
-    width: 2.5vh !important;
-    height: 2.5vh !important;
-    font-size: 0 !important;
-    margin-top: 0.6vh;
+  /* ✅ Adjust individual image containers */
+  .pair-thumbnails-horizontal {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 2vw !important;
+    margin-bottom: 1vh !important;
   }
 
-  /* ✅ Force Button Sizes with Higher Specificity */
-  body .game-container .button-container .submit-button {
-    width: 160px !important;
+  .thumbnail-container {
+    width: 18vw !important;
+    height: 18vw !important;
+    max-width: 160px !important;
+    max-height: 160px !important;
+  }
+
+  /* ✅ Fixed Submit & Clear Button Sizes */
+  .game-container .button-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .game-container .button-container .submit-button {
+    width: 180px !important;
+    height: 45px !important;
+    padding: 10px 26px !important;
+    font-size: 17px !important;
+    max-width: 180px !important;
+    min-width: auto !important;
+    flex-grow: 0 !important;
+  }
+
+  .game-container .button-container .clear-button {
+    width: 140px !important;
     height: 40px !important;
-    padding: 8px 26px !important;
+    padding: 8px 22px !important;
+    font-size: 16px !important;
+    max-width: 140px !important;
+    min-width: auto !important;
+    flex-grow: 0 !important;
+  }
+}
+
+/* ✅ Mobile: Stack Thumbnails */
+@media (max-width: 850px) {
+  .horizontal-thumbnail-grid {
+    flex-direction: column;
   }
 
-  body .game-container .button-container .clear-button {
-    width: 120px !important;
-    height: 35px !important;
-    padding: 5.5px 20px !important;
+  .first-row,
+  .second-row {
+    flex-direction: column;
+  }
+
+  .thumbnail-container {
+    width: 30vw;
+    height: 30vw;
+    max-width: 90px;
+    max-height: 90px;
+  }
+}
+
+/* ✅ Fix white space issue - Ensure full coverage */
+.thumbnail-container img {
+  width: 101%;
+  height: 101%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+/* ✅ Fix for WebKit browsers */
+@supports (-webkit-touch-callout: none) {
+  .thumbnail-container img {
+    width: 101%;
+    height: 101%;
   }
 }
 
 /* Dark Mode */
 body.dark-mode .top-bar {
-  background-color: #181818; /* Match dark mode background */
-  border-bottom: 2px solid #222; /* Slightly darker for contrast */
+  background-color: #181818;
+  /* Match dark mode background */
+  border-bottom: 2px solid #222;
+  /* Slightly darker for contrast */
 }
 
 body.dark-mode .app-title,
 body.dark-mode .icon,
 body.dark-mode .game-header,
-body.dark-mode .tries-left,
-body.dark-mode .palette-icon {
+body.dark-mode .tries-left {
   color: #CFCFCF;
+}
+
+body.dark-mode .tries-circle {
+  background-color: #CFCFCF;
 }
 
 body.dark-mode .nav-button {
@@ -941,7 +1318,8 @@ body.dark-mode .submit-button.disabled {
 
 /* Dark Mode: Mid-Turn Overlay */
 body.dark-mode .mid-turn-overlay {
-  background-color: rgba(0, 0, 0, 0.85); /* Darkened background */
+  background-color: rgba(0, 0, 0, 0.85);
+  /* Darkened background */
 }
 
 body.dark-mode .mid-turn-overlay-content {
@@ -969,7 +1347,8 @@ body.dark-mode .mid-turn-overlay-try-again-button:hover {
 
 /* Dark Mode: Already Guessed Overlay */
 body.dark-mode .duplicate-overlay {
-  background-color: rgba(0, 0, 0, 0.85); /* Darker background */
+  background-color: rgba(0, 0, 0, 0.85);
+  /* Darker background */
 }
 
 body.dark-mode .duplicate-overlay-content {
@@ -1008,7 +1387,8 @@ body.dark-mode .full-page-loading-screen {
 }
 
 body.dark-mode .loading-logo {
-  filter: brightness(80%); /* Adjust logo brightness for dark mode */
+  filter: brightness(80%);
+  /* Adjust logo brightness for dark mode */
 }
 
 body.dark-mode .full-page-progress-bar {

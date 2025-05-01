@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaInfoCircle, FaChartBar, FaCog, FaShareAlt, FaPalette } from 'react-icons/fa';
+import { FaInfoCircle, FaChartBar, FaCog, FaShareAlt, FaLongArrowAltRight, FaLongArrowAltLeft } from 'react-icons/fa';
 import logo from '../assets/images/artalyze-logo.png';
 import SwiperCore, { Swiper, SwiperSlide } from 'swiper/react';
 import { getTodayInEST } from '../utils/dateUtils';
@@ -47,11 +47,25 @@ const Game = () => {
   const [showMobileWarning, setShowMobileWarning] = useState(false);
   const [error, setError] = useState('');
   const swiperRef = useRef(null);
+  const lastTapTime = useRef(0);
+  const singleTapTimeout = useRef(null);
+  const [showSwipeOverlay, setShowSwipeOverlay] = useState(false);
+  const [showSwipeRightOverlay, setShowSwipeRightOverlay] = useState(false);
+  const [showSwipeLeftOverlay, setShowSwipeLeftOverlay] = useState(false);
+  const [hasSeenSwipeLeft, setHasSeenSwipeLeft] = useState(false);
+  const [showDoubleTapOverlay, setShowDoubleTapOverlay] = useState(false);
+  const [hasSeenDoubleTap, setHasSeenDoubleTap] = useState(false);
+  const [showInfoOverlay, setShowInfoOverlay] = useState(false);
+  const [hasSeenSwipeOverlays, setHasSeenSwipeOverlays] = useState(() => {
+    return localStorage.getItem("hasSeenSwipeOverlays") === "true";
+  });
+
 
   const [userId, setUserId] = useState(localStorage.getItem("userId"));
   const { selections = [], updateSelections, isLoading, error: selectionsError } = useSelections(userId, isLoggedIn);
   const [completedSelections, setCompletedSelections] = useState([]);
-
+  const [attempts, setAttempts] = useState([]);
+  const [completedAttempts, setCompletedAttempts] = useState([]);
   const [alreadyGuessed, setAlreadyGuessed] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDuplicateOverlay, setShowDuplicateOverlay] = useState(false);
@@ -59,6 +73,7 @@ const Game = () => {
     return localStorage.getItem("darkMode") === "true";
   });
 
+  const [imageLoading, setImageLoading] = useState({});
 
   const [stats, setStats] = useState({
     gamesPlayed: 0,
@@ -70,6 +85,19 @@ const Game = () => {
     lastPlayedDate: null,
   });
 
+  const getMidTurnMessage = (correctCount) => {
+    if (correctCount === 0 || correctCount === 1) {
+      return "None or only one is right.";
+    } else if (correctCount === 2) {
+      return "You're three away.";
+    } else if (correctCount === 3) {
+      return "You're two away.";
+    } else if (correctCount === 4) {
+      return "Close! You're one away.";
+    } else {
+      return "";
+    }
+  };
 
   // Helper function to save triesRemaining to localStorage
   const saveTriesToLocalStorage = (tries) => {
@@ -80,6 +108,32 @@ const Game = () => {
   const handleGameComplete = async () => {
     console.log("🏁 handleGameComplete called");
     setIsGameComplete(true);
+
+    const formattedAttempts = attempts.map(attempt =>
+      attempt.map(selected => selected === true) // Ensures correct boolean values
+    );
+
+    const updatedCompletedAttempts = [...completedAttempts, ...formattedAttempts];
+    setCompletedAttempts(updatedCompletedAttempts);
+    localStorage.setItem("completedAttempts", JSON.stringify(updatedCompletedAttempts));
+
+    if (isUserLoggedIn()) {
+      try {
+        await axiosInstance.put("/stats/completed-attempts", { completedAttempts: updatedCompletedAttempts });
+        console.log("✅ Completed attempts saved in backend.");
+      } catch (error) {
+        console.error("❌ Error saving completed attempts:", error);
+      }
+    }
+
+    // ✅ Reset attempts for the next game
+    setAttempts([]);
+    localStorage.setItem("attempts", JSON.stringify([]));
+
+    if (isUserLoggedIn()) {
+      await axiosInstance.put("/stats/attempts", { attempts: [] });
+    }
+
 
     if (!Array.isArray(selections) || !Array.isArray(imagePairs)) {
       console.error("❌ Invalid data: selections or imagePairs are undefined.");
@@ -186,6 +240,20 @@ const Game = () => {
         setAlreadyGuessed(alreadyGuessed);
       }
 
+      // ✅ Restore attempts and completedAttempts for guest users
+      if (!isUserLoggedIn()) {
+        const storedAttempts = localStorage.getItem("attempts");
+        const storedCompletedAttempts = localStorage.getItem("completedAttempts");
+
+        if (storedAttempts) {
+          setAttempts(JSON.parse(storedAttempts));
+        }
+
+        if (storedCompletedAttempts) {
+          setCompletedAttempts(JSON.parse(storedCompletedAttempts));
+        }
+      }
+
       try {
         if (isLoggedIn) {
           console.log("Fetching user selections, tries, and completed selections...");
@@ -205,6 +273,35 @@ const Game = () => {
             setAlreadyGuessed(alreadyGuessed);
             localStorage.setItem("alreadyGuessed", JSON.stringify(alreadyGuessed));
           }
+
+          if (statsResponse.data.attempts) {
+            console.log("✅ Restoring attempts from backend.");
+
+            const parsedAttempts = statsResponse.data.attempts.map(attempt =>
+              Array.isArray(attempt) ? attempt.map(selected => selected === true || selected === "true") : []
+            ); // ✅ Ensure values remain booleans
+
+            setAttempts(parsedAttempts);
+            localStorage.setItem("attempts", JSON.stringify(parsedAttempts));
+          } else {
+            console.log("⚠️ No attempts found, keeping previous state.");
+
+            const storedAttempts = localStorage.getItem("attempts");
+            if (storedAttempts) {
+              try {
+                setAttempts(JSON.parse(storedAttempts));
+              } catch (error) {
+                console.error("⚠️ Error parsing stored attempts, resetting to empty:", error);
+                setAttempts([]);
+              }
+            }
+          }
+
+          if (statsResponse.data.completedAttempts) {
+            setCompletedAttempts(statsResponse.data.completedAttempts);
+            localStorage.setItem("completedAttempts", JSON.stringify(statsResponse.data.completedAttempts));
+          }
+
         } else {
           console.log("Handling guest user selections...");
           const savedSelections = localStorage.getItem("selections");
@@ -264,30 +361,42 @@ const Game = () => {
         }
       }
 
-      // ✅ **Ensure selections reset properly if LSMD is outdated**
+      // ✅ **Ensure selections, attempts, completedSelections, and completedAttempts reset properly if LSMD is outdated**
       if (!lastSelectionMadeDate || lastSelectionMadeDate !== today) {
-        console.log("🆕 New puzzle detected. Resetting selections BEFORE updating LSMD.");
+        console.log("🆕 New puzzle detected. Resetting selections, attempts, completedSelections, and completedAttempts BEFORE updating LSMD.");
 
         // **Clear localStorage before making API call**
         localStorage.removeItem("selections");
-        localStorage.removeItem("completedSelections");
+        localStorage.removeItem("completedSelections"); // ✅ Reset completedSelections for new puzzle
+        localStorage.removeItem("attempts");
+        localStorage.removeItem("completedAttempts");
+        localStorage.removeItem("alreadyGuessed");
 
         userSelections = [];
         userCompletedSelections = [];
+        setAttempts([]);
+        setCompletedSelections([]); // ✅ Reset completedSelections in state
+        setCompletedAttempts([]);
+        setAlreadyGuessed([]);
 
-        console.log("🗑️ Selections cleared:", userSelections);
+        console.log("🗑️ Selections, attempts, completedSelections, and completedAttempts cleared:", userSelections);
 
         if (isLoggedIn) {
-          await axiosInstance.put("/stats/selections", { selections: [], lastSelectionMadeDate: today });
+          await axiosInstance.put("/stats/selections", { selections: [], attempts: [], completedSelections: [], completedAttempts: [], lastSelectionMadeDate: today });
         } else {
           localStorage.setItem("selections", JSON.stringify([]));
+          localStorage.setItem("attempts", JSON.stringify([]));
+          localStorage.setItem("completedSelections", JSON.stringify([])); // ✅ Reset completedSelections for guests
+          localStorage.setItem("completedAttempts", JSON.stringify([])); // ✅ Reset completedAttempts for guests
+          localStorage.setItem("alreadyGuessed", JSON.stringify([]));
           localStorage.setItem("lastSelectionMadeDate", today);
         }
 
         console.log(`✅ LSMD Updated to ${today}`);
       } else {
-        console.log("✅ Persisting selections as LSMD matches today's date.");
+        console.log("✅ Persisting selections, attempts, completedSelections, and completedAttempts as LSMD matches today's date.");
       }
+
 
       // ✅ **Ensure selections persist across refreshes during active gameplay**
       if (!gameCompletedToday) {
@@ -321,14 +430,42 @@ const Game = () => {
       console.log("📦 Puzzle Response:", puzzleResponse.data);
 
       if (puzzleResponse.data?.imagePairs?.length > 0) {
-        const pairs = puzzleResponse.data.imagePairs.map((pair) => ({
-          human: pair.humanImageURL,
-          ai: pair.aiImageURL,
-          images: Math.random() > 0.5
-            ? [pair.humanImageURL, pair.aiImageURL]
-            : [pair.aiImageURL, pair.humanImageURL],
-        }));
+        const getRandomizedPairs = (pairs) => {
+          return pairs.map((pair) => ({
+            human: pair.humanImageURL,
+            ai: pair.aiImageURL,
+            images: Math.random() > 0.5
+              ? [pair.humanImageURL, pair.aiImageURL]
+              : [pair.aiImageURL, pair.humanImageURL],
+          }));
+        };
 
+        const initializeImagePairs = (imagePairsData) => {
+          const today = getTodayInEST();
+          const lastUpdatedDate = localStorage.getItem("lastUpdatedDate");
+
+          // ✅ Reset only if a new day is detected
+          if (lastUpdatedDate !== today) {
+            console.log("🌅 New day detected! Resetting randomizedImagePairs.");
+            localStorage.removeItem("randomizedImagePairs");
+            localStorage.setItem("lastUpdatedDate", today);
+          }
+
+          let storedPairs = localStorage.getItem("randomizedImagePairs");
+
+          // ✅ Always fetch new image pairs if storedPairs is missing
+          if (!storedPairs || lastUpdatedDate !== today) {
+            console.log("🎲 Fetching and randomizing new image pairs.");
+            const randomizedPairs = getRandomizedPairs(imagePairsData);
+            localStorage.setItem("randomizedImagePairs", JSON.stringify(randomizedPairs));
+            return randomizedPairs;
+          }
+
+          console.log("🔄 Using cached image pairs from localStorage.");
+          return JSON.parse(storedPairs);
+        };
+
+        const pairs = initializeImagePairs(puzzleResponse.data.imagePairs);
         console.log("🖼️ Setting imagePairs:", pairs);
         setImagePairs(pairs);
         localStorage.setItem("completedPairs", JSON.stringify(puzzleResponse.data.imagePairs));
@@ -391,6 +528,16 @@ const Game = () => {
   };
 
   // Game logic: Initialize or restore game state based on completion status
+
+  useEffect(() => {
+    const hasPlayedBefore = localStorage.getItem("hasPlayedBefore");
+
+    if (!hasPlayedBefore) {
+      setIsInfoOpen(true); // Show info modal for first-time users
+      localStorage.setItem("hasPlayedBefore", "true"); // Mark that they have played
+    }
+  }, []);
+
   useEffect(() => {
     if (!isGameComplete) {
       console.log("Initializing game...");
@@ -430,37 +577,49 @@ const Game = () => {
   }, [userId, isGameComplete, imagePairs.length]);
 
   useEffect(() => {
-    const disableContextMenu = (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    };
-
-    const disableLongPress = (event) => {
-      if (event.target.tagName === 'IMG') {
-        event.preventDefault();
-        event.stopPropagation();
+    const disableZoom = (event) => {
+      if (!document.querySelector(".zoomable")) {
+        if (event.ctrlKey || event.metaKey || event.deltaY) {
+          event.preventDefault();
+        }
       }
     };
-
-    // Add event listeners to block right-click and long-press
-    document.addEventListener('contextmenu', disableContextMenu, { capture: true });
-    document.addEventListener('touchstart', disableLongPress, { passive: false, capture: true });
-    document.addEventListener('touchend', disableLongPress, { passive: false, capture: true });
-    document.addEventListener('pointerdown', disableLongPress, { passive: false, capture: true });
-    document.addEventListener('pointerup', disableLongPress, { passive: false, capture: true });
-    document.addEventListener('mousedown', disableLongPress, { passive: false, capture: true });
-    document.addEventListener('mouseup', disableLongPress, { passive: false, capture: true });
-
-    return () => {
-      document.removeEventListener('contextmenu', disableContextMenu, { capture: true });
-      document.removeEventListener('touchstart', disableLongPress, { capture: true });
-      document.removeEventListener('touchend', disableLongPress, { capture: true });
-      document.removeEventListener('pointerdown', disableLongPress, { capture: true });
-      document.removeEventListener('pointerup', disableLongPress, { capture: true });
-      document.removeEventListener('mousedown', disableLongPress, { capture: true });
-      document.removeEventListener('mouseup', disableLongPress, { capture: true });
+    
+    const handleZoomReset = (event) => {
+      const zoomableImage = document.querySelector(".zoomable");
+      if (zoomableImage && event.scale < 1) {
+        zoomableImage.style.transform = "scale(1)"; // Reset zoom to default when pinch-in detected
+      }
     };
+    
+    const disableTouchZoom = (event) => {
+      if (!event.target.closest(".zoomable")) {
+        event.preventDefault();
+      }
+    };
+    
+    const disableContextMenu = (event) => {
+      event.preventDefault();
+    };
+    
+    // Prevent right-click (context menu)
+    document.addEventListener("contextmenu", disableContextMenu);
+    
+    // Prevent zooming gestures except on .zoomable images
+    document.addEventListener("wheel", disableZoom, { passive: false });
+    document.addEventListener("keydown", disableZoom);
+    document.addEventListener("gesturestart", disableTouchZoom);
+    document.addEventListener("gesturechange", handleZoomReset);
+    
+    return () => {
+      document.removeEventListener("contextmenu", disableContextMenu);
+      document.removeEventListener("wheel", disableZoom);
+      document.removeEventListener("keydown", disableZoom);
+      document.removeEventListener("gesturestart", disableTouchZoom);
+      document.removeEventListener("gesturechange", handleZoomReset);
+    };      
   }, []);
+  
 
   // Persist isGameComplete state across refreshes
   useEffect(() => {
@@ -492,13 +651,28 @@ const Game = () => {
   // Monitor updates to imagePairs
   useEffect(() => {
     console.log("Image pairs state updated:", imagePairs);
+
     if (imagePairs.length > 0) {
+      // Existing logic for updating Swiper
       setTimeout(() => {
         if (swiperRef.current) {
           console.log("Updating Swiper to current index:", currentIndex);
           swiperRef.current.slideToLoop(currentIndex, 0);
         }
       }, 100);
+
+      // 🔄 **New Image Preloading Logic**
+      const loadingState = {};
+      imagePairs.forEach((pair, index) => {
+        pair.images.forEach((image, position) => {
+          loadingState[`${index}-${position}`] = true; // Mark as loading
+          const img = new Image();
+          img.src = image;
+          img.onload = () => handleImageLoad(index, position);
+          img.onerror = () => handleImageError(index, position);
+        });
+      });
+      setImageLoading((prev) => ({ ...prev, ...loadingState }));
     }
   }, [currentIndex, imagePairs]);
 
@@ -527,11 +701,15 @@ const Game = () => {
   useEffect(() => {
     if (!isLoggedIn) {
       const savedCompletedSelections = localStorage.getItem("completedSelections");
+      const parsedCompletedSelections = savedCompletedSelections ? JSON.parse(savedCompletedSelections) : [];
 
-      if (completedSelections.length === 0 && savedCompletedSelections) {
+      // ✅ Prevent infinite loop: Only restore if necessary
+      if (completedSelections.length === 0 && parsedCompletedSelections.length > 0) {
         console.log("Restoring completedSelections from localStorage for guest user.");
-        setCompletedSelections(JSON.parse(savedCompletedSelections));
-      } else if (completedSelections.length > 0 && JSON.stringify(completedSelections) !== savedCompletedSelections) {
+        setCompletedSelections(parsedCompletedSelections);
+      }
+      // ✅ Prevent unnecessary updates: Only save to localStorage if values have actually changed
+      else if (completedSelections.length > 0 && JSON.stringify(completedSelections) !== JSON.stringify(parsedCompletedSelections)) {
         console.log("Persisting completedSelections to localStorage for guest user.");
         localStorage.setItem("completedSelections", JSON.stringify(completedSelections));
       }
@@ -539,28 +717,49 @@ const Game = () => {
       console.log("Syncing completedSelections with backend...");
       saveCompletedSelectionsToBackend(completedSelections);
     }
-  }, [completedSelections, isLoggedIn, isGameComplete]); // ✅ Ensures proper sync when game is complete 
+  }, [completedSelections, isLoggedIn, isGameComplete]);
 
-  // Reset completedSelections when a new day starts
+  // ✅ Existing useEffect that resets completedSelections when a new day starts
   useEffect(() => {
     const today = getTodayInEST();
     const lastPlayedDate = localStorage.getItem("lastPlayedDate");
 
     if (!isGameComplete && lastPlayedDate !== today) {
-      console.log("New day detected. Resetting completedSelections.");
+      console.log("New day detected. Resetting completedSelections and completedAttempts.");
 
+      // ✅ Reset completedSelections
       setCompletedSelections([]);
       localStorage.removeItem("completedSelections");
 
-      if (isLoggedIn) {
-        console.log("📡 Resetting completedSelections in the backend...");
+      // ✅ Reset completedAttempts
+      setCompletedAttempts([]);
+      localStorage.removeItem("completedAttempts");
+
+      if (isUserLoggedIn()) {
+        console.log("📡 Resetting completedSelections and completedAttempts in the backend...");
         axiosInstance.put(`/stats/completed-selections/${userId}`, { completedSelections: [] })
           .then(() => console.log("✅ completedSelections reset in backend"))
           .catch(error => console.error("❌ Error resetting completedSelections in backend:", error));
+
+        axiosInstance.put(`/stats/completed-attempts`, { completedAttempts: [] })
+          .then(() => console.log("✅ completedAttempts reset in backend"))
+          .catch(error => console.error("❌ Error resetting completedAttempts in backend:", error));
       }
     }
   }, [isGameComplete]);
 
+  useEffect(() => {
+    const today = getTodayInEST();
+    const lastSelectionMadeDate = localStorage.getItem("lastSelectionMadeDate");
+
+    // ✅ Reset attempts[] if lastSelectionMadeDate is outdated
+    if (!lastSelectionMadeDate || lastSelectionMadeDate !== today) {
+      console.log("🌅 New day detected. Resetting attempts for guest user.");
+      setAttempts([]);
+      localStorage.setItem("attempts", JSON.stringify([]));
+      localStorage.setItem("lastSelectionMadeDate", today);
+    }
+  }, [isGameComplete]); // ✅ Ensure it re-triggers after a game completes  
 
   // ✅ Now, update `lastPlayedDate` **only when the user actually completes a game**
   useEffect(() => {
@@ -650,20 +849,6 @@ const Game = () => {
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
-
-
-  const encouragementMessages = [
-    "Keep it up!",
-    "You're doing great!",
-    "Almost there!",
-    "Keep pushing!",
-    "You're doing awesome!",
-  ];
-
-  const getRandomEncouragement = () => {
-    const randomIndex = Math.floor(Math.random() * encouragementMessages.length);
-    return encouragementMessages[randomIndex];
-  };
 
   const fetchAndSetStats = async (userId) => {
     if (!userId) {
@@ -764,32 +949,79 @@ const Game = () => {
   };
 
   const handleSelection = (selectedImage, isHumanSelection) => {
-    console.log("Image clicked:", selectedImage, "Is human:", isHumanSelection);
-
     const updatedSelections = [...selections];
-    updatedSelections[currentIndex] = {
-      selected: selectedImage,
-      isHumanSelection,
-    };
 
-    console.log("Updated selections:", updatedSelections);
+    // Ensure index exists before updating
+    if (!updatedSelections[currentIndex]) {
+      updatedSelections[currentIndex] = { selected: null, isHumanSelection: false };
+    }
 
-    // Update selections in both the database and local storage
+    // Toggle selection (if clicked again, it removes selection)
+    if (updatedSelections[currentIndex].selected === selectedImage) {
+      updatedSelections[currentIndex] = null;
+    } else {
+      updatedSelections[currentIndex] = { selected: selectedImage, isHumanSelection };
+    }
+
     updateSelections(updatedSelections);
     localStorage.setItem("selections", JSON.stringify(updatedSelections));
 
-    // Move to the next pair
-    setTimeout(() => {
-      if (swiperRef.current) {
-        const nextIndex = currentIndex + 1 < imagePairs.length ? currentIndex + 1 : 0;
-        setCurrentIndex(nextIndex);
-        swiperRef.current.slideToLoop(nextIndex);
+    // ✅ Force Submit Button State Update
+    const isAllSelected = updatedSelections.filter(Boolean).length === imagePairs.length;
+    if (isAllSelected) {
+      document.querySelector(".submit-button").classList.add("enabled");
+    } else {
+      document.querySelector(".submit-button").classList.remove("enabled");
+    }
+
+    // Check if user has seen overlays before
+    const hasSeenOverlays = localStorage.getItem("hasSeenOverlays") === "true";
+
+    if (!hasSeenOverlays) {
+      // Show "Swipe right" overlay only on first selection of first image pair
+      if (!showSwipeRightOverlay && updatedSelections.filter(Boolean).length === 1 && currentIndex === 0) {
+        setShowSwipeRightOverlay(true);
+        setTimeout(() => setShowSwipeRightOverlay(false), 2000);
       }
-    }, 200);
+    }
+  };
+
+
+  const handleSwipe = (swiper) => {
+    setCurrentIndex(swiper.realIndex);
+
+    // Check if user has seen overlays before
+    const hasSeenOverlays = localStorage.getItem("hasSeenOverlays") === "true";
+
+    if (!hasSeenOverlays) {
+      // Show "Swipe left to go back" overlay after the first swipe (only once)
+      if (!hasSeenSwipeLeft && swiper.realIndex > 0) {
+        setShowSwipeLeftOverlay(true);
+        setTimeout(() => setShowSwipeLeftOverlay(false), 2000);
+        setHasSeenSwipeLeft(true);
+      }
+
+      // Show "Double tap to enlarge" overlay after the second swipe (only once)
+      if (!hasSeenDoubleTap && swiper.realIndex > 1) {
+        setShowDoubleTapOverlay(true);
+        setTimeout(() => setShowDoubleTapOverlay(false), 2000);
+        setHasSeenDoubleTap(true);
+      }
+
+      // Show "Tap info icon for more help" overlay after the fourth swipe (only once)
+      if (!showInfoOverlay && swiper.realIndex > 2) {
+        setShowInfoOverlay(true);
+        setTimeout(() => {
+          setShowInfoOverlay(false);
+          // Mark overlays as seen after all have displayed
+          localStorage.setItem("hasSeenOverlays", "true");
+        }, 2000);
+      }
+    }
   };
 
   const handleCompletionShare = () => {
-    // Ensure completedSelections and imagePairs are available
+    // Ensure completedSelections, alreadyGuessed, and imagePairs are available
     if (!completedSelections.length || !imagePairs.length) {
       alert("No data available to share today's puzzle!");
       return;
@@ -806,24 +1038,22 @@ const Game = () => {
     // Get the puzzle number dynamically
     const puzzleNumber = calculatePuzzleNumber();
 
-    // Build the visual representation of results
-    const resultsVisual = completedSelections
-      .map((selection, index) => {
-        const isCorrect = selection?.selected === imagePairs[index]?.human;
-        return isCorrect ? "🟢" : "🔴";
-      })
+    const formattedGuesses = completedAttempts
+      .map(attempt => attempt
+        .map((selected) => (selected ? "🟢" : "🔴"))
+        .join(" ")
+      ).join("\n");
+
+    // Build the final attempt separately
+    const finalAttempt = completedSelections
+      .map((selection, index) => (selection?.selected === imagePairs[index]?.human ? "🟢" : "🔴"))
       .join(" ");
 
     // Add placeholder for painting emojis
     const paintings = "🖼️ ".repeat(imagePairs.length).trim();
 
-    // Construct the shareable text
-    const shareableText = `
-  Artalyze #${puzzleNumber} ${score}/${imagePairs.length}
-  ${resultsVisual}
-  ${paintings}
-  Try it at: artalyze.app
-    `.trim();
+    // Construct the shareable text with ALL ATTEMPTS properly included
+    const shareableText = `Artalyze #${puzzleNumber} ${score}/${imagePairs.length}\n${formattedGuesses}\n${finalAttempt}\n${paintings}\n\nCheck it out here:\nhttps://artalyze.app`;
 
     // Check if the device supports native sharing
     if (navigator.share) {
@@ -865,8 +1095,34 @@ const Game = () => {
   };
 
   const handleImageClick = (imageUrl) => {
-    setEnlargedImage(imageUrl);
-    setEnlargedImageMode("completion-screen");
+    if (!imageLoading[imageUrl]) {  // Only open if it's fully loaded
+      console.log("Opening enlarged image:", imageUrl);
+      setEnlargedImage(imageUrl);
+      setEnlargedImageMode("game-screen");
+    }
+  };
+
+  const handleImageLoad = (index, position) => {
+    setImageLoading((prev) => ({ ...prev, [`${index}-${position}`]: false }));
+  };
+
+  const handleImageError = (index, position) => {
+    console.error(`Failed to load image at index ${index}, position ${position}`);
+    setImageLoading((prev) => ({ ...prev, [`${index}-${position}`]: false }));
+  };
+
+  const preloadImages = (imagePairs) => {
+    const loadingState = {};
+    imagePairs.forEach((pair, index) => {
+      pair.images.forEach((image, position) => {
+        loadingState[`${index}-${position}`] = true; // Mark as loading
+        const img = new Image();
+        img.src = image;
+        img.onload = () => handleImageLoad(index, position);
+        img.onerror = () => handleImageError(index, position);
+      });
+    });
+    setImageLoading((prev) => ({ ...prev, ...loadingState }));
   };
 
   const closeEnlargedImage = () => {
@@ -877,21 +1133,31 @@ const Game = () => {
     clearTimeout(longPressTimer.current);
   };
 
-
   const handleSubmit = async () => {
     console.log("📡 Submit button pressed!");
 
     if (isSubmitting) return; // ✅ Prevent multiple rapid submissions
     setIsSubmitting(true);
 
-    const currentSubmission = selections.map((selection) => selection.selected);
+    // ✅ Convert current submission into booleans
+    const currentSubmission = selections.map((selection, index) => selection.selected === imagePairs[index].human);
 
-    // ✅ Check if this exact submission was already made
-    const isDuplicateSubmission = alreadyGuessed.some(
-      (pastSubmission) => JSON.stringify(pastSubmission) === JSON.stringify(currentSubmission)
+    // ✅ Ensure attempts and alreadyGuessed are correctly restored and checked
+    const storedAttempts = localStorage.getItem("attempts");
+    const storedAlreadyGuessed = localStorage.getItem("alreadyGuessed");
+
+    const parsedAttempts = storedAttempts ? JSON.parse(storedAttempts) : attempts;
+    const parsedAlreadyGuessed = storedAlreadyGuessed ? JSON.parse(storedAlreadyGuessed) : alreadyGuessed;
+
+    // ✅ Allow submission if it's a perfect attempt (all correct)
+    const isPerfectAttempt = currentSubmission.every((selected) => selected === true);
+
+    // ✅ Ensure the duplicate check correctly references restored attempts
+    const isDuplicateSubmission = [...parsedAlreadyGuessed, ...parsedAttempts].some(
+      (pastAttempt) => JSON.stringify(pastAttempt.map(Boolean)) === JSON.stringify(currentSubmission.map(Boolean))
     );
 
-    if (isDuplicateSubmission) {
+    if (isDuplicateSubmission && !isPerfectAttempt) {
       console.log("⛔ Duplicate full submission detected! Showing overlay.");
       setShowDuplicateOverlay(true);
       setTimeout(() => setShowDuplicateOverlay(false), 1000);
@@ -899,19 +1165,25 @@ const Game = () => {
       return;
     }
 
-    // ✅ Store new guess in `alreadyGuessed`
-    const updatedGuesses = [...alreadyGuessed, currentSubmission];
-    setAlreadyGuessed(updatedGuesses);
-    localStorage.setItem("alreadyGuessed", JSON.stringify(updatedGuesses));
+    // ✅ Store `currentSubmission` in `attempts` as booleans but leave `alreadyGuessed[]` unchanged
+    const updatedGuesses = [...parsedAlreadyGuessed, selections.map(selection => selection.selected)];
+    const updatedAttempts = [...parsedAttempts, currentSubmission.map(Boolean)]; // ✅ Ensures booleans are stored
 
-    console.log("✅ Submission stored in alreadyGuessed:", updatedGuesses);
+    setAlreadyGuessed(updatedGuesses);
+    setAttempts(updatedAttempts);
+
+    localStorage.setItem("alreadyGuessed", JSON.stringify(updatedGuesses));
+    localStorage.setItem("attempts", JSON.stringify(updatedAttempts));
+
+    console.log("✅ Submission stored in alreadyGuessed and attempts:", updatedGuesses, updatedAttempts);
 
     if (isUserLoggedIn()) {
       try {
         await axiosInstance.put("/stats/already-guessed", { alreadyGuessed: updatedGuesses });
-        console.log("✅ alreadyGuessed updated in backend.");
+        await axiosInstance.put("/stats/attempts", { attempts: updatedAttempts });
+        console.log("✅ alreadyGuessed and attempts updated in backend.");
       } catch (error) {
-        console.error("❌ Error updating alreadyGuessed:", error);
+        console.error("❌ Error updating alreadyGuessed/attempts:", error);
       }
     }
 
@@ -929,6 +1201,30 @@ const Game = () => {
       console.log("🏁 Game completed! Correct answers:", correct);
       setIsGameComplete(true);
       setShowOverlay(false);
+
+      // ✅ Move attempts to completedAttempts upon game completion
+      const updatedCompletedAttempts = [...completedAttempts, ...updatedAttempts];
+
+      setCompletedAttempts(updatedCompletedAttempts);
+      localStorage.setItem("completedAttempts", JSON.stringify(updatedCompletedAttempts));
+
+      if (isUserLoggedIn()) {
+        try {
+          await axiosInstance.put("/stats/completed-attempts", { completedAttempts: updatedCompletedAttempts });
+          console.log("✅ Completed attempts saved in backend.");
+        } catch (error) {
+          console.error("❌ Error saving completed attempts:", error);
+        }
+      }
+
+      // ✅ Reset attempts for next game
+      setAttempts([]);
+      localStorage.setItem("attempts", JSON.stringify([]));
+
+      if (isUserLoggedIn()) {
+        await axiosInstance.put("/stats/attempts", { attempts: [] });
+      }
+
       handleGameComplete();
     } else {
       console.log("🔄 Guess submitted, but game is NOT complete yet. Showing mid-turn overlay...");
@@ -939,16 +1235,39 @@ const Game = () => {
     setIsSubmitting(false);
   };
 
-
   const handleStatsModalClose = () => {
     setIsStatsOpen(false);
     setTimeout(() => setIsStatsModalDismissed(true), 300); // Trigger animation after modal close animation
   };
 
-  const isSubmitEnabled = selections.length === imagePairs.length;
+  const isSubmitEnabled = imagePairs.length > 0 && selections.filter(Boolean).length === imagePairs.length;
 
   return (
     <div className={`game-container ${darkMode ? "dark-mode" : ""}`}>
+
+      {/* Swipe Right Overlay */}
+      {showSwipeRightOverlay && (
+        <div className="swipe-overlay">
+          <span>Swipe right</span>
+          <FaLongArrowAltRight className="swipe-arrow" />
+        </div>
+      )}
+
+      {/* Swipe Left Overlay */}
+      {showSwipeLeftOverlay && (
+        <div className="swipe-overlay">
+          <FaLongArrowAltLeft className="swipe-arrow" />
+          <span>Swipe left to go back</span>
+        </div>
+      )}
+
+      {/* Double Tap Overlay */}
+      {showDoubleTapOverlay && (
+        <div className="double-tap-overlay">
+          <span>Double tap to enlarge image</span>
+        </div>
+      )}
+
       {/* Mobile Warning Overlay */}
       {showMobileWarning && (
         <div className="mobile-warning-overlay">
@@ -978,9 +1297,12 @@ const Game = () => {
         </div>
       )}
 
-
-
-
+      {/* Info Overlay (Shows after fourth swipe) */}
+      {showInfoOverlay && (
+        <div className="info-overlay">
+          <span>Tap <FaInfoCircle className="info-icon" /> for more help</span>
+        </div>
+      )}
 
       {/* Full Page Loading Screen */}
       {loading && (
@@ -995,7 +1317,9 @@ const Game = () => {
 
       {/* Top Bar */}
       <div className="top-bar">
-        <div className="app-title">Artalyze</div>
+        <div className="app-title" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+          Artalyze
+        </div>
         <div className="icons-right">
           <FaInfoCircle className="icon" title="Info" onClick={() => setIsInfoOpen(true)} />
           <FaChartBar className="icon" title="Stats" onClick={() => setIsStatsOpen(true)} />
@@ -1015,10 +1339,8 @@ const Game = () => {
         correctCount={correctCount}
         isGameComplete={isGameComplete}
         completedSelections={completedSelections}
+        attempts={completedAttempts} // ✅ Ensure attempts are passed
       />
-
-
-
 
       <SettingsModal
         isOpen={isSettingsOpen}
@@ -1028,137 +1350,78 @@ const Game = () => {
 
       {!isGameComplete && (
         <>
-          <h1 className="game-header">Guess the human painting from each pair!</h1>
+          <h1 className="game-header">Guess the human artwork from each pair!</h1>
 
-          {/* 
-<div className="progress-bar-container">
-  <div className="progress-bar">
-    {[...Array(5)].map((_, index) => (
-      <div
-        key={index}
-        className="progress-bar-segment"
-        style={{
-          backgroundColor: selections[index] ? "#4d73af" : "#e0e0e0",  // Fill based on selections
-        }}
-      />
-    ))}
-  </div>
-</div>
-*/}
-
-          <div className={`status-bar ${showOverlay ? 'blurred' : ''}`}>
-            <div className="header-separator"></div>  {/* Add space between the header and the tries line */}
-
-            <div className="tries-left">
-              <span>Tries Left:</span>
-              {[...Array(triesLeft)].map((_, i) => (
-                <FaPalette key={i} className="palette-icon" />
-              ))}
-            </div>
+          {/* Tries Left Section (Above Image Pairs) */}
+          <div className="tries-left">
+            <span>Tries Left:</span>
+            {[...Array(triesLeft)].map((_, i) => (
+              <span key={i} className="tries-circle"></span>
+            ))}
           </div>
 
+          {/* Image Pairs */}
           {imagePairs && imagePairs.length > 0 ? (
-            <Swiper
-              loop={true}
-              onSlideChange={(swiper) => setCurrentIndex(swiper.realIndex)}
-              onSwiper={(swiper) => {
-                swiperRef.current = swiper;
-                swiper.slideToLoop(0);
-              }}
-            >
-              {imagePairs.map((pair, index) => (
-                <SwiperSlide key={index}>
-                  <div className="image-pair-container">
-                    {pair.images.map((image, idx) => (
-                      <div
-                        key={idx}
-                        className={`image-container ${selections[index]?.selected === image ? "selected" : ""}`}
-                        onClick={() => handleSelection(image, image === pair.human)}
-                      >
-                        <img
-                          src={image}
-                          alt={`Painting ${idx + 1}`}
-                          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                          onTouchStart={(e) => { handleLongPress(image); e.preventDefault(); e.stopPropagation(); }}
-                          onTouchEnd={handleRelease}
-                          onPointerDown={(e) => e.preventDefault()} // Prevents Chrome long-press
-                          onPointerUp={(e) => e.preventDefault()}
-                          onMouseDown={(e) => e.preventDefault()}
-                          draggable="false"
-                        />
+            <>
+              <Swiper
+                loop={true}
+                onSlideChange={handleSwipe} // ✅ Now using handleSwipe
+                onSwiper={(swiper) => {
+                  swiperRef.current = swiper;
+                  swiper.slideToLoop(0);
+                }}
+              >
+                {imagePairs.map((pair, index) => (
+                  <SwiperSlide key={index}>
+                    <div className="image-pair-container">
+                      {pair.images.map((image, idx) => (
+                        <div
+                          key={idx}
+                          className={`image-container ${selections[index]?.selected === image ? "selected" : ""}`}
+                        >
+                          {imageLoading[`${index}-${idx}`] && <div className="image-loader"></div>}
+                          <img
+                            src={image}
+                            alt={`Painting ${idx + 1}`}
+                            onClick={(e) => {
+                              const currentTime = new Date().getTime();
+                              const timeSinceLastTap = currentTime - lastTapTime.current;
 
-                      </div>
-                    ))}
-                  </div>
-                </SwiperSlide>
+                              if (timeSinceLastTap < 300) { // ✅ Double-tap detected
+                                clearTimeout(singleTapTimeout.current); // ✅ Cancel single tap selection
+                                if (!enlargedImage) { // ✅ Ensure enlargement only happens once
+                                  setEnlargedImage(null); // Ensure previous one is cleared
+                                  setTimeout(() => {
+                                    setEnlargedImage(image);
+                                    setEnlargedImageMode("game-screen");
+                                  }, 10); // Small delay prevents duplicate stacking
+                                }
+                              } else {
+                                singleTapTimeout.current = setTimeout(() => {
+                                  handleSelection(image, image === pair.human); // ✅ Select only if no double-tap
+                                }, 220);
+                              }
 
-
-              ))}
-            </Swiper>
+                              lastTapTime.current = currentTime;
+                            }}
+                            draggable="false"
+                            onLoad={() => handleImageLoad(index, idx)}
+                            onError={() => handleImageError(index, idx)}
+                            style={{ visibility: imageLoading[`${index}-${idx}`] ? "hidden" : "visible" }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </>
           ) : (
             <p>Loading...</p>
           )}
 
-          {enlargedImage && (
-            <div className="enlarge-modal" onClick={closeEnlargedImage}>
-              <div className="swiper-container">
-                <Swiper
-                  loop={true}
-                  initialSlide={enlargedImageIndex}
-                  onSlideChange={(swiper) => setEnlargedImageIndex(swiper.realIndex)}
-                  navigation={{
-                    prevEl: ".swiper-button-prev",
-                    nextEl: ".swiper-button-next",
-                  }}
-                  slidesPerView={1} // Show only one image per slide
-                  spaceBetween={10} // Add some space if needed between slides
-                >
-                  {imagePairs &&
-                    imagePairs.map((pair, index) => (
-                      <SwiperSlide key={index}>
-                        <div className="enlarged-image-container">
-                          {/* Display only one image per slide (human or AI) */}
-                          <img
-                            src={enlargedImage}
-                            alt="Enlarged view"
-                            className="enlarged-image"
-                            onClick={(e) => e.stopPropagation()}
-                            onContextMenu={(e) => e.preventDefault()}
-                            onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                            onTouchEnd={handleRelease}
-                            onPointerDown={(e) => e.preventDefault()} // 🔹 Blocks long-press options
-                            onPointerUp={(e) => e.preventDefault()}
-                            onMouseDown={(e) => e.preventDefault()}
-                          />
-
-
-                        </div>
-                      </SwiperSlide>
-                    ))}
-                </Swiper>
-              </div>
-              <div className="swiper-button-prev">&#8592;</div>
-              <div className="swiper-button-next">&#8594;</div>
-            </div>
-          )}
-
-          <div className="navigation-buttons">
-            {imagePairs.map((_, index) => (
-              <button
-                key={index}
-                className={`nav-button ${currentIndex === index ? 'active' : ''} ${selections[index]?.selected ? 'selected' : ''}`}
-                onClick={() => {
-                  setCurrentIndex(index);
-                  swiperRef.current.slideToLoop(index);
-                }}
-                aria-label={`Go to image pair ${index + 1}`} /* Accessibility */
-              />
-            ))}
-          </div>
-
-
-
-          <div className="button-container">
+          {/* Status Bar (Clear Left, Navigation Center, Submit Right) */}
+          <div className="status-bar">
             <button
               className={`clear-button ${selections.length > 0 ? 'enabled' : ''}`}
               onClick={() => {
@@ -1178,6 +1441,21 @@ const Game = () => {
               Clear
             </button>
 
+            {/* Navigation Buttons Centered */}
+            <div className="navigation-buttons">
+              {imagePairs.map((_, index) => (
+                <button
+                  key={index}
+                  className={`nav-button ${currentIndex === index ? 'active' : ''} ${selections[index]?.selected ? 'selected' : ''}`}
+                  onClick={() => {
+                    setCurrentIndex(index);
+                    swiperRef.current.slideToLoop(index);
+                  }}
+                  aria-label={`Go to image pair ${index + 1}`} /* Accessibility */
+                />
+              ))}
+            </div>
+
             <button
               className={`submit-button ${isSubmitEnabled ? 'enabled' : 'disabled'}`}
               onClick={handleSubmit}
@@ -1187,6 +1465,46 @@ const Game = () => {
             </button>
           </div>
 
+          {/* Enlarged Image Modal */}
+          {enlargedImage && (
+            <div className="enlarge-modal" onClick={closeEnlargedImage}>
+              <div className="swiper-container">
+                <Swiper
+                  loop={true}
+                  initialSlide={enlargedImageIndex}
+                  onSlideChange={(swiper) => setEnlargedImageIndex(swiper.realIndex)}
+                  navigation={{
+                    prevEl: ".swiper-button-prev",
+                    nextEl: ".swiper-button-next",
+                  }}
+                  slidesPerView={1}
+                  spaceBetween={10}
+                >
+                  {imagePairs &&
+                    imagePairs.map((pair, index) => (
+                      <SwiperSlide key={index}>
+                        <div className="enlarged-image-container">
+                          <div className="zoom-wrapper">
+                            <img
+                              src={enlargedImage}
+                              alt="Enlarged view"
+                              className="enlarged-image zoomable" /* ✅ Correct class */
+                              onClick={(e) => e.stopPropagation()} // Prevents modal from closing
+                              onContextMenu={(e) => e.preventDefault()} // Disable right-click
+                              onTouchStart={(e) => e.stopPropagation()} // Stop event bubbling
+                              onMouseDown={(e) => e.preventDefault()} // Prevent dragging
+                              draggable="false"
+                            />
+                          </div>
+                        </div>
+                      </SwiperSlide>
+                    ))}
+                </Swiper>
+              </div>
+              <div className="swiper-button-prev">&#8592;</div>
+              <div className="swiper-button-next">&#8594;</div>
+            </div>
+          )}
 
         </>
       )}
@@ -1194,17 +1512,8 @@ const Game = () => {
       {showOverlay && (
         <div className="mid-turn-overlay">
           <div className="mid-turn-overlay-content">
-            {correctCount === imagePairs.length - 1 ? ( // ✅ Dynamically check "1 away"
-              <>
-                <h2 className="mid-turn-overlay-title">Close! You're 1 away</h2>
-                <p className="mid-turn-overlay-message">You have {triesLeft} tries left</p>  {/* ✅ Now correct */}
-              </>
-            ) : correctCount >= 0 && correctCount <= 3 ? (
-              <>
-                <h2 className="mid-turn-overlay-title">{getRandomEncouragement()}</h2>
-                <p className="mid-turn-overlay-message">You have {triesLeft} tries left</p>
-              </>
-            ) : null}
+            <h2 className="mid-turn-overlay-title">{getMidTurnMessage(correctCount)}</h2>
+            <p className="mid-turn-overlay-message">You have {triesLeft} tries left</p>
             <button
               onClick={() => setShowOverlay(false)}
               className="mid-turn-overlay-try-again-button"
@@ -1215,10 +1524,10 @@ const Game = () => {
         </div>
       )}
 
-
-
       {isGameComplete && (
         <div className="completion-screen">
+
+          {/* Completion Message - Now Above Buttons and Score Badge */}
           <p className="completion-message">
             <strong>
               {correctCount === 5
@@ -1229,21 +1538,38 @@ const Game = () => {
             </strong>
           </p>
 
-          <div className="completion-score-container">
+          {/* Top Header with Stats, Score Badge, and Share Button */}
+          <div className="completion-header">
+            <button className="stats-button compact" onClick={() => setIsStatsOpen(true)}>
+              <FaChartBar /> Stats
+            </button>
+
             <span
-              className={`completion-score-badge ${correctCount === 5
+              className={`completion-score-badge compact ${correctCount === 5
                 ? "five-correct"
-                : correctCount === 0
-                  ? "zero-correct"
-                  : ""
+                : correctCount === 4
+                  ? "four-correct"
+                  : correctCount === 3
+                    ? "three-correct"
+                    : correctCount === 2
+                      ? "two-correct"
+                      : correctCount === 1
+                        ? "one-correct"
+                        : "zero-correct"
                 }`}
+              style={{ flexShrink: 0 }}
             >
-              {correctCount}/5 correct
+              Score: {correctCount}/5
             </span>
+
+            <button className="share-button compact" onClick={handleCompletionShare}>
+              <FaShareAlt /> Share
+            </button>
           </div>
 
+          {/* Thumbnail Grid - Two Rows for Large Screens, Single Column for Mobile */}
           <div className="horizontal-thumbnail-grid">
-            {/* First row: Pairs 1-3 */}
+            {/* First Row: First 3 Image Pairs */}
             <div className="first-row">
               {imagePairs.slice(0, 3).map((pair, index) => {
                 const selection = completedSelections[index];
@@ -1251,48 +1577,23 @@ const Game = () => {
                 return (
                   <div key={index} className="pair-thumbnails-horizontal">
                     <div
-                      className={`thumbnail-container human ${selection?.selected === pair.human ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
+                      className={`thumbnail-container human ${isCorrect ? "correct pulse" : ""}`}
                       onClick={() => setEnlargedImage(pair.human)}
                     >
-                      <img
-                        src={pair.human}
-                        alt={`Human Painting for pair ${index + 1}`}
-                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                        onTouchStart={(e) => { handleLongPress(image); e.preventDefault(); e.stopPropagation(); }}
-                        onTouchEnd={handleRelease}
-                        onPointerDown={(e) => e.preventDefault()} // Prevents Chrome long-press
-                        onPointerUp={(e) => e.preventDefault()}
-                        onMouseDown={(e) => e.preventDefault()}
-                        draggable="false"
-                      />
-
-
+                      <img src={pair.human} alt={`Human ${index + 1}`} draggable="false" />
                     </div>
                     <div
-                      className={`thumbnail-container ai ${selection?.selected === pair.ai ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
+                      className={`thumbnail-container ai ${!isCorrect && selection ? "incorrect pulse" : ""}`}
                       onClick={() => setEnlargedImage(pair.ai)}
                     >
-                      <img
-                        src={pair.ai}
-                        alt={`AI Painting for pair ${index + 1}`}
-                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                        onTouchStart={(e) => { handleLongPress(image); e.preventDefault(); e.stopPropagation(); }}
-                        onTouchEnd={handleRelease}
-                        onPointerDown={(e) => e.preventDefault()} // Prevents Chrome long-press
-                        onPointerUp={(e) => e.preventDefault()}
-                        onMouseDown={(e) => e.preventDefault()}
-                        draggable="false"
-                      />
-
-
-
+                      <img src={pair.ai} alt={`AI ${index + 1}`} draggable="false" />
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Second row: Pairs 4-5 */}
+            {/* Second Row: Last 2 Image Pairs */}
             <div className="second-row">
               {imagePairs.slice(3, 5).map((pair, index) => {
                 const selection = completedSelections[index + 3];
@@ -1300,40 +1601,16 @@ const Game = () => {
                 return (
                   <div key={index + 3} className="pair-thumbnails-horizontal">
                     <div
-                      className={`thumbnail-container human ${selection?.selected === pair.human ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
+                      className={`thumbnail-container human ${isCorrect ? "correct pulse" : ""}`}
                       onClick={() => setEnlargedImage(pair.human)}
                     >
-                      <img
-                        src={pair.human}
-                        alt={`Human Painting for pair ${index + 4}`}
-                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                        onTouchStart={(e) => { handleLongPress(image); e.preventDefault(); e.stopPropagation(); }}
-                        onTouchEnd={handleRelease}
-                        onPointerDown={(e) => e.preventDefault()} // Prevents Chrome long-press
-                        onPointerUp={(e) => e.preventDefault()}
-                        onMouseDown={(e) => e.preventDefault()}
-                        draggable="false"
-                      />
-
-
-
+                      <img src={pair.human} alt={`Human ${index + 4}`} draggable="false" />
                     </div>
                     <div
-                      className={`thumbnail-container ai ${selection?.selected === pair.ai ? (isCorrect ? "correct pulse" : "incorrect pulse") : ""}`}
+                      className={`thumbnail-container ai ${!isCorrect && selection ? "incorrect pulse" : ""}`}
                       onClick={() => setEnlargedImage(pair.ai)}
                     >
-                      <img
-                        src={pair.ai}
-                        alt={`AI Painting for pair ${index + 4}`}
-                        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                        onTouchStart={(e) => { handleLongPress(image); e.preventDefault(); e.stopPropagation(); }}
-                        onTouchEnd={handleRelease}
-                        onPointerDown={(e) => e.preventDefault()} // Prevents Chrome long-press
-                        onPointerUp={(e) => e.preventDefault()}
-                        onMouseDown={(e) => e.preventDefault()}
-                        draggable="false"
-                      />
-
+                      <img src={pair.ai} alt={`AI ${index + 4}`} draggable="false" />
                     </div>
                   </div>
                 );
@@ -1342,45 +1619,26 @@ const Game = () => {
           </div>
 
 
-
-
-          <div className="completion-buttons">
-            <button className="stats-button" onClick={() => setIsStatsOpen(true)}>
-              <FaChartBar /> See Stats
-            </button>
-            <button
-              className="share-button"
-              onClick={() =>
-                handleCompletionShare(
-                  selections.map((s) => s?.isHumanSelection),
-                  imagePairs
-                )
-              }
-            >
-              <FaShareAlt /> Share
-            </button>
-          </div>
         </div>
       )}
 
       {enlargedImage && (
-        <div className={`enlarge-modal ${enlargedImageMode}`} onClick={closeEnlargedImage}>
+        <div className="enlarge-modal" onClick={closeEnlargedImage}>
           <div className="enlarged-image-container">
             <img
               src={enlargedImage}
               alt="Enlarged view"
-              className="enlarged-image"
-              onClick={(e) => e.stopPropagation()}
-              onContextMenu={(e) => e.preventDefault()}
-              onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              onTouchEnd={handleRelease}
-              onPointerDown={(e) => e.preventDefault()} // 🔹 Blocks Chrome long-press save
-              onPointerUp={(e) => e.preventDefault()}
-              onMouseDown={(e) => e.preventDefault()}
+              className="zoomable" /* ✅ Add this class */
+              onClick={(e) => e.stopPropagation()} // Prevents modal from closing
+              onContextMenu={(e) => e.preventDefault()} // Disable right-click
+              onTouchStart={(e) => e.stopPropagation()} // Stop event bubbling
+              onMouseDown={(e) => e.preventDefault()} // Prevent dragging
+              draggable="false"
             />
           </div>
         </div>
       )}
+
 
     </div>
   );

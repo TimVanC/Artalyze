@@ -8,14 +8,16 @@ import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import PrivateRoute from "./routes/PrivateRoute";
 import { AuthProvider } from "./AuthContext";
+import { Analytics } from "@vercel/analytics/react";
 
-// Import Font Awesome CSS
+// Import Font Awesome and our custom styles
 import "@fortawesome/fontawesome-free/css/all.min.css";
-import "./App.css"; // Ensure this file contains dark mode styles
+import "./App.css";
 
 function AppContent() {
-  const { darkMode } = useDarkMode(); // ✅ Now inside the provider!
+  const { darkMode } = useDarkMode();
 
+  // Toggle dark mode class on the body element
   useEffect(() => {
     if (darkMode) {
       document.body.classList.add("dark-mode");
@@ -43,7 +45,8 @@ function App() {
   return (
     <AuthProvider>
       <DarkModeProvider>
-        <AppContent /> {/* ✅ Now, useDarkMode() is inside the provider! */}
+        <AppContent />
+        <Analytics />
       </DarkModeProvider>
     </AuthProvider>
   );

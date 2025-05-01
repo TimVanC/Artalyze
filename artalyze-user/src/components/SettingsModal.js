@@ -5,6 +5,7 @@ import "./SettingsModal.css";
 const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
   const { darkMode, setDarkMode } = useDarkMode();
 
+  // Toggle dark mode and sync with backend if user is logged in
   const toggleDarkMode = async () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
@@ -30,14 +31,15 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
     }
   };
 
+  // Clear user data and redirect to home page
   const handleLogout = () => {
-    localStorage.clear(); // Clear all local storage
-    window.location.href = "/"; // Redirect to the homepage or login page
+    localStorage.clear();
+    window.location.href = "/";
   };
 
   if (!isOpen) return null;
 
-  const currentYear = new Date().getFullYear(); // Dynamically fetch the current year
+  const currentYear = new Date().getFullYear();
 
   return (
     <div className="settings-modal-overlay">
@@ -89,6 +91,17 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
               className="settings-button"
               onClick={() => {
                 onClose();
+                window.open("/patch-notes.html", "_blank");
+              }}
+            >
+              Patch Notes
+            </button>
+          </li>
+          <li>
+            <button
+              className="settings-button"
+              onClick={() => {
+                onClose();
                 window.open("/terms-of-service.html", "_blank");
               }}
             >
@@ -101,9 +114,9 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
               onClick={() => {
                 onClose();
                 if (isLoggedIn) {
-                  handleLogout(); // Log out if user is logged in
+                  handleLogout();
                 } else {
-                  window.location.href = "/login"; // Redirect to login/create account page
+                  window.location.href = "/login";
                 }
               }}
             >

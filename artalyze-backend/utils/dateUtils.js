@@ -1,28 +1,33 @@
 const getTodayInEST = () => {
-  const now = new Date();
-  // Convert UTC time to EST by subtracting 5 hours
-  const estOffset = -5 * 3600000; // EST = UTC - 5 hours
-  const estDate = new Date(now.getTime() + estOffset);
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
 
-  // Format EST date as YYYY-MM-DD
-  const year = estDate.getUTCFullYear();
-  const month = String(estDate.getUTCMonth() + 1).padStart(2, '0'); // Months are 0-based
-  const day = String(estDate.getUTCDate()).padStart(2, '0');
+  const parts = formatter.formatToParts(new Date());
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
 
+  console.log(`🕒 Debug: Detected TODAY in EST as: ${year}-${month}-${day}`); // Debugging line
   return `${year}-${month}-${day}`;
 };
 
 const getYesterdayInEST = () => {
   const now = new Date();
-  const estOffset = -5 * 3600000; // EST = UTC - 5 hours
-  const estDate = new Date(now.getTime() + estOffset - 24 * 3600000); // Subtract 24 hours for yesterday
+  now.setDate(now.getDate() - 1); // Subtract 1 day
 
-  // Format EST date as YYYY-MM-DD
-  const year = estDate.getUTCFullYear();
-  const month = String(estDate.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(estDate.getUTCDate()).padStart(2, '0');
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
 
-  return `${year}-${month}-${day}`;
+  const parts = formatter.formatToParts(now);
+  return `${parts.find(p => p.type === 'year').value}-${parts.find(p => p.type === 'month').value}-${parts.find(p => p.type === 'day').value}`;
 };
 
 module.exports = { getTodayInEST, getYesterdayInEST };

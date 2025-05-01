@@ -9,8 +9,7 @@ const axiosInstance = axios.create({
   },
 });
 
-
-// Attach token to all requests
+// Add authentication token to all outgoing requests
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("authToken");
@@ -24,15 +23,14 @@ axiosInstance.interceptors.request.use(
   }
 );
 
-// Handle potential authentication errors
+// Handle authentication errors and redirect to login if needed
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
       console.error("Authentication error, redirecting to login...");
-      // Add logic to redirect to login or clear token
-      localStorage.removeItem("authToken"); // Optionally remove the token
-      window.location.href = "/login"; // Redirect to login page
+      localStorage.removeItem("authToken");
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   }

@@ -1,0 +1,94 @@
+/* Importing the same font as used in Privacy Policy */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+/* General Page Styles */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f7f7f7;
+    color: #333;
+    margin: 0;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Page Title */
+h1 {
+    text-align: left;
+    font-size: 32px;
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 20px;
+}
+
+/* Patch Notes Content Wrapper */
+.content-wrapper {
+    background: white;
+    max-width: 900px;
+    width: 90%;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* Last Updated Date */
+.last-updated {
+    font-style: italic;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+/* Section Titles */
+h2 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-top: 30px;
+    margin-bottom: 10px;
+    color: #222;
+}
+
+h3 {
+    font-size: 20px;
+    font-weight: 500;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+/* Lists */
+ul {
+    padding-left: 20px;
+    margin-top: 5px;
+    margin-bottom: 15px;
+}
+
+li {
+    margin-bottom: 8px;
+    line-height: 1.6;
+}
+
+/* Code Blocks */
+code {
+    font-family: monospace;
+    background-color: #eee;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .content-wrapper {
+        width: 95%;
+        padding: 20px;
+    }
+
+    h1 {
+        font-size: 28px;
+        text-align: center;
+    }
+}

@@ -1,0 +1,3 @@
+# User Panel
+src/App.js merge=ours
+src/utils/axiosInstance.js merge=ours

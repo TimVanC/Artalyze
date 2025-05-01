@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './ManageUsers.css';
 
+// Page for managing user accounts and permissions
 const ManageUsers = () => {
+  // State for users list and form data
   const [users, setUsers] = useState([]);
   const [formState, setFormState] = useState({
     firstName: '',
@@ -14,10 +16,12 @@ const ManageUsers = () => {
   const [editUserId, setEditUserId] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Fetch users when component mounts
   useEffect(() => {
     fetchUsers();
   }, []);
 
+  // Get all users from the server
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('adminToken');
@@ -31,15 +35,14 @@ const ManageUsers = () => {
       setErrorMessage('Failed to fetch users.');
     }
   };
-  
 
-  // Handle form input changes
+  // Update form state when inputs change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormState({ ...formState, [name]: value });
   };
 
-  // Handle form submission
+  // Save new or updated user
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -64,7 +67,7 @@ const ManageUsers = () => {
     }
   };
 
-  // Handle delete user
+  // Remove a user from the system
   const handleDeleteUser = async (userId) => {
     try {
       await axios.delete(`/api/admin/users/${userId}`, {
@@ -78,7 +81,7 @@ const ManageUsers = () => {
     }
   };
 
-  // Handle edit user
+  // Load user data into the form for editing
   const handleEditUser = (user) => {
     setEditUserId(user._id);
     setFormState({
@@ -125,7 +128,7 @@ const ManageUsers = () => {
           placeholder="Password"
           value={formState.password}
           onChange={handleInputChange}
-          required={!editUserId} // Password is required only for new users
+          required={!editUserId}
         />
         <label>
           Admin Access:

@@ -206,11 +206,19 @@ const Login = () => {
   return (
     <div className="login-container">
       <div className="login-top-bar">
-        <div className="login-app-title">Artalyze</div>
+        <div className="login-app-title" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+          Artalyze
+        </div>
       </div>
-      <div className="login-logo-container">
-        <img src={logo} alt="Artalyze Logo" className="login-app-logo" />
-      </div>
+      {step !== 3 && (
+        <div className="login-logo-container">
+          <img src={logo} alt="Artalyze Logo" className="login-app-logo" />
+        </div>
+      )}
+
+
+
+
       {
         step === 1 && (
           <form
@@ -311,10 +319,16 @@ const Login = () => {
             <div className="terms-container">
               <p>
                 By continuing, you agree to the{' '}
-                <a href="/terms-of-service">Terms of Service</a> and{' '}
-                <a href="/privacy-policy">Privacy Policy</a>.
+                <a href="/terms-of-service.html" target="_blank" rel="noopener noreferrer">
+                  Terms of Service
+                </a>{' '}
+                and{' '}
+                <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer">
+                  Privacy Policy
+                </a>.
               </p>
             </div>
+
           </form>
 
 
@@ -506,36 +520,36 @@ const Login = () => {
       )}
 
 
-{step === 4 && (
-  <form onSubmit={handleLoginSubmit}>
-    <h2>Log In</h2>
-    {/* Email field for pre-filled email */}
-    {email && (
-      <input
-        type="email"
-        placeholder="Enter your email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        readOnly
-        className="prefilled-email" // Optional class for styling pre-filled email
-      />
-    )}
-    <input
-      type="password"
-      placeholder="Enter your password"
-      value={password}
-      onChange={(e) => setPassword(e.target.value)}
-      required
-    />
-    <button type="button" className="forgot-password-button" onClick={handleForgotPassword}>
-      Forgot Password?
-    </button>
-    {error && <p className="error-message">{error}</p>}
-    <button type="submit" className="next-button">
-      Log In
-    </button>
-  </form>
-)}
+      {step === 4 && (
+        <form onSubmit={handleLoginSubmit}>
+          <h2>Log In</h2>
+          {/* Email field for pre-filled email */}
+          {email && (
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              readOnly
+              className="prefilled-email" // Optional class for styling pre-filled email
+            />
+          )}
+          <input
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <button type="button" className="forgot-password-button" onClick={handleForgotPassword}>
+            Forgot Password?
+          </button>
+          {error && <p className="error-message">{error}</p>}
+          <button type="submit" className="next-button">
+            Log In
+          </button>
+        </form>
+      )}
 
 
       {step === 5 && (

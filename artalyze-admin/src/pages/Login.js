@@ -3,22 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import axiosInstance from "../axiosInstance";
 
+// Login page for admin authentication
 const Login = () => {
+  // State for form inputs and error handling
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
+  // Handle form submission and authentication
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       const response = await axiosInstance.post('/admin/login', { email, password });
       localStorage.setItem('adminToken', response.data.token);
-      navigate('/overview'); // Redirect to the overview page after successful login
+      navigate('/overview');
     } catch (error) {
       setErrorMessage('Invalid login credentials');
     }
-};
+  };
 
   return (
     <div className="login-container">

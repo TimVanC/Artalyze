@@ -70,6 +70,7 @@ const Home = () => {
     <div className={`home-container fade-in ${darkMode ? "dark-mode" : ""}`}>
       <img src={logo} alt="Artalyze Logo" className="home-logo" />
       <h1 className="home-title">Artalyze</h1>
+      <p className="beta-label">BETA</p>
       <p className="home-description">Can you spot the human masterpiece?</p>
       <button className="play-button" onClick={handlePlayClick}>
         {hasPlayedToday ? 'See Stats' : 'Play'}

@@ -1,7 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
+// The main dashboard view for administrators
 const AdminOverview = () => {
+  // Hook for programmatic navigation
   const navigate = useNavigate();
 
   return (

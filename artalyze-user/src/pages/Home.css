@@ -41,6 +41,17 @@ html, body {
   margin-bottom: 10px;
 }
 
+/* BETA Label */
+.beta-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4d73af; /* Matches your theme */
+  margin-top: -5px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+
 /* Description */
 .home-description {
   font-size: 17px;

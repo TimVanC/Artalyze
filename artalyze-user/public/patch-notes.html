@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artalyze Patch Notes</title>
+    <link rel="stylesheet" href="/css/patch-notes.css">
+</head>
+
+<body>
+
+    <h1>BETA Version 1.4 Patch Notes</h1>
+    <div class="content-wrapper">
+        <p class="last-updated">Release Date: February 27th, 2025</p>
+
+        <h2>New Features & Improvements</h2>
+
+        <div class="section">
+            <h3>Pinch-to-Zoom for Enlarged Images</h3>
+            <ul>
+                <li>Users on mobile devices (width < 650px) can now <strong>pinch-to-zoom</strong> when viewing an
+                        enlarged image.</li>
+                <li>Zooming is <strong>only enabled for enlarged images</strong>, preventing unintended page zooming.
+                </li>
+                <li>Users can zoom in and reset to the original size, but <strong>cannot zoom out beyond 100%</strong>
+                    to avoid layout issues.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Enhanced Mobile Zoom Controls</h3>
+            <ul>
+                <li><strong>Prevented zooming out past the original image size</strong> to avoid excessive white space
+                    on Chrome.</li>
+                <li><strong>Enforced a minimum zoom level of 100%</strong> while allowing smooth zooming in.</li>
+                <li>Improved image scaling to ensure zoom remains intuitive across different devices.</li>
+            </ul>
+        </div>
+
+        <h2>Bug Fixes & Optimizations</h2>
+
+        <div class="section">
+            <h3>Fixed Chrome Zoom-Out Bug</h3>
+            <ul>
+                <li>Previously, users on Chrome could <strong>continue zooming out</strong> after zooming in, causing
+                    unwanted white space.</li>
+                <li>Implemented a <strong>gesture tracking system</strong> to detect when users shrink below 100% scale
+                    and automatically reset them to full size.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Prevented Page Zooming While Keeping Image Zoom Functional</h3>
+            <ul>
+                <li>Stopped <code>touch-action: none;</code> from globally blocking gestures while still preventing page
+                    zoom.</li>
+                <li>Adjusted event listeners to <strong>allow pinch gestures only on enlarged images</strong>, keeping
+                    the rest of the site zoom-restricted.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Refined Event Listener Handling</h3>
+            <ul>
+                <li>Ensured <code>gesturestart</code>, <code>gesturechange</code>, and <code>gestureend</code> properly
+                    manage zoom interactions.</li>
+                <li>Moved all zoom-related event handling into a <strong>single <code>useEffect</code> hook</strong>,
+                    reducing unnecessary event listeners.</li>
+                <li>Fixed an issue where zoom restrictions weren’t consistently applying on iOS and Chrome.</li>
+            </ul>
+        </div>
+    </div>
+
+
+    <h1>BETA Version 1.3 Patch Notes</h1>
+    <div class="content-wrapper">
+        <p class="last-updated">Release Date: February 26th, 2025</p>
+
+        <h2>New Features & Improvements</h2>
+        <div class="section">
+            <h3>Enhanced Sharing System – Now Includes All User Attempts</h3>
+            <ul>
+                <li>The shareable game results now include all attempts made by a player, rather than only their final
+                    guess.</li>
+                <li>Each attempt is displayed with 🟢 (correct) and 🔴 (incorrect) markers, giving a more detailed
+                    breakdown of the player's thought process.</li>
+                <li>The new format showcases every attempt leading up to the final submission, making shared results
+                    more engaging and competitive.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Refined Attempt & Submission Tracking</h3>
+            <ul>
+                <li><strong>Already Guessed Prevention Fix:</strong> Prevents players from re-submitting the same
+                    selections after a refresh.</li>
+                <li><strong>Improved Attempt Storage:</strong> Ensures attempts persist across refreshes but reset
+                    properly when a new puzzle starts to avoid carrying over unfinished games.</li>
+            </ul>
+        </div>
+
+        <h2>Bug Fixes & Optimizations</h2>
+        <div class="section">
+            <h3>Attempts & Game State Persistence Fixes</h3>
+            <ul>
+                <li>Fixed attempts not resetting on a new puzzle – If a player started a game but didn’t finish, their
+                    previous day's attempts will no longer carry over to the next day.</li>
+                <li>Resolved an issue where attempts were being incorrectly converted, causing all values to appear as
+                    true.</li>
+                <li>Ensured that both selections and attempts reset together when a new puzzle begins.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Already Guessed & Submission Validation Fixes</h3>
+            <ul>
+                <li>Fixed an issue where players could submit the same guesses multiple times after a refresh.</li>
+                <li>Already guessed selections now properly track across refreshes and persist until the game is
+                    completed.</li>
+                <li>Prevented incorrect reactivation of the submit button when selections were removed.</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Backend & API Stability Enhancements</h3>
+            <ul>
+                <li>Improved synchronization between the frontend and backend to maintain game state accuracy.</li>
+                <li>Fixed inconsistencies in storing and retrieving attempts, ensuring data integrity after a refresh.
+                </li>
+                <li>Optimized performance of database queries related to attempts and selections.</li>
+            </ul>
+        </div>
+
+        <h1>BETA Version 1.2 Patch Notes</h1>
+        <div class="content-wrapper">
+            <p class="last-updated">Release Date: February 25th, 2025</p>
+
+            <h2>New Features & Improvements</h2>
+            <div class="section">
+                <h3>Image Loading & Stability Enhancements</h3>
+                <ul>
+                    <li><strong>Preloaded Enlarged Images:</strong> Enlarged images now load instantly instead of
+                        reloading every time they are viewed.</li>
+                    <li><strong>Persistent Image Order:</strong> The randomization of human and AI images is now stored
+                        in localStorage, preventing images from switching positions after a refresh.</li>
+                    <li><strong>Loading Indicators:</strong> Implemented a loader over image containers while images are
+                        loading, ensuring better feedback on slower connections.</li>
+                </ul>
+            </div>
+
+            <h2>Bug Fixes & Optimizations</h2>
+            <div class="section">
+                <h3>Image Pair Randomization & Flickering Fixes</h3>
+                <ul>
+                    <li><strong>Fixed Position Switching on Refresh:</strong> Image pairs now maintain their initial
+                        order throughout the puzzle, eliminating flickering and re-randomization on reload.</li>
+                    <li><strong>Cached Image Order:</strong> The daily puzzle is now saved in localStorage, ensuring
+                        that once an image order is set, it remains unchanged until the next puzzle.</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h3>Submit Button Activation Fixes</h3>
+                <ul>
+                    <li><strong>Submit Button Only Activates When All Pairs Are Selected:</strong> Fixed an issue where
+                        selecting only the last image incorrectly enabled the submit button.</li>
+                    <li><strong>Deselecting an Image Properly Disables the Submit Button:</strong> If a selection is
+                        removed, the submit button will now deactivate unless all pairs remain selected.</li>
+                    <li><strong>Clearing Selections Resets Button State:</strong> Pressing "Clear" correctly disables
+                        the submit button and resets the selection state.</li>
+                </ul>
+            </div>
+        </div>
+
+        <h1>BETA Version 1.1 Patch Notes</h1>
+        <div class="content-wrapper">
+            <p class="last-updated">Release Date: February 17th, 2025</p>
+
+            <h2>New Features & Improvements</h2>
+            <div class="section">
+                <h3>Swipe Overlays for New Players</h3>
+                <ul>
+                    <li>First-time users now see a “Swipe right” overlay after their first selection.</li>
+                    <li>After swiping, a “Swipe left to go back” overlay appears to guide navigation.</li>
+                    <li>A “Double tap to enlarge image” overlay now appears after the second swipe.</li>
+                    <li>After the fourth swipe, a “Tap info icon for more help” overlay displays.</li>
+                    <li>These overlays only appear once per user to maintain a seamless experience.</li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h3>Dark Mode Overlay Enhancements</h3>
+                <p>Overlays now have a lighter background with black text in dark mode for improved readability.</p>
+            </div>
+
+            <div class="section">
+                <h3>Mid-Turn Overlay Feedback Improvement</h3>
+                <p>Players now receive clearer, more specific feedback after submitting incorrect guesses:</p>
+                <ul>
+                    <li><strong>0-1 correct:</strong> "None or only one is right. Rethink your picks."</li>
+                    <li><strong>2 correct:</strong> "You're three away."</li>
+                    <li><strong>3 correct:</strong> "You're two away."</li>
+                    <li><strong>4 correct:</strong> "Close! You're one away."</li>
+                </ul>
+                <p>This provides better guidance and allows players to adjust their strategy accordingly.</p>
+            </div>
+
+            <h2>Bug Fixes & Optimizations</h2>
+            <div class="section">
+                <ul>
+                    <li>Ensured overlays only trigger once per user and do not reappear after being dismissed.</li>
+                    <li>Fixed an issue where <code>handleSwipe</code> was not correctly tracking first-time swipes.</li>
+                    <li>Resolved a bug causing overlays to reappear on subsequent swipes.</li>
+                    <li>Adjusted overlay spacing for improved readability and reduced visual clutter.</li>
+                    <li>Minor UI adjustments to keep overlays compact and non-intrusive.</li>
+                </ul>
+            </div>
+        </div>
+</body>
+
+</html>

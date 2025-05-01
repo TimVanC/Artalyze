@@ -4,7 +4,6 @@ import './InfoModal.css';
 import humanExample from '../assets/images/human-example.png';
 import aiExample from '../assets/images/ai-example.png';
 
-
 const InfoModal = ({ isOpen, onClose }) => {
   const [isDismissing, setIsDismissing] = useState(false);
   const touchStartY = useRef(null);
@@ -12,22 +11,25 @@ const InfoModal = ({ isOpen, onClose }) => {
 
   if (!isOpen && !isDismissing) return null;
 
+  // Handle modal dismissal with animation
   const handleDismiss = () => {
     setIsDismissing(true);
     setTimeout(() => {
-      setIsDismissing(false); // Reset state
-      onClose(); // Trigger modal close
-    }, 400); // Match the CSS animation duration
+      setIsDismissing(false);
+      onClose();
+    }, 400);
   };
 
+  // Track touch start position for swipe detection
   const handleTouchStart = (e) => {
     touchStartY.current = e.touches[0].clientY;
   };
 
+  // Handle swipe down to dismiss modal
   const handleTouchMove = (e) => {
     const touchEndY = e.touches[0].clientY;
     if (touchStartY.current && touchEndY - touchStartY.current > 50) {
-      handleDismiss(); // Trigger slide-down animation when swipe is detected
+      handleDismiss();
     }
   };
 
@@ -48,9 +50,11 @@ const InfoModal = ({ isOpen, onClose }) => {
           <h3 className="rules-heading">Rules</h3>
           <hr className="section-separator" />
           <ul>
-            <li>Swipe through each pair and choose the painting you believe is created by a human.</li>
+            <li>Swipe through each pair and tap on the image you believe is created by a human.</li>
+            <li>Double-tap the image to enlarge it and zoom in.</li>
             <li>You have three tries to get all five pairs correct.</li>
             <li>The correct answers will be revealed after your final selection.</li>
+            <li>Each daily puzzle increases in difficulty from Monday to Sunday.</li>
           </ul>
         </section>
 

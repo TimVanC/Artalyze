@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check for user authentication status here, e.g., by checking a token
+    // Check if user is logged in by looking for an auth token in localStorage
     const token = localStorage.getItem('authToken');
     setIsAuthenticated(!!token);
   }, []);

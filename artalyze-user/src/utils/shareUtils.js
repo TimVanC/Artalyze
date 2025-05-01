@@ -1,6 +1,7 @@
 export const handleShare = (selections, imagePairs) => {
+  // Format game results for sharing
   const shareableText = `
-    🎨 Artalyze Results 🎨
+    Artalyze Results
     ${selections
       .map((isHumanSelection, index) => {
         const pair = imagePairs[index];
@@ -9,6 +10,7 @@ export const handleShare = (selections, imagePairs) => {
       .join('\n')}
   `;
 
+  // Try native sharing first, fallback to clipboard if not available
   if (navigator.share) {
     navigator
       .share({

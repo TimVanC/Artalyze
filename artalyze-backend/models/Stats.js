@@ -79,6 +79,16 @@ const statsSchema = new mongoose.Schema(
       type: [[String]],
       default: [],
     },
+
+    // ✅ New Fields for Tracking Attempts
+    attempts: {
+      type: [[String]], // Stores guesses before game completion
+      default: [],
+    },
+    completedAttempts: {
+      type: [[String]], // Finalized guesses upon game completion
+      default: [],
+    },
   },
   { timestamps: true }
 );
