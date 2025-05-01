@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './ManageUsers.css';
 
-// Page for managing user accounts and permissions
+// Component for managing user accounts and admin access
 const ManageUsers = () => {
-  // State for users list and form data
   const [users, setUsers] = useState([]);
   const [formState, setFormState] = useState({
     firstName: '',
@@ -16,12 +15,12 @@ const ManageUsers = () => {
   const [editUserId, setEditUserId] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Fetch users when component mounts
+  // Fetch users on component mount
   useEffect(() => {
     fetchUsers();
   }, []);
 
-  // Get all users from the server
+  // Retrieve all users from the backend
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('adminToken');
@@ -36,13 +35,13 @@ const ManageUsers = () => {
     }
   };
 
-  // Update form state when inputs change
+  // Update form state when input values change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormState({ ...formState, [name]: value });
   };
 
-  // Save new or updated user
+  // Create or update a user
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     try {

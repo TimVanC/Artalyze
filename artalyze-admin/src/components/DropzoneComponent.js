@@ -1,10 +1,9 @@
-// A reusable component for handling file drops
+// Component for handling image file uploads using react-dropzone
 import React from 'react';
 import { useDropzone } from 'react-dropzone';
 
-// Component that renders a dropzone for image uploads
+// Reusable dropzone component for image uploads
 const DropzoneComponent = ({ onDrop, label, currentFile }) => {
-  // Configure the dropzone to accept image files
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
     accept: 'image/*',
@@ -13,6 +12,7 @@ const DropzoneComponent = ({ onDrop, label, currentFile }) => {
   return (
     <div {...getRootProps()} className="dropzone">
       <input {...getInputProps()} />
+      {/* Display current file name or upload prompt */}
       {currentFile ? (
         <p>{currentFile.name}</p>
       ) : (

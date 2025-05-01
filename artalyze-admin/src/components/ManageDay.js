@@ -8,24 +8,23 @@ import axios from 'axios';
 import axiosInstance from '../axiosInstance';
 import './ManageDay.css';
 
+// Component for managing image pairs for a specific date
 const ManageDay = () => {
-  // Keep track of the selected date and image pairs
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [imagePairs, setImagePairs] = useState([]); // State to store the fetched image pairs
   const [error, setError] = useState(null); // State for managing error messages
   const [uploadMessage, setUploadMessage] = useState(''); // State for managing upload messages
 
-  // Grab the image pairs for the selected date
+  // Fetch image pairs for the selected date
   const fetchImagePairs = useCallback(async () => {
     try {
-      // Adjust the date to EST/EDT timezone
       const adjustedDate = new Date(selectedDate);
-      adjustedDate.setUTCHours(5, 0, 0, 0);
-      const formattedDate = adjustedDate.toISOString().split("T")[0];
+      adjustedDate.setUTCHours(5, 0, 0, 0); // Convert to EST/EDT format
+      const formattedDate = adjustedDate.toISOString().split("T")[0]; // Ensure only YYYY-MM-DD
 
       console.log('Fetching Image Pairs for:', formattedDate);
       const response = await axiosInstance.get(`/admin/get-image-pairs-by-date/${formattedDate}`);
-
+      
       if (response.data && response.data.pairs) {
         setImagePairs(response.data.pairs);
       } else {
@@ -37,18 +36,17 @@ const ManageDay = () => {
     }
   }, [selectedDate]);
 
-  // Fetch image pairs whenever the selected date changes
   useEffect(() => {
     fetchImagePairs();
   }, [fetchImagePairs]); // Runs only when `fetchImagePairs` changes
 
-  // Handle date selection from the calendar
+  // Handle date selection from calendar
   const handleDateClick = (date) => {
     setSelectedDate(date);
     setUploadMessage(''); // Clear any existing upload messages when a new date is selected
   };
 
-  // Handle file drops in the dropzones
+  // Handle file drops for both human and AI images
   const onDrop = (acceptedFiles, index, type) => {
     const updatedPairs = [...imagePairs];
     if (!updatedPairs[index]) {
@@ -69,20 +67,18 @@ const ManageDay = () => {
     setImagePairs(updatedPairs);
   };
 
-  // Upload the image pairs to the server
+  // Upload image pairs to the server
   const handleUpload = async () => {
     if (!selectedDate) {
       setUploadMessage('Please select a date first.');
       return;
     }
-
+  
     try {
-      // Adjust the date for daylight savings
       const date = new Date(selectedDate);
-      const isDaylightSaving = date.getMonth() >= 2 && date.getMonth() <= 10;
-      date.setUTCHours(isDaylightSaving ? 4 : 5, 0, 0, 0);
-
-      // Upload each pair one at a time
+      const isDaylightSaving = date.getMonth() >= 2 && date.getMonth() <= 10; // DST
+      date.setUTCHours(isDaylightSaving ? 4 : 5, 0, 0, 0); // Adjust EST/EDT
+  
       for (let i = 0; i < imagePairs.length; i++) {
         const pair = imagePairs[i];
         if (pair && pair.human && pair.ai) {
@@ -91,32 +87,17 @@ const ManageDay = () => {
           formData.append('aiImage', pair.ai);
           formData.append('scheduledDate', date.toISOString());
           formData.append('pairIndex', i);
-
-          // Small delay between uploads to prevent overwhelming the server
-          await new Promise((resolve) => setTimeout(resolve, 200));
-
-          console.log("[DEBUG] Uploading Image Pair - FormData Content:");
-          for (let pair of formData.entries()) {
-            console.log(`${pair[0]}:`, pair[1]);
-          }
-
-          try {
-            const response = await axios.post(
-              "https://artalyze-backend-staging.up.railway.app/api/admin/upload-image-pair",
-              formData,
-              {
-                headers: {
-                  "Content-Type": "multipart/form-data", // ✅ Ensure correct format
-                },
-              }
-            );
-            console.log("[DEBUG] Upload Successful:", response.data);
-          } catch (error) {
-            console.error("[ERROR] Upload Failed:", error.response ? error.response.data : error.message);
-          }
+  
+          await new Promise((resolve) => setTimeout(resolve, 200)); // Delay between requests
+  
+          await axios.post(
+            "https://artalyze-backend-production.up.railway.app/api/admin/upload-image-pair", 
+            formData, 
+            { headers: { "Content-Type": "multipart/form-data" } }
+          );
         }
       }
-
+  
       setUploadMessage('All images uploaded successfully');
       fetchImagePairs(); // Refresh the image pairs
     } catch (error) {
@@ -124,6 +105,7 @@ const ManageDay = () => {
       setUploadMessage('Failed to upload some or all images. Please try again.');
     }
   };
+  
 
   return (
     <div className="manage-day-container">
@@ -137,7 +119,7 @@ const ManageDay = () => {
 
           {error && <p className="error-message">{error}</p>}
 
-          {/* Show existing image pairs for the selected date */}
+          {/* Existing Image Pairs Section */}
           <div className="existing-image-pairs-container">
             <h3>Existing Image Pairs for {selectedDate.toDateString()}</h3>
             {imagePairs.length === 0 && <p>No existing image pairs found for this date.</p>}
@@ -166,7 +148,7 @@ const ManageDay = () => {
             </div>
           </div>
 
-          {/* Dropzones for uploading new image pairs */}
+          {/* Dropzones for Uploading */}
           <div className="image-pairs-container">
             {[...Array(5)].map((_, index) => (
               <div key={index} className={`pair-container ${index < 4 ? 'half-width' : 'full-width'}`}>

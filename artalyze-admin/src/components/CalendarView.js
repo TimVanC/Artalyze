@@ -3,15 +3,14 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import './CalendarView.css'; // Custom styles for your Calendar
 
-// A reusable calendar component for selecting dates
+// Calendar component for selecting and viewing scheduled image pairs
 const CalendarView = ({ onSelectDate }) => {
-  // Keep track of the currently selected date
   const [selectedDate, setSelectedDate] = useState(new Date());
 
-  // Update the selected date and notify the parent component
+  // Handle date selection and notify parent component
   const handleDateChange = (date) => {
     setSelectedDate(date);
-    onSelectDate(date);
+    onSelectDate(date); // Pass selected date to the parent component to load the details
   };
 
   return (
