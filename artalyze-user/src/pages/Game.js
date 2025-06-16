@@ -430,8 +430,9 @@ const Game = () => {
       const puzzleResponse = await axiosInstance.get("/game/daily-puzzle");
       console.log("📦 Puzzle Response:", puzzleResponse.data);
 
-      if (puzzleResponse.data?.puzzles?.length > 0) {
+      if (puzzleResponse.data?.imagePairs?.length > 0) {
         const getRandomizedPairs = (pairs) => {
+          console.log("🎲 Randomizing pairs:", pairs);
           return pairs.map((pair) => ({
             human: pair.humanImageURL,
             ai: pair.aiImageURL,
@@ -441,33 +442,12 @@ const Game = () => {
           }));
         };
 
-        const initializeImagePairs = (imagePairsData) => {
-          const today = getTodayInEST();
-          const lastUpdatedDate = localStorage.getItem("lastUpdatedDate");
-
-          if (lastUpdatedDate !== today) {
-            console.log("🌅 New day detected! Resetting randomizedImagePairs.");
-            localStorage.removeItem("randomizedImagePairs");
-            localStorage.setItem("lastUpdatedDate", today);
-          }
-
-          let storedPairs = localStorage.getItem("randomizedImagePairs");
-
-          if (!storedPairs || lastUpdatedDate !== today) {
-            console.log("🎲 Fetching and randomizing new image pairs.");
-            const randomizedPairs = getRandomizedPairs(imagePairsData);
-            localStorage.setItem("randomizedImagePairs", JSON.stringify(randomizedPairs));
-            return randomizedPairs;
-          }
-
-          console.log("🔄 Using cached image pairs from localStorage.");
-          return JSON.parse(storedPairs);
-        };
-
-        const pairs = initializeImagePairs(puzzleResponse.data.puzzles);
-        console.log("🖼️ Setting imagePairs:", pairs);
-        setImagePairs(pairs);
-        localStorage.setItem("completedPairs", JSON.stringify(puzzleResponse.data.puzzles));
+        // Always use fresh data, don't rely on cache
+        console.log("🎲 Fetching and randomizing new image pairs.");
+        const randomizedPairs = getRandomizedPairs(puzzleResponse.data.imagePairs);
+        console.log("🎲 Randomized pairs:", randomizedPairs);
+        setImagePairs(randomizedPairs);
+        localStorage.setItem("completedPairs", JSON.stringify(puzzleResponse.data.imagePairs));
       } else {
         console.warn("⚠️ No image pairs available for today.");
         setImagePairs([]);
@@ -608,7 +588,7 @@ const Game = () => {
       document.removeEventListener("wheel", disableZoom);
       document.removeEventListener("keydown", disableZoom);
       document.removeEventListener("gesturestart", disableTouchZoom);
-      document.removeEventListener("gesturechange", handleZoomReset);
+      document.removeEventListener("gesturechange", disableTouchZoom);
     };      
   }, []);
 
@@ -1401,57 +1381,62 @@ const Game = () => {
           {/* Image Pairs */}
           {imagePairs && imagePairs.length > 0 ? (
             <>
+              {console.log("🎨 Rendering Swiper with imagePairs:", imagePairs)}
               <Swiper
                 loop={true}
-                onSlideChange={handleSwipe} // ✅ Now using handleSwipe
+                onSlideChange={handleSwipe}
                 onSwiper={(swiper) => {
+                  console.log("🎯 Swiper initialized with ref:", swiper);
                   swiperRef.current = swiper;
                   swiper.slideToLoop(0);
                 }}
               >
-                {imagePairs.map((pair, index) => (
-                  <SwiperSlide key={index}>
-                    <div className="image-pair-container">
-                      {pair.images.map((image, idx) => (
-                        <div
-                          key={idx}
-                          className={`image-container ${selections[index]?.selected === image ? "selected" : ""}`}
-                        >
-                          {imageLoading[`${index}-${idx}`] && <div className="image-loader"></div>}
-                          <img
-                            src={image}
-                            alt={`Painting ${idx + 1}`}
-                            onClick={(e) => {
-                              const currentTime = new Date().getTime();
-                              const timeSinceLastTap = currentTime - lastTapTime.current;
+                {imagePairs.map((pair, index) => {
+                  console.log(`🖼️ Rendering pair ${index}:`, pair);
+                  return (
+                    <SwiperSlide key={index}>
+                      <div className="image-pair-container">
+                        {pair.images.map((image, idx) => (
+                          <div
+                            key={idx}
+                            className={`image-container ${selections[index]?.selected === image ? "selected" : ""}`}
+                          >
+                            {imageLoading[`${index}-${idx}`] && <div className="image-loader"></div>}
+                            <img
+                              src={image}
+                              alt={`Painting ${idx + 1}`}
+                              onClick={(e) => {
+                                const currentTime = new Date().getTime();
+                                const timeSinceLastTap = currentTime - lastTapTime.current;
 
-                              if (timeSinceLastTap < 300) { // ✅ Double-tap detected
-                                clearTimeout(singleTapTimeout.current); // ✅ Cancel single tap selection
-                                if (!enlargedImage) { // ✅ Ensure enlargement only happens once
-                                  setEnlargedImage(null); // Ensure previous one is cleared
-                                  setTimeout(() => {
-                                    setEnlargedImage(image);
-                                    setEnlargedImageMode("game-screen");
-                                  }, 10); // Small delay prevents duplicate stacking
+                                if (timeSinceLastTap < 300) {
+                                  clearTimeout(singleTapTimeout.current);
+                                  if (!enlargedImage) {
+                                    setEnlargedImage(null);
+                                    setTimeout(() => {
+                                      setEnlargedImage(image);
+                                      setEnlargedImageMode("game-screen");
+                                    }, 10);
+                                  }
+                                } else {
+                                  singleTapTimeout.current = setTimeout(() => {
+                                    handleSelection(image, image === pair.human);
+                                  }, 220);
                                 }
-                              } else {
-                                singleTapTimeout.current = setTimeout(() => {
-                                  handleSelection(image, image === pair.human); // ✅ Select only if no double-tap
-                                }, 220);
-                              }
 
-                              lastTapTime.current = currentTime;
-                            }}
-                            draggable="false"
-                            onLoad={() => handleImageLoad(index, idx)}
-                            onError={() => handleImageError(index, idx)}
-                            style={{ visibility: imageLoading[`${index}-${idx}`] ? "hidden" : "visible" }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </SwiperSlide>
-                ))}
+                                lastTapTime.current = currentTime;
+                              }}
+                              draggable="false"
+                              onLoad={() => handleImageLoad(index, idx)}
+                              onError={() => handleImageError(index, idx)}
+                              style={{ visibility: imageLoading[`${index}-${idx}`] ? "hidden" : "visible" }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </SwiperSlide>
+                  );
+                })}
               </Swiper>
             </>
           ) : (
@@ -1487,25 +1472,28 @@ const Game = () => {
             </button>
 
             {/* Navigation Buttons Centered */}
-            <div className="navigation-buttons">
+            <div className="nav-buttons">
+              {console.log("🎯 Rendering navigation buttons for pairs:", imagePairs)}
               {imagePairs.map((_, index) => (
                 <button
                   key={index}
                   className={`nav-button ${currentIndex === index ? 'active' : ''} ${selections[index]?.selected ? 'selected' : ''}`}
                   onClick={() => {
+                    console.log(`🔄 Navigating to pair ${index}`);
                     setCurrentIndex(index);
                     swiperRef.current.slideToLoop(index);
 
-                    // ✅ Track navigation button clicks in Google Analytics
+                    // Track navigation button clicks in Google Analytics
                     ReactGA.event({
                       category: "Navigation",
                       action: "Nav Button Clicked",
                       label: `User navigated to image pair ${index + 1}`,
-                      value: index + 1, // Track which image pair they navigated to
+                      value: index + 1,
                     });
                   }}
-                  aria-label={`Go to image pair ${index + 1}`} /* Accessibility */
+                  aria-label={`Go to image pair ${index + 1}`}
                 >
+                  {index + 1}
                 </button>
               ))}
             </div>
@@ -1522,41 +1510,42 @@ const Game = () => {
           {/* Enlarged Image Modal */}
           {enlargedImage && (
             <div className="enlarge-modal" onClick={closeEnlargedImage}>
-              <div className="swiper-container">
-                <Swiper
-                  loop={true}
-                  initialSlide={enlargedImageIndex}
-                  onSlideChange={(swiper) => setEnlargedImageIndex(swiper.realIndex)}
-                  navigation={{
-                    prevEl: ".swiper-button-prev",
-                    nextEl: ".swiper-button-next",
-                  }}
-                  slidesPerView={1}
-                  spaceBetween={10}
-                >
-                  {imagePairs &&
-                    imagePairs.map((pair, index) => (
-                      <SwiperSlide key={index}>
-                        <div className="enlarged-image-container">
-                          <div className="zoom-wrapper">
-                            <img
-                              src={enlargedImage}
-                              alt="Enlarged view"
-                              className="enlarged-image zoomable" /* ✅ Correct class */
-                              onClick={(e) => e.stopPropagation()} // Prevents modal from closing
-                              onContextMenu={(e) => e.preventDefault()} // Disable right-click
-                              onTouchStart={(e) => e.stopPropagation()} // Stop event bubbling
-                              onMouseDown={(e) => e.preventDefault()} // Prevent dragging
-                              draggable="false"
-                            />
-                          </div>
-                        </div>
-                      </SwiperSlide>
-                    ))}
-                </Swiper>
+              <div className="enlarged-image-container" onClick={(e) => e.stopPropagation()}>
+                <div className="zoom-wrapper">
+                  <img
+                    src={enlargedImage}
+                    alt="Enlarged view"
+                    className="enlarged-image zoomable"
+                    onClick={(e) => e.stopPropagation()}
+                    onContextMenu={(e) => e.preventDefault()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.preventDefault()}
+                    draggable="false"
+                  />
+                </div>
+                {enlargedImageMode === "game-screen" && (
+                  <>
+                    <div className="swiper-button-prev" onClick={(e) => {
+                      e.stopPropagation();
+                      const currentPair = imagePairs[currentIndex];
+                      if (currentPair) {
+                        const currentImageIndex = currentPair.images.indexOf(enlargedImage);
+                        const newImageIndex = currentImageIndex === 0 ? 1 : 0;
+                        setEnlargedImage(currentPair.images[newImageIndex]);
+                      }
+                    }}>&#8592;</div>
+                    <div className="swiper-button-next" onClick={(e) => {
+                      e.stopPropagation();
+                      const currentPair = imagePairs[currentIndex];
+                      if (currentPair) {
+                        const currentImageIndex = currentPair.images.indexOf(enlargedImage);
+                        const newImageIndex = currentImageIndex === 0 ? 1 : 0;
+                        setEnlargedImage(currentPair.images[newImageIndex]);
+                      }
+                    }}>&#8594;</div>
+                  </>
+                )}
               </div>
-              <div className="swiper-button-prev">&#8592;</div>
-              <div className="swiper-button-next">&#8594;</div>
             </div>
           )}
 
@@ -1699,24 +1688,6 @@ const Game = () => {
 
         </div>
       )}
-
-      {enlargedImage && (
-        <div className="enlarge-modal" onClick={closeEnlargedImage}>
-          <div className="enlarged-image-container">
-            <img
-              src={enlargedImage}
-              alt="Enlarged view"
-              className="zoomable" /* ✅ Add this class */
-              onClick={(e) => e.stopPropagation()} // Prevents modal from closing
-              onContextMenu={(e) => e.preventDefault()} // Disable right-click
-              onTouchStart={(e) => e.stopPropagation()} // Stop event bubbling
-              onMouseDown={(e) => e.preventDefault()} // Prevent dragging
-              draggable="false"
-            />
-          </div>
-        </div>
-      )}
-
 
     </div>
   );

@@ -11,7 +11,7 @@ exports.authenticateToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log('Decoded JWT:', decoded); // Log decoded token
-    req.user = { userId: decoded.userId }; // Attach userId
+    req.user = decoded; // Store the entire decoded token
     next();
   } catch (error) {
     console.error('JWT verification failed:', error);
@@ -21,11 +21,14 @@ exports.authenticateToken = (req, res, next) => {
 
 // Middleware to check if the user is an admin
 exports.authorizeAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
-    next(); // User is admin, continue
-  } else if (!req.user) {
+  if (!req.user) {
     return res.status(401).json({ message: 'Authentication required.' });
+  }
+  
+  if (req.user.role === 'admin') {
+    next(); // User is admin, continue
   } else {
+    console.error('Access denied. User role:', req.user.role);
     res.status(403).json({ message: 'Access denied. Admins only.' });
   }
 };

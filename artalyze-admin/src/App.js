@@ -2,10 +2,11 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import ManageDay from './components/ManageDay';
+import Upload from './components/Upload';
 import UserManagement from './pages/ManageUsers';
 import AdminOverview from './components/AdminOverview';
 
-// Protected route component that checks for admin authentication
+// Protect routes that require admin authentication
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('adminToken');
   return token ? children : <Navigate to="/login" />;
@@ -19,9 +20,11 @@ function App() {
       <Routes>
         {/* Redirect to overview if logged in, otherwise to login page */}
         <Route path="/" element={isLoggedIn ? <Navigate to="/overview" /> : <Navigate to="/login" />} />
+        
         {/* Admin login page */}
         <Route path="/login" element={<Login />} />
-        {/* Protected routes requiring admin authentication */}
+        
+        {/* Admin dashboard overview */}
         <Route
           path="/overview"
           element={
@@ -30,6 +33,18 @@ function App() {
             </ProtectedRoute>
           }
         />
+        
+        {/* Upload human images for automated pairing */}
+        <Route
+          path="/upload"
+          element={
+            <ProtectedRoute>
+              <Upload />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Manage and view daily puzzle image pairs */}
         <Route
           path="/manage-day"
           element={
@@ -38,6 +53,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+        
+        {/* Manage user accounts and statistics */}
         <Route
           path="/manage-users"
           element={

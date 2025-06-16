@@ -1,179 +1,229 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { BASE_URL } from "../config";
 import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css'; // Import calendar styles
-import DropzoneComponent from './DropzoneComponent';
-import axios from 'axios';
+import 'react-calendar/dist/Calendar.css';
 import axiosInstance from '../axiosInstance';
+import ImageModal from './ImageModal';
 import './ManageDay.css';
 
-// Component for managing image pairs for a specific date
 const ManageDay = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [imagePairs, setImagePairs] = useState([]); // State to store the fetched image pairs
-  const [error, setError] = useState(null); // State for managing error messages
-  const [uploadMessage, setUploadMessage] = useState(''); // State for managing upload messages
+  const [imagePairs, setImagePairs] = useState([]);
+  const [pendingImages, setPendingImages] = useState([]);
+  const [error, setError] = useState(null);
+  const [message, setMessage] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Fetch image pairs for the selected date
   const fetchImagePairs = useCallback(async () => {
     try {
       const adjustedDate = new Date(selectedDate);
-      adjustedDate.setUTCHours(5, 0, 0, 0); // Convert to EST/EDT format
-      const formattedDate = adjustedDate.toISOString().split("T")[0]; // Ensure only YYYY-MM-DD
+      adjustedDate.setUTCHours(5, 0, 0, 0);
+      const formattedDate = adjustedDate.toISOString().split("T")[0];
 
-      console.log('Fetching Image Pairs for:', formattedDate);
+      console.log('Fetching pairs for date:', formattedDate);
       const response = await axiosInstance.get(`/admin/get-image-pairs-by-date/${formattedDate}`);
-      
-      if (response.data && response.data.pairs) {
-        setImagePairs(response.data.pairs);
+      console.log('Received pairs:', response.data);
+
+      if (response.data) {
+        setImagePairs(response.data.pairs || []);
+        setPendingImages(response.data.pendingHumanImages || []);
+        setMessage('');
       } else {
         setImagePairs([]);
+        setPendingImages([]);
+        setMessage('No pairs scheduled for this date.');
       }
     } catch (error) {
       console.error('Error fetching image pairs:', error);
+      setError('Failed to fetch image pairs. Please try again.');
       setImagePairs([]);
+      setPendingImages([]);
     }
   }, [selectedDate]);
 
   useEffect(() => {
     fetchImagePairs();
-  }, [fetchImagePairs]); // Runs only when `fetchImagePairs` changes
+  }, [fetchImagePairs]);
 
-  // Handle date selection from calendar
   const handleDateClick = (date) => {
     setSelectedDate(date);
-    setUploadMessage(''); // Clear any existing upload messages when a new date is selected
+    setMessage('');
   };
 
-  // Handle file drops for both human and AI images
-  const onDrop = (acceptedFiles, index, type) => {
-    const updatedPairs = [...imagePairs];
-    if (!updatedPairs[index]) {
-      updatedPairs[index] = {}; // Ensure the pair object exists
-    }
-
-    const file = acceptedFiles[0];
-    if (!file.type.startsWith('image/')) {
-      alert('Please upload a valid image file.');
-      return;
-    }
-
-    if (type === 'human') {
-      updatedPairs[index].human = file;
-    } else if (type === 'ai') {
-      updatedPairs[index].ai = file;
-    }
-    setImagePairs(updatedPairs);
+  const handleImageClick = (imageUrl) => {
+    setSelectedImage(imageUrl);
   };
 
-  // Upload image pairs to the server
-  const handleUpload = async () => {
-    if (!selectedDate) {
-      setUploadMessage('Please select a date first.');
-      return;
-    }
-  
+  const handleRegenerateAI = async (pairId) => {
     try {
-      const date = new Date(selectedDate);
-      const isDaylightSaving = date.getMonth() >= 2 && date.getMonth() <= 10; // DST
-      date.setUTCHours(isDaylightSaving ? 4 : 5, 0, 0, 0); // Adjust EST/EDT
-  
-      for (let i = 0; i < imagePairs.length; i++) {
-        const pair = imagePairs[i];
-        if (pair && pair.human && pair.ai) {
-          const formData = new FormData();
-          formData.append('humanImage', pair.human);
-          formData.append('aiImage', pair.ai);
-          formData.append('scheduledDate', date.toISOString());
-          formData.append('pairIndex', i);
-  
-          await new Promise((resolve) => setTimeout(resolve, 200)); // Delay between requests
-  
-          await axios.post(
-            "https://artalyze-backend-production.up.railway.app/api/admin/upload-image-pair", 
-            formData, 
-            { headers: { "Content-Type": "multipart/form-data" } }
-          );
-        }
-      }
-  
-      setUploadMessage('All images uploaded successfully');
-      fetchImagePairs(); // Refresh the image pairs
+      setIsLoading(true);
+      setError(null);
+      
+      const adjustedDate = new Date(selectedDate);
+      adjustedDate.setUTCHours(5, 0, 0, 0);
+      const formattedDate = adjustedDate.toISOString().split("T")[0];
+      
+      console.log('Regenerating AI image for:', { pairId, formattedDate });
+      const response = await axiosInstance.post('/admin/regenerate-ai-image', {
+        pairId,
+        scheduledDate: formattedDate
+      });
+      console.log('Regenerate response:', response.data);
+
+      // Update the image pairs with the new AI image
+      setImagePairs(prevPairs => 
+        prevPairs.map(pair => 
+          pair._id === pairId 
+            ? { ...pair, aiImageURL: response.data.newAiImageUrl }
+            : pair
+        )
+      );
+
+      setMessage('AI image regenerated successfully!');
     } catch (error) {
-      console.error('Upload error:', error);
-      setUploadMessage('Failed to upload some or all images. Please try again.');
+      console.error('Error regenerating AI image:', error);
+      setError(error.response?.data?.error || 'Failed to regenerate AI image');
+    } finally {
+      setIsLoading(false);
     }
   };
-  
+
+  const handleDeletePair = async (pairId) => {
+    if (!window.confirm('Are you sure you want to delete this pair? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const adjustedDate = new Date(selectedDate);
+      adjustedDate.setUTCHours(5, 0, 0, 0);
+      const formattedDate = adjustedDate.toISOString().split("T")[0];
+
+      console.log('Deleting pair:', { pairId, formattedDate });
+      await axiosInstance.delete('/admin/delete-pair', {
+        data: {
+          pairId,
+          scheduledDate: formattedDate
+        }
+      });
+
+      // Remove the deleted pair from the state
+      setImagePairs(prevPairs => prevPairs.filter(pair => pair._id !== pairId));
+      setMessage('Image pair deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting pair:', error);
+      setError(error.response?.data?.error || 'Failed to delete image pair');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="manage-day-container">
-      <h1>Manage Day</h1>
-      <div className="calendar-container">
-        <Calendar onClickDay={handleDateClick} />
+      <h1>Manage Daily Pairs</h1>
+      
+      <div className="info-box">
+        <p>View and manage automatically scheduled image pairs:</p>
+        <ul>
+          <li>Select a date to view its scheduled pairs</li>
+          <li>Click on any image to enlarge it</li>
+          <li>Use the regenerate button to create a new AI variation</li>
+          <li>Use the delete button to remove a pair completely</li>
+        </ul>
       </div>
-      {selectedDate && (
-        <>
-          <h2>Manage Image Pairs for {selectedDate.toDateString()}</h2>
 
-          {error && <p className="error-message">{error}</p>}
+      <div className="calendar-container">
+        <Calendar onChange={handleDateClick} value={selectedDate} />
+      </div>
 
-          {/* Existing Image Pairs Section */}
-          <div className="existing-image-pairs-container">
-            <h3>Existing Image Pairs for {selectedDate.toDateString()}</h3>
-            {imagePairs.length === 0 && <p>No existing image pairs found for this date.</p>}
-            <div className="existing-pairs-wrapper">
-              {imagePairs.map((pair, index) => (
-                <div key={index} className="existing-pair-container">
-                  <h4>Pair #{index + 1}</h4>
-                  <div className="existing-images">
-                    <div className="image-wrapper">
-                      {pair.humanImageURL ? (
-                        <img src={pair.humanImageURL} alt="Human Art" className="image-preview" />
-                      ) : (
-                        <p>No Human Image</p>
-                      )}
-                    </div>
-                    <div className="image-wrapper">
-                      {pair.aiImageURL ? (
-                        <img src={pair.aiImageURL} alt="AI Art" className="image-preview" />
-                      ) : (
-                        <p>No AI Image</p>
-                      )}
-                    </div>
+      <div className="date-header">
+        <h2>Pairs for {selectedDate.toDateString()}</h2>
+      </div>
+
+      {error && <div className="error-message">{error}</div>}
+      {message && <div className="info-message">{message}</div>}
+
+      {/* Display completed pairs */}
+      <div className="existing-image-pairs-container">
+        <h3>Completed Pairs</h3>
+        {imagePairs.length === 0 ? (
+          <p className="no-pairs-message">No completed pairs for this date.</p>
+        ) : (
+          <div className="existing-pairs-wrapper">
+            {imagePairs.map((pair, index) => (
+              <div key={pair._id || index} className="existing-pair-container">
+                <h4>Pair #{index + 1}</h4>
+                <div className="existing-images">
+                  <div className="image-wrapper">
+                    <img 
+                      src={pair.humanImageURL} 
+                      alt="Human Art" 
+                      className="image-preview"
+                      onClick={() => handleImageClick(pair.humanImageURL)}
+                    />
+                    <p>Human</p>
+                  </div>
+                  <div className="image-wrapper">
+                    <img 
+                      src={pair.aiImageURL} 
+                      alt="AI Art" 
+                      className="image-preview"
+                      onClick={() => handleImageClick(pair.aiImageURL)}
+                    />
+                    <p>AI</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Dropzones for Uploading */}
-          <div className="image-pairs-container">
-            {[...Array(5)].map((_, index) => (
-              <div key={index} className={`pair-container ${index < 4 ? 'half-width' : 'full-width'}`}>
-                <h3>Pair {index + 1}</h3>
-                <div className="dropzone-container">
-                  <DropzoneComponent
-                    onDrop={(files) => onDrop(files, index, 'human')}
-                    label="Drop Human Image"
-                    currentFile={imagePairs[index]?.human}
-                  />
-                  <DropzoneComponent
-                    onDrop={(files) => onDrop(files, index, 'ai')}
-                    label="Drop AI Image"
-                    currentFile={imagePairs[index]?.ai}
-                  />
+                <div className="pair-actions">
+                  <button 
+                    className="regenerate-button"
+                    onClick={() => handleRegenerateAI(pair._id)}
+                    disabled={isLoading}
+                  >
+                    <span className="regenerate-icon">↻</span>
+                    Regenerate AI
+                  </button>
+                  <button 
+                    className="delete-button"
+                    onClick={() => handleDeletePair(pair._id)}
+                    disabled={isLoading}
+                  >
+                    Delete Pair
+                  </button>
                 </div>
               </div>
             ))}
           </div>
+        )}
+      </div>
 
-          <button className="upload-button" onClick={handleUpload}>
-            Upload Pairs
-          </button>
-          {uploadMessage && <p className="upload-message">{uploadMessage}</p>}
-        </>
+      {/* Display pending human images */}
+      <div className="pending-images-container">
+        <h3>Pending Human Images</h3>
+        <p className="info-text">These images are queued for AI pair generation</p>
+        <div className="pending-images-grid">
+          {pendingImages.map((image, index) => (
+            <div key={index} className="pending-image-wrapper">
+              <img 
+                src={image.url} 
+                alt={`Pending Human Art ${index + 1}`} 
+                className="image-preview"
+                onClick={() => handleImageClick(image.url)}
+              />
+              <p>Uploaded {new Date(image.uploadedAt).toLocaleTimeString()}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {selectedImage && (
+        <ImageModal
+          imageUrl={selectedImage}
+          onClose={() => setSelectedImage(null)}
+        />
       )}
     </div>
   );

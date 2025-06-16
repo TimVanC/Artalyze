@@ -209,38 +209,38 @@ h1 {
 /* ========================= */
 /*    NAVIGATION BUTTONS     */
 /* ========================= */
-.navigation-buttons {
+.nav-buttons {
   display: flex;
   justify-content: center;
-  flex-grow: 1;
-  /* Ensures even spacing */
-  gap: 2vh;
-  /* Keeps buttons evenly spaced */
+  gap: 10px;
+  margin: 0 10px;
 }
 
-.navigation-buttons .nav-button {
-  background-color: #ccc;
-  width: 2.5vh;
-  /* Small circles */
-  height: 2.5vh;
+.nav-button {
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  border: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 0;
-  /* Hide text */
+  border: 2px solid #ccc;
+  background: none;
+  color: #666;
+  font-weight: bold;
   cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  transition: all 0.3s ease;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Selected and Active Nav Buttons */
-.navigation-buttons .nav-button.selected {
-  background-color: #A8D5BA;
+.nav-button.active {
+  border-color: #007bff;
+  color: #007bff;
 }
 
-.navigation-buttons .nav-button.active {
-  background-color: #4d73af;
+.nav-button.selected {
+  background-color: #007bff;
+  border-color: #007bff;
+  color: white;
 }
 
 /* ========================= */
@@ -343,7 +343,6 @@ h1 {
   width: 100vw;
   height: 100vh;
   background: rgba(0, 0, 0, 0.8);
-  /* Dim background */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -352,26 +351,100 @@ h1 {
 
 /* Container to properly center the enlarged image */
 .enlarged-image-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  max-width: 70vw;
-  /* Unified width across all screens */
-  max-height: 70vh;
-  /* Unified height across all screens */
   overflow: hidden;
 }
 
-/* Enlarged Image Styling */
-.enlarged-image {
-  max-width: 100%;
-  max-height: 100%;
+/* Zoom wrapper for mobile pinch-zoom */
+.zoom-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Updated enlarged image styling */
+.enlarged-image,
+.zoomable {
+  max-width: 95vw;
+  max-height: 95vh;
+  width: auto;
+  height: auto;
   object-fit: contain;
-  /* Maintain aspect ratio */
   border-radius: 8px;
-  /* Match overall UI */
-  transform: scale(1);
-  transition: transform 0.3s ease-in-out;
+  transform-origin: center;
+  touch-action: pinch-zoom;
+}
+
+/* Ensure consistent behavior for all enlarged images */
+.enlarged-image-container img {
+  max-width: 95vw;
+  max-height: 95vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+  transform-origin: center;
+  touch-action: pinch-zoom;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+  .enlarged-image-container img,
+  .enlarged-image,
+  .zoomable {
+    max-width: 98vw;
+    max-height: 98vh;
+  }
+}
+
+/* Navigation arrows */
+.swiper-button-prev,
+.swiper-button-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 1002;
+  font-size: 24px;
+  color: #333;
+}
+
+.swiper-button-prev {
+  left: 20px;
+}
+
+.swiper-button-next {
+  right: 20px;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+  .enlarged-image {
+    max-width: 98vw;
+    max-height: 98vh;
+  }
+
+  .swiper-button-prev,
+  .swiper-button-next {
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+  }
 }
 
 /* Prevent unintended duplicate image stacking */

@@ -1,15 +1,15 @@
 import axios from "axios";
 
-const BASE_URL = "https://artalyze-backend-production.up.railway.app/api";
+const STAGING_BASE_URL = "https://artalyze-backend-staging.up.railway.app/api"; // Staging backend URL
 
 const axiosInstance = axios.create({
-  baseURL: BASE_URL, // Now using the deployed backend
+  baseURL: STAGING_BASE_URL, // Now using the staging backend
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Add authentication token to all outgoing requests
+// Attach token to all requests
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("authToken");

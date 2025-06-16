@@ -1,4 +1,5 @@
 import React from "react";
+import ReactGA from "react-ga4";
 import { useDarkMode } from "../hooks/useDarkMode";
 import "./SettingsModal.css";
 
@@ -47,7 +48,19 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
         <h2>Settings</h2>
         <ul className="settings-options">
           <li className="dark-mode-toggle-wrapper">
-            <div className="dark-mode-toggle-container" onClick={toggleDarkMode}>
+            <div
+              className="dark-mode-toggle-container"
+              onClick={() => {
+                toggleDarkMode();
+
+                // ✅ Track Dark Mode toggle
+                ReactGA.event({
+                  category: "Settings",
+                  action: "Dark Mode Toggled",
+                  label: darkMode ? "Switched to Light Mode" : "Switched to Dark Mode",
+                });
+              }}
+            >
               <span className="dark-mode-toggle-label">Dark Mode</span>
               <div className={`dark-mode-toggle ${darkMode ? "active" : ""}`}></div>
             </div>
@@ -59,33 +72,76 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
               onClick={() => {
                 onClose();
                 window.location.href = "mailto:info@artalyze.app?subject=Feedback";
+
+                // ✅ Track Feedback button click
+                ReactGA.event({
+                  category: "Settings",
+                  action: "Feedback Clicked",
+                  label: "User clicked Feedback",
+                });
               }}
             >
               Feedback
             </button>
           </li>
+
           <li>
             <button
               className="settings-button"
               onClick={() => {
                 onClose();
                 window.open("/privacy-policy.html", "_blank");
+
+                // ✅ Track Privacy Policy click
+                ReactGA.event({
+                  category: "Settings",
+                  action: "Privacy Policy Clicked",
+                  label: "User viewed Privacy Policy",
+                });
               }}
             >
               Privacy Policy
             </button>
           </li>
+
           <li>
             <button
               className="settings-button"
               onClick={() => {
                 onClose();
                 window.location.href = "mailto:info@artalyze.app?subject=Bug Report";
+
+                // ✅ Track Report a Bug click
+                ReactGA.event({
+                  category: "Settings",
+                  action: "Report Bug Clicked",
+                  label: "User clicked Report a Bug",
+                });
               }}
             >
               Report a Bug
             </button>
           </li>
+
+          <li>
+            <button
+              className="settings-button"
+              onClick={() => {
+                onClose();
+                window.open("/patch-notes.html", "_blank");
+
+                // ✅ Track Patch Notes click
+                ReactGA.event({
+                  category: "Settings",
+                  action: "Patch Notes Clicked",
+                  label: "User viewed Patch Notes",
+                });
+              }}
+            >
+              Patch Notes
+            </button>
+          </li>
+
           <li>
             <button
               className="settings-button"
@@ -103,11 +159,19 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
               onClick={() => {
                 onClose();
                 window.open("/terms-of-service.html", "_blank");
+
+                // ✅ Track Terms of Service click
+                ReactGA.event({
+                  category: "Settings",
+                  action: "Terms of Service Clicked",
+                  label: "User viewed Terms of Service",
+                });
               }}
             >
               Terms of Service
             </button>
           </li>
+
           <li>
             <button
               className="settings-button"
@@ -115,8 +179,22 @@ const SettingsModal = ({ isOpen, onClose, isLoggedIn }) => {
                 onClose();
                 if (isLoggedIn) {
                   handleLogout();
+
+                  // ✅ Track Log Out click
+                  ReactGA.event({
+                    category: "Settings",
+                    action: "User Logged Out",
+                    label: "User clicked Log Out",
+                  });
                 } else {
                   window.location.href = "/login";
+
+                  // ✅ Track Create Account click
+                  ReactGA.event({
+                    category: "Settings",
+                    action: "Create Account Clicked",
+                    label: "User clicked Create Account",
+                  });
                 }
               }}
             >

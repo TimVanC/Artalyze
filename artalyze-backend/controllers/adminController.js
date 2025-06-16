@@ -1,27 +1,27 @@
 // controllers/adminController.js
 
-const ImagePair = require('../models/ImagePair');
-const path = require('path');
-const fs = require('fs');
-const jwt = require('jsonwebtoken');
+const mongoose = require("mongoose");
+const ImagePair = require("../models/ImagePair");
+const jwt = require("jsonwebtoken");
 
+// Dynamically select collection name based on environment
+const collectionName = process.env.NODE_ENV === "staging" ? "staging_imagePairs" : "imagePairs";
+const ImagePairCollection = mongoose.model(collectionName, ImagePair.schema);
+
+// Admin login
 exports.adminLogin = async (req, res) => {
   const { email, password } = req.body;
-  
+
   // Load admin credentials from .env
   const adminEmail = process.env.ADMIN_EMAIL;
   const adminPassword = process.env.ADMIN_PASSWORD;
 
   if (email !== adminEmail || password !== adminPassword) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+    return res.status(401).json({ message: "Invalid credentials" });
   }
 
-  // Generate JWT
-  const token = jwt.sign(
-      { role: 'admin' },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-  );
+  // Generate JWT token without expiration for admin
+  const token = jwt.sign({ role: "admin" }, process.env.JWT_SECRET);
 
   res.json({ token });
 };
@@ -30,7 +30,7 @@ exports.adminLogin = async (req, res) => {
 exports.uploadDayPuzzle = async (req, res) => {
   const { date } = req.body;
   const pairs = [];
-  
+
   // Process image pairs from the formData
   for (let i = 0; i < 5; i++) {
     if (req.files[`human${i}`] && req.files[`ai${i}`]) {
@@ -45,23 +45,23 @@ exports.uploadDayPuzzle = async (req, res) => {
   }
 
   if (pairs.length === 0) {
-    return res.status(400).json({ message: 'No image pairs provided' });
+    return res.status(400).json({ message: "No image pairs provided" });
   }
 
   try {
-    let existingPair = await ImagePair.findOne({ date });
+    let existingPair = await ImagePairCollection.findOne({ date });
 
     if (existingPair) {
       existingPair.pairs = pairs;
       await existingPair.save();
     } else {
-      await ImagePair.create({ date, pairs });
+      await ImagePairCollection.create({ date, pairs });
     }
 
-    res.status(200).json({ message: 'Image pairs uploaded successfully' });
+    res.status(200).json({ message: "Image pairs uploaded successfully" });
   } catch (error) {
-    console.error('Error uploading image pairs:', error);
-    res.status(500).json({ message: 'Failed to upload image pairs' });
+    console.error("Error uploading image pairs:", error);
+    res.status(500).json({ message: "Failed to upload image pairs" });
   }
 };
 
@@ -70,7 +70,7 @@ exports.getImagePairsByDate = async (req, res) => {
   try {
     const { date } = req.params;
     if (!date) {
-      return res.status(400).json({ error: 'Date parameter is required' });
+      return res.status(400).json({ error: "Date parameter is required" });
     }
 
     // Convert the date string to a proper UTC date range
@@ -81,17 +81,17 @@ exports.getImagePairsByDate = async (req, res) => {
     queryEnd.setUTCHours(23, 59, 59, 999); // End of day UTC
 
     // Find image pairs within this date range
-    const imagePair = await ImagePair.findOne({
+    const imagePair = await ImagePairCollection.findOne({
       scheduledDate: { $gte: queryStart, $lte: queryEnd }
     });
 
     if (!imagePair) {
-      return res.status(404).json({ error: 'No image pairs found for this date' });
+      return res.status(404).json({ error: "No image pairs found for this date" });
     }
 
     res.status(200).json(imagePair.pairs);
   } catch (error) {
-    console.error('Error fetching image pairs:', error);
-    res.status(500).json({ message: 'Failed to fetch image pairs' });
+    console.error("Error fetching image pairs:", error);
+    res.status(500).json({ message: "Failed to fetch image pairs" });
   }
 };

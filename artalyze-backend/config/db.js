@@ -4,14 +4,13 @@ require('dotenv').config();
 
 const username = process.env.MONGO_USER;
 const password = process.env.MONGO_PASS;
-const uri = `mongodb+srv://${username}:${password}@cluster0.rr4c6.mongodb.net/<database-name>?retryWrites=true&w=majority`;
+const dbName = process.env.NODE_ENV === "staging" ? "artalyze_staging" : "artalyze";
+const uri = `mongodb+srv://${username}:${password}@cluster0.rr4c6.mongodb.net/${dbName}?retryWrites=true&w=majority`;
 
 const connectDB = async () => {
     try {
-        await mongoose.connect(uri, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
+        console.log('Connecting to MongoDB database:', dbName);
+        await mongoose.connect(uri);
         console.log('MongoDB connected successfully');
     } catch (err) {
         console.error('MongoDB connection error:', err.message);

@@ -6,13 +6,28 @@ const ImagePairSchema = new mongoose.Schema({
   scheduledDate: { 
     type: Date, 
     required: true,
-    unique: true 
+    unique: true,
+    validate: {
+      validator: function(value) {
+        const today = new Date();
+        today.setUTCHours(5, 0, 0, 0); // Set to midnight EST (5 AM UTC)
+        return value >= today;
+      },
+      message: 'Cannot schedule image pairs for dates before the current day'
+    }
   },
   pairs: [
     {
       humanImageURL: { type: String, required: true },
       aiImageURL: { type: String, required: true },
       metadata: { type: Object, default: {} } // Added for future extensibility
+    }
+  ],
+  pendingHumanImages: [
+    {
+      url: { type: String, required: true },
+      publicId: { type: String, required: true },
+      uploadedAt: { type: Date, default: Date.now }
     }
   ],
   status: { 
@@ -29,4 +44,7 @@ ImagePairSchema.pre('save', function(next) {
   next();
 }); // Middleware to update 'updatedAt' before saving
 
-module.exports = mongoose.model('ImagePair', ImagePairSchema);
+const collectionName = process.env.NODE_ENV === "staging" ? "staging_imagePairs" : "imagePairs";
+
+module.exports = mongoose.model(collectionName, ImagePairSchema);
+

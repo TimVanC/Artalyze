@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Box, Button, CircularProgress, Typography, Paper, Alert } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { v4 as uuidv4 } from 'uuid';
+import axiosInstance from '../../axiosInstance';
 
 const ImageUploader = () => {
   const [uploading, setUploading] = useState(false);
@@ -28,8 +29,16 @@ const ImageUploader = () => {
     // Generate session ID
     const sessionId = uuidv4();
 
-    // Connect to SSE endpoint
-    eventSourceRef.current = new EventSource(`/api/admin/progress-updates/${sessionId}`);
+    // Connect to SSE endpoint with auth token
+    const token = localStorage.getItem('adminToken');
+    eventSourceRef.current = new EventSource(
+      `/api/admin/progress-updates/${sessionId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
     
     eventSourceRef.current.onmessage = (event) => {
       const { message } = JSON.parse(event.data);
@@ -47,16 +56,17 @@ const ImageUploader = () => {
     formData.append('sessionId', sessionId);
 
     try {
-      const response = await fetch('/api/admin/upload-human-image', {
-        method: 'POST',
-        body: formData
+      const response = await axiosInstance.post('/admin/upload-human-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
       });
 
       if (!response.ok) {
         throw new Error('Upload failed');
       }
 
-      const result = await response.json();
+      const result = await response.data;
       setSuccess(true);
       
       // Clear the file input
@@ -64,7 +74,8 @@ const ImageUploader = () => {
         fileInputRef.current.value = '';
       }
     } catch (error) {
-      setError(error.message);
+      console.error('Upload error:', error);
+      setError(error.response?.data?.error || error.message);
     } finally {
       cleanup();
     }

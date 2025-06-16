@@ -15,8 +15,8 @@ export const calculatePuzzleNumber = () => {
 
   const estNow = new Date(year, month, day);
 
-  // Game launch date: February 15, 2025 at midnight EST
-  const startDate = new Date(Date.UTC(2025, 1, 15, 5, 0, 0)); // 5:00 AM UTC = Midnight EST
+  // Game launch date: June 1, 2024 at midnight EST
+  const startDate = new Date(Date.UTC(2024, 5, 1, 5, 0, 0)); // 5:00 AM UTC = Midnight EST
 
   // Calculate days since launch to get current puzzle number
   const puzzleNumber = Math.floor((estNow - startDate) / (1000 * 60 * 60 * 24)) + 1;

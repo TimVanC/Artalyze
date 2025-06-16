@@ -12,37 +12,31 @@ const connectDB = require('./config/db'); // Database connection configuration
 
 const app = express();
 
-// Verify server status
-app.get("/", (req, res) => {
-    res.json({ message: "Backend is running successfully!" });
-});
-
 // Log all incoming requests for debugging and monitoring
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} request to ${req.originalUrl} from ${req.headers.origin}`);
     next();
 });
 
-// Configure CORS with appropriate origins based on environment
+// CORS configuration
+const otherOrigins = process.env.OTHER_ORIGINS ? process.env.OTHER_ORIGINS.split(",") : [];
+
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
+    origin: process.env.NODE_ENV === 'staging'
         ? [
-            'https://artalyze.app',
-            'https://www.artalyze.app',
-            'https://artalyze-admin.vercel.app',
-            'https://artalyze-user.vercel.app',
-            'https://staging.artalyze.app'
+            'https://staging-admin.artalyze.app',
+            'https://staging.artalyze.app',
+            'https://artalyze-backend-staging.up.railway.app'
           ]
-        : [
-            'http://localhost:3000',
-            'http://localhost:3001'
-          ],
+        : [...otherOrigins],
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    exposedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    maxAge: 86400 // Cache preflight requests for 24 hours
 }));
 
-// Parse incoming request bodies
+// Middleware to parse JSON and URL-encoded data
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -57,10 +51,12 @@ app.use(express.urlencoded({ extended: true }));
     }
 })();
 
-// Serve static files from the uploads directory
-app.use('/uploads', express.static('uploads'));
+// Verify server status
+app.get("/", (req, res) => {
+    res.json({ message: "Backend is running successfully!" });
+});
 
-// Mount all API routes
+// Mount all API routes first
 app.use('/api/auth', authRoutes);
 app.use('/api/game', gameRoutes);
 app.use('/api/images', imageRoutes);
@@ -68,15 +64,19 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/user', userRoutes);
 
+// API 404 handler - only handle /api/* routes
+app.use('/api/*', (req, res) => {
+    res.status(404).json({ error: 'API endpoint not found' });
+});
+
 // Global error handler for uncaught exceptions
 app.use((err, req, res, next) => {
     console.error('An error occurred:', err.stack);
-    res.status(500).send({ message: 'An error occurred. Please try again later.' });
+    res.status(500).json({ message: 'An error occurred. Please try again later.' });
 });
 
 // Production environment configuration
 if (process.env.NODE_ENV === 'production') {
-    app.use('/api/admin', adminRoutes);
     app.use(express.static(path.join(__dirname, '../artalyze-user/build')));
     app.get('*', (req, res) => {
         if (req.path.startsWith('/api/')) {
@@ -87,19 +87,8 @@ if (process.env.NODE_ENV === 'production') {
     });
 }
 
-// Start the server on the specified port
-const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
-
-// Handle graceful shutdown on SIGTERM signal
-process.on('SIGTERM', () => {
-    console.log('SIGTERM signal received. Closing HTTP server.');
-    server.close(() => {
-        console.log('HTTP server closed.');
-    });
-});
+// Serve static files from the uploads directory
+app.use('/uploads', express.static('uploads'));
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
@@ -113,5 +102,19 @@ app.get('/:page', (req, res, next) => {
         if (err) {
             next();
         }
+    });
+});
+
+// Start the server on the specified port
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
+
+// Handle graceful shutdown on SIGTERM signal
+process.on('SIGTERM', () => {
+    console.log('SIGTERM signal received. Closing HTTP server.');
+    server.close(() => {
+        console.log('HTTP server closed.');
     });
 });

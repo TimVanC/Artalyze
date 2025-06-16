@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import ReactGA from "react-ga4";
 import { useDarkMode } from "../hooks/useDarkMode";
 import "./StatsModal.css";
 import { FaShareAlt } from 'react-icons/fa';
@@ -28,7 +29,7 @@ const StatsModal = ({
   correctCount = 0,
   isGameComplete = false,
   completedSelections = [],
-  attempts = [],
+  attempts = [], // ✅ Add attempts prop
 }) => {
   const userId = localStorage.getItem('userId');
   const [stats, setStats] = useState(initialStats);
@@ -105,7 +106,7 @@ const StatsModal = ({
     
     Track your stats and play daily:
     https://artalyze.app
-    `;    
+    `;
 
     if (navigator.share) {
       navigator
@@ -128,34 +129,42 @@ const StatsModal = ({
 
   // Share today's puzzle results
   const handleCompletionShare = () => {
+    // Ensure completedSelections, attempts, and imagePairs are available
     if (!completedSelections.length || !imagePairs.length) {
       alert("No data available to share today's puzzle!");
       return;
     }
-  
+
+    // Calculate the score based on completed selections
     const score = completedSelections.reduce((count, selection, index) => {
       if (selection?.selected === imagePairs[index]?.human) {
         return count + 1;
       }
       return count;
     }, 0);
-  
+
+    // Get the puzzle number dynamically
     const puzzleNumber = calculatePuzzleNumber();
-  
+
+    // Format all attempts (previous guesses)
     const formattedGuesses = attempts
       .map(attempt => attempt
         .map((selected) => (selected ? "🟢" : "🔴"))
         .join(" ")
       ).join("\n");
-  
+
+    // Add the final attempt separately
     const finalAttempt = completedSelections
       .map((selection, index) => (selection?.selected === imagePairs[index]?.human ? "🟢" : "🔴"))
       .join(" ");
-  
+
+    // Add placeholder for painting emojis
     const paintings = "🖼️ ".repeat(imagePairs.length).trim();
-  
+
+    // Construct the shareable text including all attempts
     const shareableText = `Artalyze #${puzzleNumber} ${score}/${imagePairs.length}\n${formattedGuesses}\n${finalAttempt}\n${paintings}\n\nCheck it out here:\nhttps://artalyze.app`;
-  
+
+    // Attempt native sharing first, fallback to clipboard copy
     if (navigator.share) {
       navigator
         .share({
@@ -172,29 +181,35 @@ const StatsModal = ({
         .catch((error) => console.error("Failed to copy:", error));
     }
   };
-  
-  // Share current game results
+
+
   const shareResults = (usedSelections, allAttempts) => {
+    // Ensure we have valid selections, attempts, and image pairs
     if (!usedSelections.length || !imagePairs.length || !allAttempts.length) {
       alert("No data available to share today's puzzle!");
       return;
     }
   
     const puzzleNumber = calculatePuzzleNumber();
-  
+
+    // Calculate the correct count from the final attempt
     const correctCount = usedSelections.reduce((count, selection, index) => {
       return selection?.selected === imagePairs[index]?.human ? count + 1 : count;
     }, 0);
-  
+
+    // Format all attempts visually
     const formattedGuesses = allAttempts
       .map(attempt =>
         attempt.map((selected) => (selected ? "🟢" : "🔴")).join(" ")
       ).join("\n");
-  
+
+    // Add placeholder for painting emojis
     const paintings = "🖼️ ".repeat(imagePairs.length).trim();
-  
+
+    // Construct the shareable text including all attempts
     const shareableText = `Artalyze #${puzzleNumber} ${correctCount}/${imagePairs.length}\n${formattedGuesses}\n${paintings}\n\nCheck it out here:\nhttps://artalyze.app`;
-  
+
+    // Attempt native sharing first, fallback to clipboard copy
     if (navigator.share) {
       navigator
         .share({
@@ -211,6 +226,8 @@ const StatsModal = ({
         .catch((error) => console.error("Failed to copy:", error));
     }
   };
+
+
 
   if (!isOpen && !isDismissing) return null;
 
@@ -366,16 +383,36 @@ const StatsModal = ({
             <div className="share-buttons-container">
               <button
                 className="modal-share-button"
-                onClick={handleHistoricalStatsShare}
+                onClick={() => {
+                  handleHistoricalStatsShare();
+
+                  // ✅ Track "Share Stats" button in Google Analytics
+                  ReactGA.event({
+                    category: "Stats Modal",
+                    action: "Shared Lifetime Stats",
+                    label: "User shared their lifetime stats from the Stats Modal",
+                  });
+                }}
               >
                 <FaShareAlt className="share-icon" /> Share Stats
               </button>
-              <button 
-              className="modal-share-today-button" 
-              onClick={handleCompletionShare}
+
+              <button
+                className="modal-share-today-button"
+                onClick={() => {
+                  handleCompletionShare();
+
+                  // ✅ Track "Share Today" button in Google Analytics
+                  ReactGA.event({
+                    category: "Stats Modal",
+                    action: "Shared Today's Stats",
+                    label: "User shared their daily stats from the Stats Modal",
+                  });
+                }}
               >
                 <FaShareAlt className="share-icon" /> Share Today
               </button>
+
             </div>
 
 
@@ -395,11 +432,19 @@ const StatsModal = ({
             <button
               className="guest-cta-button"
               onClick={() => {
+                // ✅ Track Guest CTA Click in Google Analytics
+                ReactGA.event({
+                  category: "Guest Engagement",
+                  action: "Guest Create Account Clicked",
+                  label: "Guest user clicked to create a free account",
+                });
+
                 window.location.href = "/login";
               }}
             >
               Create a Free Account
             </button>
+
           </div>
 
         )}
