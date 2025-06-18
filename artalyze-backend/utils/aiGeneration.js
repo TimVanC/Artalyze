@@ -23,13 +23,24 @@ const RETRY_DELAY = 5000;
 const getDalleSize = (width, height) => {
   const aspectRatio = width / height;
   
-  if (aspectRatio >= 1.6) {
-    return "1792x1024"; // Wide
-  } else if (aspectRatio <= 0.7) {
-    return "1024x1792"; // Tall
+  // Calculate dimensions that maintain aspect ratio while fitting within DALL-E's limits
+  let dalleWidth, dalleHeight;
+  
+  if (aspectRatio >= 1) {
+    // Landscape or square
+    dalleWidth = 1024;
+    dalleHeight = Math.round(1024 / aspectRatio);
   } else {
-    return "1024x1024"; // Square
+    // Portrait
+    dalleHeight = 1024;
+    dalleWidth = Math.round(1024 * aspectRatio);
   }
+  
+  // Ensure dimensions are multiples of 8 (DALL-E requirement)
+  dalleWidth = Math.round(dalleWidth / 8) * 8;
+  dalleHeight = Math.round(dalleHeight / 8) * 8;
+  
+  return `${dalleWidth}x${dalleHeight}`;
 };
 
 /**
@@ -147,11 +158,11 @@ const generateAIImage = async (prompt, referenceImageUrl, progressCallback = nul
       const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
       const imageBuffer = Buffer.from(imageResponse.data);
 
-      // Process with sharp to resize and convert to webp
+      // Process with sharp to maintain exact aspect ratio
       const processedBuffer = await sharp(imageBuffer)
-        .resize(600, null, { // Resize to 600px width, maintain aspect ratio
-          withoutEnlargement: true,
-          fit: 'inside'
+        .resize(width, height, { // Use exact dimensions from reference image
+          fit: 'fill',
+          position: 'center'
         })
         .webp({ quality: 90 })
         .toBuffer();
@@ -160,8 +171,8 @@ const generateAIImage = async (prompt, referenceImageUrl, progressCallback = nul
         progressCallback('Image processed, uploading to Cloudinary...');
       }
 
-      // Upload to Cloudinary
-      const uploadResult = await uploadToCloudinary(processedBuffer);
+      // Upload to Cloudinary with exact dimensions
+      const uploadResult = await uploadToCloudinary(processedBuffer, { width, height });
 
       if (progressCallback) {
         progressCallback('Process completed successfully');
@@ -236,7 +247,7 @@ const getCloudinaryOptions = (medium) => {
   return baseOptions;
 };
 
-const uploadToCloudinary = async (imageBuffer, metadata) => {
+const uploadToCloudinary = async (imageBuffer, dimensions) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
@@ -246,7 +257,11 @@ const uploadToCloudinary = async (imageBuffer, metadata) => {
         flags: 'preserve_transparency',
         fetch_format: 'auto',
         transformation: [
-          { width: 600, crop: "scale" }
+          { 
+            width: dimensions.width,
+            height: dimensions.height,
+            crop: "fill"
+          }
         ]
       },
       (error, result) => {
