@@ -32,15 +32,25 @@ async function automateDaily() {
         const caption = await captionImage(humanImage.url);
         console.log(`Caption generated: ${caption}`);
 
-        // Generate creative AI prompt from caption
-        const aiPrompt = await generateAiPrompt(caption);
-        console.log(`AI prompt generated: ${aiPrompt}`);
+        // Generate enhanced AI prompt with style analysis and imperfections
+        const promptResult = await generateAiPrompt(caption, {
+          medium: humanImage.medium || 'mixed',
+          style: humanImage.style || 'contemporary',
+          dimensions: {
+            width: humanImage.width,
+            height: humanImage.height
+          }
+        });
+        
+        console.log(`Enhanced AI prompt generated: ${promptResult.prompt}`);
+        console.log(`Style analysis: ${promptResult.metadata.styleAnalysis}`);
+        console.log(`Suggested imperfections: ${promptResult.metadata.suggestedImperfections}`);
 
-        // Generate AI image matching dimensions
-        const aiImage = await generateAiImage(aiPrompt, {
+        // Generate AI image with enhanced parameters and metadata
+        const aiImage = await generateAiImage(promptResult.prompt, {
           width: humanImage.width,
           height: humanImage.height
-        });
+        }, promptResult.metadata);
 
         // Upload both images to dated folder and move human image to used
         const { humanUrl, aiUrl } = await processAndUploadImages({
@@ -52,7 +62,13 @@ async function automateDaily() {
 
         results.push({
           humanImageURL: humanUrl,
-          aiImageURL: aiUrl
+          aiImageURL: aiUrl,
+          metadata: {
+            ...promptResult.metadata,
+            originalCaption: caption,
+            enhancedPrompt: promptResult.prompt,
+            generatedAt: new Date()
+          }
         });
 
       } catch (error) {

@@ -13,6 +13,7 @@ const OpenAI = require('openai');
 const { generateAIImage } = require('../utils/aiGeneration');
 const jwt = require('jsonwebtoken');
 const { generateImageDescription, remixCaption } = require('../utils/textProcessing');
+const axios = require('axios');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -298,6 +299,15 @@ router.post('/upload-human-image', upload.single('humanImage'), async (req, res)
     sendProgress(sessionId, `Processing image ${currentImageIndex}/${totalImages}: Optimizing image...`, 'info');
 
     try {
+      // Get image dimensions before resizing
+      const metadata = await sharp(humanImage.buffer).metadata();
+      const dimensions = {
+        width: metadata.width,
+        height: metadata.height,
+        aspectRatio: metadata.width / metadata.height,
+        orientation: metadata.width > metadata.height ? 'landscape' : metadata.width < metadata.height ? 'portrait' : 'square'
+      };
+
       // Resize image before uploading
       const resizedBuffer = await resizeImage(humanImage.buffer);
       sendProgress(sessionId, `Image ${currentImageIndex}/${totalImages}: Optimization complete`, 'success');
@@ -314,14 +324,25 @@ router.post('/upload-human-image', upload.single('humanImage'), async (req, res)
 
       // Generate remixed prompt
       sendProgress(sessionId, `Image ${currentImageIndex}/${totalImages}: Engineering AI prompt...`, 'info');
-      const { prompt: remixedPrompt, metadata } = await remixCaption(imageAnalysis);
+      const { prompt: remixedPrompt } = await remixCaption({
+        ...imageAnalysis,
+        metadata: {
+          ...imageAnalysis.metadata,
+          dimensions
+        }
+      });
       sendProgress(sessionId, `Image ${currentImageIndex}/${totalImages}: AI prompt ready`, 'success');
 
       try {
         // Generate AI image
         sendProgress(sessionId, `Image ${currentImageIndex}/${totalImages}: Starting AI generation (typically 30-45 seconds)...`, 'info');
-        const aiImageUrl = await generateAIImage(remixedPrompt, humanUploadResult.secure_url, (message) => {
+        const aiImageUrl = await generateAIImage(remixedPrompt, (message) => {
           sendProgress(sessionId, `Image ${currentImageIndex}/${totalImages}: ${message}`, 'info');
+        }, dimensions, {
+          ...imageAnalysis.metadata,
+          dimensions,
+          imageType: imageAnalysis.metadata?.imageType || 'mixed_media',
+          subtype: imageAnalysis.metadata?.subtype || 'unknown'
         });
 
         if (!aiImageUrl) {
@@ -347,7 +368,10 @@ router.post('/upload-human-image', upload.single('humanImage'), async (req, res)
           { 
             description: imageAnalysis.description,
             styleAnalysis: imageAnalysis.styleAnalysis,
-            metadata: imageAnalysis.metadata,
+            metadata: {
+              ...imageAnalysis.metadata,
+              dimensions
+            },
             remixedPrompt 
           }
         );
@@ -498,9 +522,16 @@ router.post('/regenerate-ai-image', async (req, res) => {
       return res.status(400).json({ error: 'Pair ID and scheduled date are required.' });
     }
 
-    // Find the document for the given date
+    // Use the same date range query as get-image-pairs-by-date
+    const queryStart = new Date(scheduledDate);
+    queryStart.setUTCHours(0, 0, 0, 0);
+
+    const queryEnd = new Date(queryStart);
+    queryEnd.setUTCHours(23, 59, 59, 999);
+
+    // Find the document for the given date range
     const doc = await ImagePairCollection.findOne({ 
-      scheduledDate: new Date(scheduledDate)
+      scheduledDate: { $gte: queryStart, $lte: queryEnd }
     });
     console.log('Found document:', doc);
     if (!doc) {
@@ -514,11 +545,33 @@ router.post('/regenerate-ai-image', async (req, res) => {
       return res.status(404).json({ error: 'Pair not found in the document.' });
     }
 
+    // Get dimensions from the human image
+    const humanImageResponse = await axios.get(pair.humanImageURL, { responseType: 'arraybuffer' });
+    const humanImageBuffer = Buffer.from(humanImageResponse.data);
+    const metadata = await sharp(humanImageBuffer).metadata();
+    const dimensions = {
+      width: metadata.width,
+      height: metadata.height,
+      aspectRatio: metadata.width / metadata.height,
+      orientation: metadata.width > metadata.height ? 'landscape' : metadata.width < metadata.height ? 'portrait' : 'square'
+    };
+
     // Generate new image description and AI image
     const imageAnalysis = await generateImageDescription(pair.humanImageURL);
-    const { prompt: remixedPrompt } = await remixCaption(imageAnalysis);
+    const { prompt: remixedPrompt } = await remixCaption({
+      ...imageAnalysis,
+      metadata: {
+        ...imageAnalysis.metadata,
+        dimensions
+      }
+    });
     
-    const newAiImageUrl = await generateAIImage(remixedPrompt, pair.humanImageURL);
+    const newAiImageUrl = await generateAIImage(remixedPrompt, null, dimensions, {
+      ...imageAnalysis.metadata,
+      dimensions,
+      imageType: imageAnalysis.metadata?.imageType || 'mixed_media',
+      subtype: imageAnalysis.metadata?.subtype || 'unknown'
+    });
     if (!newAiImageUrl) {
       return res.status(429).json({ error: 'AI image generation failed. Please try again later.' });
     }
@@ -526,8 +579,8 @@ router.post('/regenerate-ai-image', async (req, res) => {
     // Update the specific pair in the array
     const updateResult = await ImagePairCollection.findOneAndUpdate(
       { 
-        scheduledDate: new Date(scheduledDate),
-        'pairs._id': mongoose.Types.ObjectId(pairId)
+        scheduledDate: { $gte: queryStart, $lte: queryEnd },
+        'pairs._id': pairId
       },
       {
         $set: {
@@ -536,6 +589,7 @@ router.post('/regenerate-ai-image', async (req, res) => {
             description: imageAnalysis.description,
             styleAnalysis: imageAnalysis.styleAnalysis,
             remixedPrompt,
+            dimensions,
             regeneratedAt: new Date()
           }
         }
@@ -571,9 +625,16 @@ router.delete('/delete-pair', async (req, res) => {
       return res.status(400).json({ error: 'Pair ID and scheduled date are required.' });
     }
 
+    // Use the same date range query as get-image-pairs-by-date
+    const queryStart = new Date(scheduledDate);
+    queryStart.setUTCHours(0, 0, 0, 0);
+
+    const queryEnd = new Date(queryStart);
+    queryEnd.setUTCHours(23, 59, 59, 999);
+
     // First check if the document exists
     const doc = await ImagePairCollection.findOne({ 
-      scheduledDate: new Date(scheduledDate)
+      scheduledDate: { $gte: queryStart, $lte: queryEnd }
     });
     
     if (!doc) {
@@ -588,8 +649,8 @@ router.delete('/delete-pair', async (req, res) => {
 
     // Remove the pair using $pull
     const result = await ImagePairCollection.findOneAndUpdate(
-      { scheduledDate: new Date(scheduledDate) },
-      { $pull: { pairs: { _id: mongoose.Types.ObjectId(pairId) } } },
+      { scheduledDate: { $gte: queryStart, $lte: queryEnd } },
+      { $pull: { pairs: { _id: pairId } } },
       { new: true }
     );
 
@@ -605,6 +666,234 @@ router.delete('/delete-pair', async (req, res) => {
   } catch (error) {
     console.error('Deletion Error:', error);
     res.status(500).json({ error: 'Failed to delete image pair' });
+  }
+});
+
+// Bulk regenerate AI images for selected pairs on a date
+router.post('/bulk-regenerate-selected-ai-images', async (req, res) => {
+  console.log('Bulk regenerate selected AI endpoint called with:', {
+    body: req.body,
+    headers: req.headers
+  });
+  try {
+    const { scheduledDate, pairIds } = req.body;
+    if (!scheduledDate || !pairIds || !Array.isArray(pairIds) || pairIds.length === 0) {
+      return res.status(400).json({ error: 'Scheduled date and pair IDs array are required.' });
+    }
+
+    // Use the same date range query as get-image-pairs-by-date
+    const queryStart = new Date(scheduledDate);
+    queryStart.setUTCHours(0, 0, 0, 0);
+
+    const queryEnd = new Date(queryStart);
+    queryEnd.setUTCHours(23, 59, 59, 999);
+
+    // Find the document for the given date
+    const doc = await ImagePairCollection.findOne({ 
+      scheduledDate: { $gte: queryStart, $lte: queryEnd }
+    });
+    
+    if (!doc) {
+      return res.status(404).json({ error: 'No pairs found for this date.' });
+    }
+
+    if (!doc.pairs || doc.pairs.length === 0) {
+      return res.status(404).json({ error: 'No pairs to regenerate.' });
+    }
+
+    // Filter pairs to only those that are selected
+    const selectedPairs = doc.pairs.filter(pair => pairIds.includes(pair._id.toString()));
+    
+    if (selectedPairs.length === 0) {
+      return res.status(404).json({ error: 'No selected pairs found.' });
+    }
+
+    console.log(`Regenerating ${selectedPairs.length} selected AI images...`);
+
+    // Regenerate AI images for selected pairs
+    const updatedPairs = [...doc.pairs]; // Copy all pairs
+    for (let i = 0; i < selectedPairs.length; i++) {
+      const pair = selectedPairs[i];
+      try {
+        console.log(`Regenerating selected pair ${i + 1}/${selectedPairs.length}: ${pair._id}`);
+
+        // Get dimensions from the human image
+        const humanImageResponse = await axios.get(pair.humanImageURL, { responseType: 'arraybuffer' });
+        const humanImageBuffer = Buffer.from(humanImageResponse.data);
+        const metadata = await sharp(humanImageBuffer).metadata();
+        const dimensions = {
+          width: metadata.width,
+          height: metadata.height,
+          aspectRatio: metadata.width / metadata.height,
+          orientation: metadata.width > metadata.height ? 'landscape' : metadata.width < metadata.height ? 'portrait' : 'square'
+        };
+
+        // Generate new image description and AI image
+        const imageAnalysis = await generateImageDescription(pair.humanImageURL);
+        const { prompt: remixedPrompt } = await remixCaption({
+          ...imageAnalysis,
+          metadata: {
+            ...imageAnalysis.metadata,
+            dimensions
+          }
+        });
+        
+        const newAiImageUrl = await generateAIImage(remixedPrompt, null, dimensions, {
+          ...imageAnalysis.metadata,
+          dimensions,
+          imageType: imageAnalysis.metadata?.imageType || 'mixed_media',
+          subtype: imageAnalysis.metadata?.subtype || 'unknown'
+        });
+
+        if (newAiImageUrl) {
+          // Update the specific pair in the updatedPairs array
+          const pairIndex = updatedPairs.findIndex(p => p._id.toString() === pair._id.toString());
+          if (pairIndex !== -1) {
+            updatedPairs[pairIndex] = {
+              ...updatedPairs[pairIndex].toObject(),
+              aiImageURL: newAiImageUrl,
+              metadata: {
+                description: imageAnalysis.description,
+                styleAnalysis: imageAnalysis.styleAnalysis,
+                remixedPrompt,
+                dimensions,
+                regeneratedAt: new Date()
+              }
+            };
+          }
+        } else {
+          console.warn(`Failed to regenerate AI image for pair ${pair._id}`);
+        }
+
+        // Add a small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+      } catch (error) {
+        console.error(`Error regenerating pair ${pair._id}:`, error);
+      }
+    }
+
+    // Update the document with updated pairs
+    const updateResult = await ImagePairCollection.findOneAndUpdate(
+      { scheduledDate: { $gte: queryStart, $lte: queryEnd } },
+      { $set: { pairs: updatedPairs } },
+      { new: true }
+    );
+
+    if (!updateResult) {
+      return res.status(404).json({ error: 'Failed to update the pairs.' });
+    }
+
+    res.json({ 
+      message: `Successfully regenerated ${selectedPairs.length} AI images`,
+      updatedPairs: updateResult.pairs
+    });
+
+  } catch (error) {
+    console.error('Bulk Regeneration Error:', error);
+    res.status(500).json({ error: 'Failed to bulk regenerate AI images' });
+  }
+});
+
+// Bulk delete selected pairs for a date
+router.delete('/bulk-delete-selected-pairs', async (req, res) => {
+  console.log('Bulk delete selected pairs endpoint called with:', {
+    body: req.body,
+    headers: req.headers
+  });
+  try {
+    const { scheduledDate, pairIds } = req.body;
+    if (!scheduledDate || !pairIds || !Array.isArray(pairIds) || pairIds.length === 0) {
+      return res.status(400).json({ error: 'Scheduled date and pair IDs array are required.' });
+    }
+
+    // Use the same date range query as get-image-pairs-by-date
+    const queryStart = new Date(scheduledDate);
+    queryStart.setUTCHours(0, 0, 0, 0);
+
+    const queryEnd = new Date(queryStart);
+    queryEnd.setUTCHours(23, 59, 59, 999);
+
+    // First check if the document exists
+    const doc = await ImagePairCollection.findOne({ 
+      scheduledDate: { $gte: queryStart, $lte: queryEnd }
+    });
+    
+    if (!doc) {
+      return res.status(404).json({ error: 'No pairs found for this date.' });
+    }
+
+    if (!doc.pairs || doc.pairs.length === 0) {
+      return res.status(404).json({ error: 'No pairs to delete.' });
+    }
+
+    // Filter pairs to only those that are selected
+    const selectedPairs = doc.pairs.filter(pair => pairIds.includes(pair._id.toString()));
+    
+    if (selectedPairs.length === 0) {
+      return res.status(404).json({ error: 'No selected pairs found.' });
+    }
+
+    console.log(`Deleting ${selectedPairs.length} selected pairs for date ${scheduledDate}`);
+
+    // Remove selected pairs using $pull with $in operator
+    const result = await ImagePairCollection.findOneAndUpdate(
+      { scheduledDate: { $gte: queryStart, $lte: queryEnd } },
+      { $pull: { pairs: { _id: { $in: pairIds } } } },
+      { new: true }
+    );
+
+    if (!result) {
+      return res.status(404).json({ error: 'Failed to delete the pairs.' });
+    }
+
+    res.json({ 
+      message: `Successfully deleted ${selectedPairs.length} image pairs`,
+      deletedCount: selectedPairs.length,
+      remainingPairs: result.pairs
+    });
+
+  } catch (error) {
+    console.error('Bulk Deletion Error:', error);
+    res.status(500).json({ error: 'Failed to bulk delete image pairs' });
+  }
+});
+
+// Get image pairs for a specific date
+router.get('/image-pairs/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    const targetDate = new Date(date);
+    targetDate.setUTCHours(5, 0, 0, 0); // Set to midnight EST
+
+    const imagePair = await ImagePairCollection.findOne({ scheduledDate: targetDate });
+    
+    if (!imagePair) {
+      return res.json([]);
+    }
+
+    res.json(imagePair.pairs || []);
+  } catch (error) {
+    console.error('Error fetching image pairs:', error);
+    res.status(500).json({ error: 'Failed to fetch image pairs' });
+  }
+});
+
+// Get pair counts for all days (for calendar highlighting)
+router.get('/pair-counts', async (req, res) => {
+  try {
+    const pairCounts = {};
+    // Only fetch scheduledDate and pairs fields, use lean for performance
+    const allImagePairs = await ImagePairCollection.find({}, { scheduledDate: 1, pairs: 1 }).lean();
+    allImagePairs.forEach(imagePair => {
+      // Always use UTC date string (YYYY-MM-DD)
+      const dateString = new Date(imagePair.scheduledDate).toISOString().slice(0, 10);
+      pairCounts[dateString] = imagePair.pairs ? imagePair.pairs.length : 0;
+    });
+    res.json(pairCounts);
+  } catch (error) {
+    console.error('Error fetching pair counts:', error);
+    res.status(500).json({ error: 'Failed to fetch pair counts' });
   }
 });
 

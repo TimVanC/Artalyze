@@ -1,12 +1,15 @@
 import axios from "axios";
 
-const STAGING_BASE_URL = "https://artalyze-backend-staging.up.railway.app/api"; // Staging backend URL
+// Automatically detect environment and use appropriate backend URL
+const isStaging = window.location.hostname.includes('staging') || process.env.NODE_ENV === 'development';
+const BASE_URL = isStaging 
+  ? "https://artalyze-backend-staging.up.railway.app/api"
+  : "https://artalyze-backend-production.up.railway.app/api";
 
 const axiosInstance = axios.create({
-  baseURL: STAGING_BASE_URL, // Now using the staging backend
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL: BASE_URL,
+  timeout: 30000,
+  withCredentials: true,
 });
 
 // Attach token to all requests

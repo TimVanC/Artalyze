@@ -1,27 +1,4 @@
 const { uploadImage, moveToUsed } = require('./cloudinaryUtils');
-const sharp = require('sharp');
-
-/**
- * Resize image while preserving aspect ratio
- * @param {Buffer} buffer Image buffer to resize
- * @returns {Promise<Buffer>} Resized image buffer
- */
-async function resizeImage(buffer) {
-  const image = sharp(buffer);
-  const metadata = await image.metadata();
-  
-  // Only resize if width is greater than 600px
-  if (metadata.width > 600) {
-    return await image
-      .resize(600, null, { 
-        fit: 'inside',
-        withoutEnlargement: true 
-      })
-      .toBuffer();
-  }
-  
-  return buffer;
-}
 
 /**
  * Process and upload both human and AI images
@@ -37,12 +14,9 @@ async function processAndUploadImages({ date, index, humanImage, aiImage }) {
     // Create folder path for this date's puzzle
     const puzzleFolder = `artalyze/puzzles/${date}`;
 
-    // Resize AI image before uploading
-    const resizedAiBuffer = await resizeImage(aiImage);
-
     // Upload AI image to puzzle folder
     const aiResult = await uploadImage(
-      resizedAiBuffer,
+      aiImage,
       puzzleFolder,
       `Ai${index}`
     );

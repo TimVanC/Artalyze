@@ -30,4 +30,13 @@ const getYesterdayInEST = () => {
   return `${parts.find(p => p.type === 'year').value}-${parts.find(p => p.type === 'month').value}-${parts.find(p => p.type === 'day').value}`;
 };
 
-module.exports = { getTodayInEST, getYesterdayInEST };
+/**
+ * Format a date as YYYY-MM-DD
+ * @param {Date} date Date to format
+ * @returns {string} Formatted date string
+ */
+const formatDate = (date) => {
+  return date.toISOString().split('T')[0];
+};
+
+module.exports = { getTodayInEST, getYesterdayInEST, formatDate };
