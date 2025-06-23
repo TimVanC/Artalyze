@@ -1,179 +1,394 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { BASE_URL } from "../config";
 import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css'; // Import calendar styles
-import DropzoneComponent from './DropzoneComponent';
-import axios from 'axios';
+import 'react-calendar/dist/Calendar.css';
 import axiosInstance from '../axiosInstance';
+import ImageModal from './ImageModal';
 import './ManageDay.css';
 
-// Component for managing image pairs for a specific date
 const ManageDay = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [imagePairs, setImagePairs] = useState([]); // State to store the fetched image pairs
-  const [error, setError] = useState(null); // State for managing error messages
-  const [uploadMessage, setUploadMessage] = useState(''); // State for managing upload messages
+  const [imagePairs, setImagePairs] = useState([]);
+  const [error, setError] = useState(null);
+  const [message, setMessage] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingPairs, setLoadingPairs] = useState(new Set()); // Track individual pair loading states
+  const [bulkLoading, setBulkLoading] = useState(false); // Track bulk operation loading
+  const [selectedPairs, setSelectedPairs] = useState(new Set()); // Track selected pairs for bulk operations
+  const [pairCounts, setPairCounts] = useState({});
 
   // Fetch image pairs for the selected date
-  const fetchImagePairs = useCallback(async () => {
+  const fetchImagePairs = async (date) => {
+    console.log('Fetching pairs for date:', date.toISOString().slice(0, 10));
+    setIsLoading(true);
+    setError(null);
     try {
-      const adjustedDate = new Date(selectedDate);
-      adjustedDate.setUTCHours(5, 0, 0, 0); // Convert to EST/EDT format
-      const formattedDate = adjustedDate.toISOString().split("T")[0]; // Ensure only YYYY-MM-DD
+      const response = await axiosInstance.get(`/admin/image-pairs/${date.toISOString().slice(0, 10)}`);
+      console.log('Pairs received:', response.data);
+      setImagePairs(response.data);
+      setSelectedPairs(new Set()); // Reset selections when changing dates
+    } catch (err) {
+      console.error('Error fetching image pairs:', err);
+      setError('Failed to fetch image pairs');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      console.log('Fetching Image Pairs for:', formattedDate);
-      const response = await axiosInstance.get(`/admin/get-image-pairs-by-date/${formattedDate}`);
-      
-      if (response.data && response.data.pairs) {
-        setImagePairs(response.data.pairs);
-      } else {
-        setImagePairs([]);
-      }
-    } catch (error) {
-      console.error('Error fetching image pairs:', error);
-      setImagePairs([]);
+  // Fetch pair counts for all days
+  const fetchPairCounts = async () => {
+    try {
+      console.log('Fetching pair counts...');
+      const response = await axiosInstance.get('/admin/pair-counts');
+      console.log('Pair counts received:', response.data);
+      setPairCounts(response.data);
+    } catch (err) {
+      console.error('Error fetching pair counts:', err);
+      // Don't set error state for pair counts, just log it
+    }
+  };
+
+  // Load pair counts only once on component mount
+  useEffect(() => {
+    fetchPairCounts();
+  }, []); // Empty dependency array - only run once
+
+  useEffect(() => {
+    if (selectedDate) {
+      fetchImagePairs(selectedDate);
     }
   }, [selectedDate]);
 
-  useEffect(() => {
-    fetchImagePairs();
-  }, [fetchImagePairs]); // Runs only when `fetchImagePairs` changes
-
-  // Handle date selection from calendar
   const handleDateClick = (date) => {
     setSelectedDate(date);
-    setUploadMessage(''); // Clear any existing upload messages when a new date is selected
+    setMessage('');
   };
 
-  // Handle file drops for both human and AI images
-  const onDrop = (acceptedFiles, index, type) => {
-    const updatedPairs = [...imagePairs];
-    if (!updatedPairs[index]) {
-      updatedPairs[index] = {}; // Ensure the pair object exists
-    }
-
-    const file = acceptedFiles[0];
-    if (!file.type.startsWith('image/')) {
-      alert('Please upload a valid image file.');
-      return;
-    }
-
-    if (type === 'human') {
-      updatedPairs[index].human = file;
-    } else if (type === 'ai') {
-      updatedPairs[index].ai = file;
-    }
-    setImagePairs(updatedPairs);
+  const handleImageClick = (imageUrl) => {
+    setSelectedImage(imageUrl);
   };
 
-  // Upload image pairs to the server
-  const handleUpload = async () => {
-    if (!selectedDate) {
-      setUploadMessage('Please select a date first.');
-      return;
-    }
-  
-    try {
-      const date = new Date(selectedDate);
-      const isDaylightSaving = date.getMonth() >= 2 && date.getMonth() <= 10; // DST
-      date.setUTCHours(isDaylightSaving ? 4 : 5, 0, 0, 0); // Adjust EST/EDT
-  
-      for (let i = 0; i < imagePairs.length; i++) {
-        const pair = imagePairs[i];
-        if (pair && pair.human && pair.ai) {
-          const formData = new FormData();
-          formData.append('humanImage', pair.human);
-          formData.append('aiImage', pair.ai);
-          formData.append('scheduledDate', date.toISOString());
-          formData.append('pairIndex', i);
-  
-          await new Promise((resolve) => setTimeout(resolve, 200)); // Delay between requests
-  
-          await axios.post(
-            "https://artalyze-backend-production.up.railway.app/api/admin/upload-image-pair", 
-            formData, 
-            { headers: { "Content-Type": "multipart/form-data" } }
-          );
-        }
+  // Handle individual pair selection
+  const handlePairSelection = (pairId) => {
+    setSelectedPairs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(pairId)) {
+        newSet.delete(pairId);
+      } else {
+        newSet.add(pairId);
       }
-  
-      setUploadMessage('All images uploaded successfully');
-      fetchImagePairs(); // Refresh the image pairs
-    } catch (error) {
-      console.error('Upload error:', error);
-      setUploadMessage('Failed to upload some or all images. Please try again.');
+      return newSet;
+    });
+  };
+
+  // Handle select all/none
+  const handleSelectAll = () => {
+    if (selectedPairs.size === imagePairs.length) {
+      // If all are selected, deselect all
+      setSelectedPairs(new Set());
+    } else {
+      // Select all
+      const allPairIds = imagePairs.map(pair => pair._id);
+      setSelectedPairs(new Set(allPairIds));
     }
   };
-  
+
+  const handleRegenerateAI = async (pairId) => {
+    setLoadingPairs(prev => new Set(prev).add(pairId));
+    try {
+      const response = await axiosInstance.post(`/admin/regenerate-ai-image`, {
+        scheduledDate: selectedDate.toISOString().split('T')[0],
+        pairId: pairId
+      });
+      
+      // Update the specific pair in the list
+      setImagePairs(prevPairs => 
+        prevPairs.map(pair => 
+          pair._id === pairId 
+            ? { ...pair, aiImageURL: response.data.aiImageURL }
+            : pair
+        )
+      );
+      
+      setMessage('AI image regenerated successfully');
+      fetchPairCounts(); // Refresh pair counts
+    } catch (error) {
+      setError('Failed to regenerate AI image');
+      console.error('Error regenerating AI image:', error);
+    } finally {
+      setLoadingPairs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(pairId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleDeletePair = async (pairId) => {
+    setLoadingPairs(prev => new Set(prev).add(pairId));
+    try {
+      await axiosInstance.delete(`/admin/delete-pair`, {
+        data: {
+          scheduledDate: selectedDate.toISOString().split('T')[0],
+          pairId: pairId
+        }
+      });
+      
+      // Remove the pair from the list
+      setImagePairs(prevPairs => prevPairs.filter(pair => pair._id !== pairId));
+      setSelectedPairs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(pairId);
+        return newSet;
+      });
+      
+      setMessage('Image pair deleted successfully');
+      fetchPairCounts(); // Refresh pair counts
+    } catch (error) {
+      setError('Failed to delete image pair');
+      console.error('Error deleting image pair:', error);
+    } finally {
+      setLoadingPairs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(pairId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleBulkRegenerate = async () => {
+    if (selectedPairs.size === 0) return;
+    
+    if (!window.confirm(`Are you sure you want to regenerate ${selectedPairs.size} AI images?`)) {
+      return;
+    }
+
+    setBulkLoading(true);
+    const promises = Array.from(selectedPairs).map(pairId => handleRegenerateAI(pairId));
+    
+    try {
+      await Promise.all(promises);
+      setMessage(`Successfully regenerated ${selectedPairs.size} AI images!`);
+      setSelectedPairs(new Set());
+      fetchPairCounts(); // Refresh pair counts
+    } catch (error) {
+      console.error('Error bulk regenerating AI images:', error);
+      setError(error.response?.data?.error || 'Failed to bulk regenerate AI images');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedPairs.size === 0) return;
+    
+    if (!window.confirm(`Are you sure you want to delete ${selectedPairs.size} image pairs? This action cannot be undone.`)) {
+      return;
+    }
+
+    setBulkLoading(true);
+    const promises = Array.from(selectedPairs).map(pairId => handleDeletePair(pairId));
+    
+    try {
+      await Promise.all(promises);
+      setMessage(`Successfully deleted ${selectedPairs.size} image pairs!`);
+      setSelectedPairs(new Set());
+      fetchPairCounts(); // Refresh pair counts
+    } catch (error) {
+      console.error('Error bulk deleting pairs:', error);
+      setError(error.response?.data?.error || 'Failed to bulk delete image pairs');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  // Function to get tile class based on pair count
+  const getTileClass = ({ date, view }) => {
+    if (view !== 'month') return '';
+    // Always use UTC YYYY-MM-DD
+    const dateString = date.toISOString().slice(0, 10);
+    const selectedDateString = selectedDate.toISOString().slice(0, 10);
+    
+    // Check if this is the currently selected date
+    if (dateString === selectedDateString) {
+      return 'calendar-day-selected';
+    }
+    
+    const count = pairCounts[dateString] || 0;
+    if (count >= 5) return 'calendar-day-complete';
+    if (count >= 1) return 'calendar-day-partial';
+    return 'calendar-day-empty';
+  };
 
   return (
     <div className="manage-day-container">
-      <h1>Manage Day</h1>
-      <div className="calendar-container">
-        <Calendar onClickDay={handleDateClick} />
+      <div className="page-header">
+        <h1>Manage Daily Image Pairs</h1>
+        <div className="instructions">
+          <span>Select a date to view pairs • Click images to enlarge • Use checkboxes for bulk operations • Regenerate AI variations • Delete pairs</span>
+        </div>
       </div>
-      {selectedDate && (
-        <>
-          <h2>Manage Image Pairs for {selectedDate.toDateString()}</h2>
 
-          {error && <p className="error-message">{error}</p>}
+      <div className="calendar-bulk-container">
+        <div className="calendar-section">
+          <Calendar
+            onChange={setSelectedDate}
+            value={selectedDate}
+            className="react-calendar"
+            tileClassName={getTileClass}
+          />
+        </div>
 
-          {/* Existing Image Pairs Section */}
-          <div className="existing-image-pairs-container">
-            <h3>Existing Image Pairs for {selectedDate.toDateString()}</h3>
-            {imagePairs.length === 0 && <p>No existing image pairs found for this date.</p>}
-            <div className="existing-pairs-wrapper">
-              {imagePairs.map((pair, index) => (
-                <div key={index} className="existing-pair-container">
-                  <h4>Pair #{index + 1}</h4>
-                  <div className="existing-images">
-                    <div className="image-wrapper">
-                      {pair.humanImageURL ? (
-                        <img src={pair.humanImageURL} alt="Human Art" className="image-preview" />
-                      ) : (
-                        <p>No Human Image</p>
-                      )}
-                    </div>
-                    <div className="image-wrapper">
-                      {pair.aiImageURL ? (
-                        <img src={pair.aiImageURL} alt="AI Art" className="image-preview" />
-                      ) : (
-                        <p>No AI Image</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+        {selectedDate && (
+          <div className="bulk-actions">
+            <div className="selection-controls">
+              <button 
+                className="select-all-button"
+                onClick={handleSelectAll}
+                disabled={bulkLoading || loadingPairs.size > 0}
+              >
+                {selectedPairs.size === imagePairs.length && imagePairs.length > 0 ? 'Deselect All' : 'Select All'}
+              </button>
+              <span className="selection-count">
+                {selectedPairs.size} of {imagePairs.length} selected
+              </span>
+            </div>
+            <div className="bulk-operation-buttons">
+              <button 
+                className="bulk-regenerate-button"
+                onClick={handleBulkRegenerate}
+                disabled={bulkLoading || loadingPairs.size > 0 || selectedPairs.size === 0}
+              >
+                {bulkLoading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Regenerating...
+                  </>
+                ) : (
+                  'Regenerate Selected'
+                )}
+              </button>
+              <button 
+                className="bulk-delete-button"
+                onClick={handleBulkDelete}
+                disabled={bulkLoading || loadingPairs.size > 0 || selectedPairs.size === 0}
+              >
+                {bulkLoading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Selected'
+                )}
+              </button>
             </div>
           </div>
+        )}
+      </div>
 
-          {/* Dropzones for Uploading */}
-          <div className="image-pairs-container">
-            {[...Array(5)].map((_, index) => (
-              <div key={index} className={`pair-container ${index < 4 ? 'half-width' : 'full-width'}`}>
-                <h3>Pair {index + 1}</h3>
-                <div className="dropzone-container">
-                  <DropzoneComponent
-                    onDrop={(files) => onDrop(files, index, 'human')}
-                    label="Drop Human Image"
-                    currentFile={imagePairs[index]?.human}
-                  />
-                  <DropzoneComponent
-                    onDrop={(files) => onDrop(files, index, 'ai')}
-                    label="Drop AI Image"
-                    currentFile={imagePairs[index]?.ai}
-                  />
+      {selectedDate && (
+        <div className="date-header">
+          <h2>Pairs for {selectedDate.toDateString()}</h2>
+        </div>
+      )}
+
+      {error && <div className="error-message">{error}</div>}
+      {message && <div className="info-message">{message}</div>}
+
+      {/* Display completed pairs */}
+      <div className="existing-image-pairs-container">
+        <h3>Completed Pairs</h3>
+        {imagePairs.length === 0 ? (
+          <p className="no-pairs-message">No completed pairs for this date.</p>
+        ) : (
+          <div className="existing-pairs-wrapper">
+            {imagePairs.map((pair, index) => {
+              const isPairLoading = loadingPairs.has(pair._id);
+              const isSelected = selectedPairs.has(pair._id);
+              return (
+                <div key={pair._id || index} className={`existing-pair-container ${isSelected ? 'selected' : ''}`}>
+                  <div className="pair-header">
+                    <h4>Pair #{index + 1}</h4>
+                    <label className="pair-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handlePairSelection(pair._id)}
+                        disabled={isPairLoading || bulkLoading}
+                      />
+                      <span className="checkmark"></span>
+                    </label>
+                  </div>
+                  <div className="existing-images">
+                    <div className="image-wrapper">
+                      <img 
+                        src={pair.humanImageURL} 
+                        alt="Human Art" 
+                        className="image-preview"
+                        onClick={() => handleImageClick(pair.humanImageURL)}
+                      />
+                      <p>Human</p>
+                    </div>
+                    <div className="image-wrapper">
+                      <img 
+                        src={pair.aiImageURL} 
+                        alt="AI Art" 
+                        className={`image-preview ${isPairLoading ? 'loading' : ''}`}
+                        onClick={() => handleImageClick(pair.aiImageURL)}
+                      />
+                      {isPairLoading && (
+                        <div className="image-loader">
+                          <div className="spinner"></div>
+                          <p>Regenerating...</p>
+                        </div>
+                      )}
+                      <p>AI</p>
+                    </div>
+                  </div>
+                  <div className="pair-actions">
+                    <button 
+                      className="regenerate-button"
+                      onClick={() => handleRegenerateAI(pair._id)}
+                      disabled={isPairLoading || bulkLoading}
+                    >
+                      {isPairLoading ? (
+                        <>
+                          <span className="spinner"></span>
+                          Regenerating...
+                        </>
+                      ) : (
+                        'Regenerate AI'
+                      )}
+                    </button>
+                    <button 
+                      className="delete-button"
+                      onClick={() => handleDeletePair(pair._id)}
+                      disabled={isPairLoading || bulkLoading}
+                    >
+                      {isPairLoading ? (
+                        <>
+                          <span className="spinner"></span>
+                          Deleting...
+                        </>
+                      ) : (
+                        'Delete Pair'
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
+        )}
+      </div>
 
-          <button className="upload-button" onClick={handleUpload}>
-            Upload Pairs
-          </button>
-          {uploadMessage && <p className="upload-message">{uploadMessage}</p>}
-        </>
+      {selectedImage && (
+        <ImageModal
+          imageUrl={selectedImage}
+          onClose={() => setSelectedImage(null)}
+        />
       )}
     </div>
   );

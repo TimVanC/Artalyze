@@ -7,10 +7,20 @@ const AdminOverview = () => {
   // Hook for programmatic navigation
   const navigate = useNavigate();
 
+  // Logout handler
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    window.location.reload();
+  };
+
   return (
     <div className="admin-overview">
-      <h1>Admin Dashboard</h1>
-      
+      <div className="admin-header">
+        <h1>Admin Dashboard</h1>
+        <button className="logout-button" onClick={handleLogout}>
+          Log Out
+        </button>
+      </div>
       <div className="admin-actions">
         <div className="action-group">
           <h2>Image Management</h2>

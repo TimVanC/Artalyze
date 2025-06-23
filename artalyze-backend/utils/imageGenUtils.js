@@ -1,8 +1,14 @@
-const Replicate = require('replicate');
+const OpenAI = require('openai');
 const sharp = require('sharp');
 
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN,
+// Check if required environment variables are set
+if (!process.env.OPENAI_API_KEY) {
+  console.error('ERROR: OPENAI_API_KEY environment variable is not set');
+  throw new Error('OPENAI_API_KEY environment variable is required for AI image generation');
+}
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 /**
@@ -57,7 +63,7 @@ const getEnhancedNegativePrompt = (style, medium) => {
 };
 
 /**
- * Generate an AI image using Stable Diffusion XL with enhanced parameters
+ * Generate an AI image using DALL-E 3 with enhanced parameters
  * @param {string} prompt Image generation prompt
  * @param {Object} dimensions Image dimensions
  * @param {number} dimensions.width Width of the image
@@ -67,48 +73,50 @@ const getEnhancedNegativePrompt = (style, medium) => {
  */
 async function generateAiImage(prompt, dimensions, metadata = {}) {
   try {
-    // Ensure dimensions are multiples of 8 (required by SDXL)
-    const width = Math.round(dimensions.width / 8) * 8;
-    const height = Math.round(dimensions.height / 8) * 8;
+    // Sanitize the prompt to avoid content policy violations
+    const sanitizedPrompt = sanitizePrompt(prompt);
+    console.log(`Original prompt: ${prompt}`);
+    console.log(`Sanitized prompt: ${sanitizedPrompt}`);
 
-    // Extract style and medium from metadata or prompt
-    const style = metadata.style || extractStyleFromPrompt(prompt);
-    const medium = metadata.medium || extractMediumFromPrompt(prompt);
+    // Use default dimensions if not provided
+    const finalDimensions = dimensions || { width: 1024, height: 1024 };
+    
+    // DALL-E 3 supports specific sizes, so we need to map to supported options
+    const getDalleSize = (width, height) => {
+      const aspectRatio = width / height;
+      
+      if (aspectRatio === 1) return "1024x1024";
+      if (aspectRatio > 1) return "1792x1024"; // Landscape
+      if (aspectRatio < 1) return "1024x1792"; // Portrait
+      
+      return "1024x1024"; // Default to square
+    };
 
-    // Get enhanced negative prompt
-    const negativePrompt = getEnhancedNegativePrompt(style, medium);
+    const dalleSize = getDalleSize(finalDimensions.width, finalDimensions.height);
 
-    // Enhanced prompt with human imperfection cues
-    const enhancedPrompt = addHumanImperfections(prompt, style, medium);
+    console.log(`Generating DALL-E 3 image with prompt: ${sanitizedPrompt}`);
+    console.log(`Size: ${dalleSize}`);
 
-    console.log(`Generating AI image with enhanced prompt: ${enhancedPrompt}`);
-    console.log(`Negative prompt: ${negativePrompt}`);
+    // Generate image using DALL-E 3
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: sanitizedPrompt,
+      n: 1,
+      size: dalleSize,
+      quality: "hd", // HD quality for better results
+      style: "natural" // Natural style for more human-like results
+    });
 
-    // Generate image using SDXL with optimized parameters
-    const output = await replicate.run(
-      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-      {
-        input: {
-          prompt: enhancedPrompt,
-          negative_prompt: negativePrompt,
-          width: width,
-          height: height,
-          num_outputs: 1,
-          scheduler: "K_EULER_ANCESTRAL", // Better for artistic styles
-          num_inference_steps: 60, // Increased for better quality
-          guidance_scale: 8.5, // Slightly higher for better adherence
-          prompt_strength: 0.85, // Slightly higher for better prompt following
-          seed: Math.floor(Math.random() * 1000000), // Random seed for variety
-          refine: "expert_ensemble_refiner", // Use expert ensemble for better quality
-          high_noise_frac: 0.8, // Better for artistic styles
-        }
-      }
-    );
+    // Get the image URL from the response
+    const imageUrl = response.data[0].url;
+    
+    if (!imageUrl) {
+      throw new Error('No image URL received from DALL-E 3');
+    }
 
     // Download the generated image
-    const imageUrl = output[0];
-    const response = await fetch(imageUrl);
-    const arrayBuffer = await response.arrayBuffer();
+    const imageResponse = await fetch(imageUrl);
+    const arrayBuffer = await imageResponse.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     // Process with sharp to ensure webp format and quality
@@ -119,7 +127,28 @@ async function generateAiImage(prompt, dimensions, metadata = {}) {
     return processedImage;
 
   } catch (error) {
-    console.error('Error generating AI image:', error);
+    console.error('Error generating AI image with DALL-E 3:', error);
+    
+    // Handle specific DALL-E 3 content policy errors
+    if (error.status === 400 && error.error?.type === 'image_generation_user_error') {
+      const contentError = new Error('DALL-E 3 rejected the prompt due to content policy violations. Please try with a different image or description.');
+      contentError.name = 'ContentPolicyError';
+      throw contentError;
+    }
+    
+    // Handle other specific errors
+    if (error.message && error.message.includes('timeout')) {
+      const timeoutError = new Error('DALL-E 3 generation timed out. This can take 30-60 seconds. Please try again.');
+      timeoutError.name = 'TimeoutError';
+      throw timeoutError;
+    }
+    
+    if (error.message && error.message.includes('billing')) {
+      const billingError = new Error('OpenAI billing issue. Please check your OpenAI account billing status.');
+      billingError.name = 'BillingError';
+      throw billingError;
+    }
+    
     throw error;
   }
 }
@@ -193,6 +222,36 @@ function addHumanImperfections(prompt, style, medium) {
   }
 
   return prompt;
+}
+
+/**
+ * Sanitize prompt to avoid DALL-E 3 content policy violations
+ */
+function sanitizePrompt(prompt) {
+  if (!prompt) return '';
+  
+  // Remove potentially problematic content
+  const problematicTerms = [
+    'nude', 'naked', 'explicit', 'sexual', 'violence', 'blood', 'gore',
+    'weapon', 'gun', 'knife', 'sword', 'bomb', 'explosion', 'fire',
+    'celebrity', 'famous person', 'politician', 'real person',
+    'copyright', 'trademark', 'logo', 'brand', 'company'
+  ];
+  
+  let sanitized = prompt.toLowerCase();
+  problematicTerms.forEach(term => {
+    sanitized = sanitized.replace(new RegExp(term, 'gi'), '');
+  });
+  
+  // Clean up extra spaces and punctuation
+  sanitized = sanitized.replace(/\s+/g, ' ').trim();
+  
+  // Ensure the prompt is not empty after sanitization
+  if (!sanitized || sanitized.length < 10) {
+    return 'abstract art composition with vibrant colors and artistic elements';
+  }
+  
+  return sanitized;
 }
 
 module.exports = {

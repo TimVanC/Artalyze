@@ -28,7 +28,12 @@ app.use(cors({
             'https://staging.artalyze.app',
             'https://artalyze-backend-staging.up.railway.app'
           ]
-        : [...otherOrigins],
+        : [
+            'https://artalyze-admin.vercel.app',
+            'https://artalyze.vercel.app',
+            'https://artalyze-backend.up.railway.app',
+            ...otherOrigins
+          ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],

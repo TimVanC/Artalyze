@@ -10,7 +10,7 @@ const streamifier = require('streamifier');
 const adminController = require('../controllers/adminController');
 const sharp = require('sharp');
 const OpenAI = require('openai');
-const { generateAIImage } = require('../utils/aiGeneration');
+const { generateAiImage } = require('../utils/imageGenUtils');
 const jwt = require('jsonwebtoken');
 const { generateImageDescription, remixCaption } = require('../utils/textProcessing');
 const axios = require('axios');
@@ -34,6 +34,7 @@ const upload = multer({ storage });
 // Dynamically select collection name based on environment
 const collectionName = process.env.NODE_ENV === "staging" ? "staging_imagePairs" : "imagePairs";
 console.log('Using MongoDB collection:', collectionName);
+console.log('NODE_ENV:', process.env.NODE_ENV);
 const ImagePairCollection = mongoose.model(collectionName, ImagePair.schema);
 
 // Ensure authentication and admin access for all routes except login
@@ -336,9 +337,7 @@ router.post('/upload-human-image', upload.single('humanImage'), async (req, res)
       try {
         // Generate AI image
         sendProgress(sessionId, `Image ${currentImageIndex}/${totalImages}: Starting AI generation (typically 30-45 seconds)...`, 'info');
-        const aiImageUrl = await generateAIImage(remixedPrompt, (message) => {
-          sendProgress(sessionId, `Image ${currentImageIndex}/${totalImages}: ${message}`, 'info');
-        }, dimensions, {
+        const aiImageUrl = await generateAiImage(remixedPrompt, dimensions, {
           ...imageAnalysis.metadata,
           dimensions,
           imageType: imageAnalysis.metadata?.imageType || 'mixed_media',
@@ -391,6 +390,35 @@ router.post('/upload-human-image', upload.single('humanImage'), async (req, res)
       } catch (error) {
         console.error('Error in AI generation or save:', error);
         sendProgress(sessionId, `Error: ${error.message}`, 'error');
+        
+        // Provide more specific error messages for DALL-E 3 issues
+        if (error.message && error.message.includes('timeout')) {
+          sendProgress(sessionId, 'DALL-E 3 generation timed out. This can take 30-60 seconds. Please try again.', 'error');
+          return res.status(408).json({ 
+            error: 'AI image generation timed out. DALL-E 3 generation can take 30-60 seconds. Please try again.',
+            humanImageURL: humanUploadResult.secure_url,
+            description: imageAnalysis.description
+          });
+        }
+        
+        if (error.message && error.message.includes('billing')) {
+          sendProgress(sessionId, 'OpenAI billing issue. Please check your OpenAI account billing status.', 'error');
+          return res.status(402).json({ 
+            error: 'OpenAI billing issue. Please check your OpenAI account billing status.',
+            humanImageURL: humanUploadResult.secure_url,
+            description: imageAnalysis.description
+          });
+        }
+        
+        if (error.message && error.message.includes('rate limit')) {
+          sendProgress(sessionId, 'OpenAI rate limit exceeded. Please wait a moment and try again.', 'error');
+          return res.status(429).json({ 
+            error: 'OpenAI rate limit exceeded. Please wait a moment and try again.',
+            humanImageURL: humanUploadResult.secure_url,
+            description: imageAnalysis.description
+          });
+        }
+        
         throw error;
       }
 
@@ -566,7 +594,7 @@ router.post('/regenerate-ai-image', async (req, res) => {
       }
     });
     
-    const newAiImageUrl = await generateAIImage(remixedPrompt, null, dimensions, {
+    const newAiImageUrl = await generateAiImage(remixedPrompt, dimensions, {
       ...imageAnalysis.metadata,
       dimensions,
       imageType: imageAnalysis.metadata?.imageType || 'mixed_media',
@@ -609,7 +637,30 @@ router.post('/regenerate-ai-image', async (req, res) => {
 
   } catch (error) {
     console.error('Regeneration Error:', error);
-    res.status(500).json({ error: 'Failed to regenerate AI image' });
+    
+    // Provide more specific error messages
+    if (error.message && error.message.includes('timeout')) {
+      return res.status(408).json({ 
+        error: 'AI image generation timed out. DALL-E 3 generation can take 30-60 seconds. Please try again.' 
+      });
+    }
+    
+    if (error.message && error.message.includes('billing')) {
+      return res.status(402).json({ 
+        error: 'OpenAI billing issue. Please check your OpenAI account billing status.' 
+      });
+    }
+    
+    if (error.message && error.message.includes('rate limit')) {
+      return res.status(429).json({ 
+        error: 'OpenAI rate limit exceeded. Please wait a moment and try again.' 
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Failed to regenerate AI image',
+      details: error.message || 'Unknown error occurred'
+    });
   }
 });
 
@@ -738,7 +789,7 @@ router.post('/bulk-regenerate-selected-ai-images', async (req, res) => {
           }
         });
         
-        const newAiImageUrl = await generateAIImage(remixedPrompt, null, dimensions, {
+        const newAiImageUrl = await generateAiImage(remixedPrompt, dimensions, {
           ...imageAnalysis.metadata,
           dimensions,
           imageType: imageAnalysis.metadata?.imageType || 'mixed_media',
@@ -770,6 +821,15 @@ router.post('/bulk-regenerate-selected-ai-images', async (req, res) => {
 
       } catch (error) {
         console.error(`Error regenerating pair ${pair._id}:`, error);
+        
+        // Provide more specific error messages for DALL-E 3 issues
+        if (error.message && error.message.includes('timeout')) {
+          console.error(`DALL-E 3 generation timed out for pair ${pair._id}. This can take 30-60 seconds.`);
+        } else if (error.message && error.message.includes('billing')) {
+          console.error(`OpenAI billing issue for pair ${pair._id}. Please check your OpenAI account billing status.`);
+        } else if (error.message && error.message.includes('rate limit')) {
+          console.error(`OpenAI rate limit exceeded for pair ${pair._id}. Please wait a moment and try again.`);
+        }
       }
     }
 
@@ -863,16 +923,23 @@ router.delete('/bulk-delete-selected-pairs', async (req, res) => {
 router.get('/image-pairs/:date', async (req, res) => {
   try {
     const { date } = req.params;
+    console.log('Fetching image pairs for date:', date, 'from collection:', collectionName);
+    
     const targetDate = new Date(date);
     targetDate.setUTCHours(5, 0, 0, 0); // Set to midnight EST
+    console.log('Target date (UTC):', targetDate.toISOString());
 
     const imagePair = await ImagePairCollection.findOne({ scheduledDate: targetDate });
+    console.log('Found image pair document:', imagePair ? 'Yes' : 'No');
     
     if (!imagePair) {
+      console.log('No image pairs found for date:', date);
       return res.json([]);
     }
 
-    res.json(imagePair.pairs || []);
+    const pairs = imagePair.pairs || [];
+    console.log('Returning', pairs.length, 'pairs for date:', date);
+    res.json(pairs);
   } catch (error) {
     console.error('Error fetching image pairs:', error);
     res.status(500).json({ error: 'Failed to fetch image pairs' });
@@ -882,14 +949,21 @@ router.get('/image-pairs/:date', async (req, res) => {
 // Get pair counts for all days (for calendar highlighting)
 router.get('/pair-counts', async (req, res) => {
   try {
+    console.log('Fetching pair counts from collection:', collectionName);
     const pairCounts = {};
     // Only fetch scheduledDate and pairs fields, use lean for performance
     const allImagePairs = await ImagePairCollection.find({}, { scheduledDate: 1, pairs: 1 }).lean();
+    console.log('Found', allImagePairs.length, 'image pair documents in database');
+    
     allImagePairs.forEach(imagePair => {
       // Always use UTC date string (YYYY-MM-DD)
       const dateString = new Date(imagePair.scheduledDate).toISOString().slice(0, 10);
-      pairCounts[dateString] = imagePair.pairs ? imagePair.pairs.length : 0;
+      const pairCount = imagePair.pairs ? imagePair.pairs.length : 0;
+      pairCounts[dateString] = pairCount;
+      console.log(`Date ${dateString}: ${pairCount} pairs`);
     });
+    
+    console.log('Total pair counts:', pairCounts);
     res.json(pairCounts);
   } catch (error) {
     console.error('Error fetching pair counts:', error);

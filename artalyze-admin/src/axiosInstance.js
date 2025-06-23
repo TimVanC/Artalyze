@@ -5,6 +5,7 @@ import axios from "axios";
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
+  timeout: 120000, // 2 minutes timeout for DALL-E 3 generation
   headers: {
     "Content-Type": "application/json",
   },

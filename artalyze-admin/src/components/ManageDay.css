@@ -1,137 +1,645 @@
 .manage-day-container {
-    max-width: 1000px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding-bottom: 50px; /* Extra padding at the bottom for better spacing */
+    padding: 15px;
+    background-color: #fafafa;
+    min-height: 100vh;
 }
 
-.calendar-container {
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.page-header h1 {
+    margin: 0 0 10px 0;
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.instructions {
+    text-align: center;
+    font-size: 1rem;
+    opacity: 0.95;
+    line-height: 1.4;
+}
+
+.calendar-bulk-container {
     display: flex;
+    gap: 30px;
+    align-items: flex-end;
+    margin-bottom: 20px;
     justify-content: center;
+}
+
+.calendar-section {
+    flex: 0 0 auto;
+}
+
+.react-calendar {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    padding: 15px;
+    font-size: 1rem;
+}
+
+.react-calendar button {
+    border: none;
+    background: none;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    color: #333 !important;
+}
+
+.react-calendar button:hover {
+    background-color: #f0f0f0;
+    color: #333 !important;
+}
+
+.react-calendar button:active {
+    background-color: #e0e0e0;
+    color: #333 !important;
+}
+
+.react-calendar__tile--active {
+    background-color: #667eea !important;
+    color: white !important;
+}
+
+.react-calendar__tile--active:hover {
+    background-color: #5a6fd8 !important;
+    color: white !important;
+}
+
+.react-calendar__tile--now {
+    background-color: #fff3cd !important;
+    color: #333 !important;
+}
+
+.react-calendar__tile--now:hover {
+    background-color: #ffeaa7 !important;
+    color: #333 !important;
+}
+
+.calendar-day-complete {
+    background-color: #d4edda !important;
+    color: #155724 !important;
+}
+
+.calendar-day-complete:hover {
+    background-color: #c3e6cb !important;
+    color: #155724 !important;
+}
+
+.calendar-day-partial {
+    background-color: #fff3cd !important;
+    color: #856404 !important;
+}
+
+.calendar-day-partial:hover {
+    background-color: #ffeaa7 !important;
+    color: #856404 !important;
+}
+
+.calendar-day-empty {
+    background-color: #f8d7da !important;
+    color: #721c24 !important;
+}
+
+.calendar-day-empty:hover {
+    background-color: #f5c6cb !important;
+    color: #721c24 !important;
+}
+
+.calendar-day-selected {
+    background-color: #d1ecf1 !important;
+    color: #0c5460 !important;
+    font-weight: bold !important;
+}
+
+.calendar-day-selected:hover {
+    background-color: #bee5eb !important;
+    color: #0c5460 !important;
+}
+
+.info-box {
+    background-color: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.info-box ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.info-box li {
+    margin: 5px 0;
+    color: #555;
+}
+
+.date-header {
+    text-align: center;
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.date-header h2 {
+    color: #333;
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.error-message {
+    color: #d32f2f;
+    text-align: center;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #ffebee;
+    border-radius: 4px;
+}
+
+.info-message {
+    color: #1976d2;
+    text-align: center;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #e3f2fd;
+    border-radius: 4px;
+}
+
+.existing-image-pairs-container {
+    background-color: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     margin-bottom: 20px;
 }
 
-/* Reset button color for calendar navigation */
-.react-calendar button {
-    color: #000 !important; /* Set text color to black */
+.existing-image-pairs-container h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 1.3rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.no-pairs-message {
+    text-align: center;
+    color: #666;
+    font-style: italic;
 }
 
 .existing-pairs-wrapper {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    margin-top: 10px;
-    justify-content: center; /* Center align all pairs */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
 }
 
 .existing-pair-container {
-    text-align: center;
-    margin-bottom: 20px;
+    background-color: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 15px;
+    transition: all 0.3s ease;
+    position: relative;
 }
 
-.existing-images {
-    display: flex;
-    gap: 10px;
+.existing-pair-container:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
 }
 
-.image-wrapper {
+.existing-pair-container.selected {
+    border-color: #667eea;
+    background-color: #f0f4ff;
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+}
+
+.pair-header {
     display: flex;
-    flex-direction: column;
     align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e9ecef;
 }
 
-.image-preview {
-    width: 150px;
-    height: 150px;
-    object-fit: cover;
-    margin-bottom: 5px;
-    border-radius: 5px;
-    border: 1px solid #ddd;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.pair-header h4 {
+    margin: 0;
+    color: #333;
+    font-size: 1rem;
+    font-weight: 600;
 }
 
-.image-pairs-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    margin-top: 20px;
-    justify-content: center; /* Center align all pairs */
+.pair-checkbox {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    user-select: none;
 }
 
-.pair-container {
-    width: calc(50% - 20px); /* Two pairs per row */
-    box-sizing: border-box; /* Include padding and border in width calculation */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    border: 1px solid #ccc;
-    padding: 10px;
-    border-radius: 5px;
-    background-color: #f9f9f9;
-    margin-bottom: 20px;
+.pair-checkbox input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
 }
 
-.dropzone-container {
-    display: flex; /* Flex layout for side-by-side alignment */
-    gap: 20px; /* Space between the two dropzones */
-    justify-content: center; /* Center the dropzones horizontally */
-    width: 100%; /* Ensure it takes the full width of the parent container */
-    margin-top: 10px;
-}
-
-.dropzone {
-    width: 150px;
-    height: 150px;
-    border: 2px dashed #aaa;
+.checkmark {
+    height: 20px;
+    width: 20px;
+    background-color: #fff;
+    border: 2px solid #ddd;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.pair-checkbox:hover input ~ .checkmark {
+    border-color: #2196F3;
+}
+
+.pair-checkbox input:checked ~ .checkmark {
+    background-color: #2196F3;
+    border-color: #2196F3;
+}
+
+.checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.pair-checkbox input:checked ~ .checkmark:after {
+    display: block;
+}
+
+.pair-checkbox input:disabled ~ .checkmark {
+    background-color: #f5f5f5;
+    border-color: #ccc;
+    cursor: not-allowed;
+}
+
+.existing-images {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.image-wrapper {
+    text-align: center;
+}
+
+.image-wrapper p {
+    margin: 5px 0;
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.image-preview {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+}
+
+.image-preview.loading {
+    opacity: 0.6;
+    filter: blur(1px);
+}
+
+.image-preview:hover {
+    transform: scale(1.05);
+}
+
+.image-loader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+    z-index: 10;
+}
+
+.image-loader p {
+    margin: 5px 0 0 0;
+    font-size: 0.8rem;
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.upload-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.upload-container {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+}
+
+.upload-container h3 {
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 1rem;
+}
+
+.dropzone {
+    border: 2px dashed #ccc;
+    border-radius: 6px;
+    padding: 20px;
     text-align: center;
     cursor: pointer;
-    background-color: rgba(0, 0, 0, 0.03);
-    border-radius: 5px;
-    transition: border-color 0.3s ease, background-color 0.3s ease;
+    transition: border-color 0.3s ease;
+    background-color: #fafafa;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .dropzone:hover {
-    border-color: #4caf50;
-    background-color: #e8f5e9;
+    border-color: #999;
 }
 
 .dropzone p {
-    font-size: 14px;
+    margin: 0;
     color: #666;
 }
 
-
-
-/* Error and upload messages */
-.error-message {
-    color: red;
-    font-weight: bold;
-    margin: 10px 0;
-    text-align: center;
-}
-
-.upload-message {
-    color: #4caf50;
-    font-weight: bold;
-    margin: 10px 0;
-    text-align: center;
-}
-
-/* Upload button */
 .upload-button {
-    margin-top: 40px; /* Increase spacing above the upload button */
-    padding: 10px 20px;
-    background-color: #4caf50;
-    color: #fff;
+    display: block;
+    margin: 20px auto;
+    padding: 12px 24px;
+    background-color: #4CAF50;
+    color: white;
     border: none;
+    border-radius: 6px;
+    font-size: 1rem;
     cursor: pointer;
-    border-radius: 5px;
-    font-size: 16px;
     transition: background-color 0.3s ease;
 }
 
 .upload-button:hover {
     background-color: #45a049;
 }
+
+.upload-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.upload-message {
+    text-align: center;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.pending-images-container {
+    margin: 20px 0;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.pending-images-container h3 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.info-text {
+    color: #666;
+    font-style: italic;
+    margin-bottom: 15px;
+}
+
+.pending-images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.pending-image-wrapper {
+    text-align: center;
+}
+
+.pending-image-wrapper img {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    margin-bottom: 8px;
+}
+
+.pending-image-wrapper p {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.pair-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.regenerate-button,
+.delete-button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 100px;
+    justify-content: center;
+}
+
+.regenerate-button {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.regenerate-button:hover:not(:disabled) {
+    background-color: #45a049;
+}
+
+.delete-button {
+    background-color: #f44336;
+    color: white;
+}
+
+.delete-button:hover:not(:disabled) {
+    background-color: #d32f2f;
+}
+
+.regenerate-button:disabled,
+.delete-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.bulk-actions {
+    flex: 0 0 auto;
+    background-color: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 2px solid #e9ecef;
+    margin-bottom: 0;
+    min-width: 300px;
+}
+
+.selection-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.select-all-button {
+    padding: 8px 16px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.select-all-button:hover:not(:disabled) {
+    background-color: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.selection-count {
+    font-size: 0.9rem;
+    color: #666;
+    font-weight: 600;
+    padding: 6px 12px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.bulk-operation-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.bulk-regenerate-button,
+.bulk-delete-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 140px;
+}
+
+.bulk-regenerate-button {
+    background-color: #2196F3;
+    color: white;
+}
+
+.bulk-regenerate-button:hover:not(:disabled) {
+    background-color: #1976D2;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+}
+
+.bulk-delete-button {
+    background-color: #f44336;
+    color: white;
+}
+
+.bulk-delete-button:hover:not(:disabled) {
+    background-color: #d32f2f;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(244, 67, 54, 0.3);
+}
+
+.select-all-button:disabled,
+.bulk-regenerate-button:disabled,
+.bulk-delete-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+

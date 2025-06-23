@@ -56,7 +56,13 @@ const StatsModal = ({
         }
 
         console.log("Fetching stats when StatsModal opens...");
-        const response = await fetch(`https://artalyze-backend-production.up.railway.app/api/stats/${resolvedUserId}`, {
+        // Use dynamic backend URL based on environment
+        const isStaging = window.location.hostname.includes('staging') || process.env.NODE_ENV === 'development';
+        const baseURL = isStaging 
+          ? "https://artalyze-backend-staging.up.railway.app/api"
+          : "https://artalyze-backend-production.up.railway.app/api";
+        
+        const response = await fetch(`${baseURL}/stats/${resolvedUserId}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("authToken")}` },
         });
 
